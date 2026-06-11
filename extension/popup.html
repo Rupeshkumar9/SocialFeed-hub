@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --bg-color: #fdfbfb;
+      --accent-color: #ff758f;
+      --accent-hover: #ff4d6d;
+      --text-color: #2b2d42;
+      --text-muted: #6c757d;
+      --card-bg: #ffffff;
+      --border-color: rgba(255, 117, 143, 0.15);
+    }
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .logo-icon {
+      background: var(--accent-color);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .title-area h1 {
+      font-size: 16px;
+      margin: 0;
+      color: #590d22;
+      font-weight: 700;
+    }
+    .title-area span {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .status-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px rgba(255, 117, 143, 0.04);
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    .status-label {
+      color: var(--text-muted);
+    }
+    .status-value {
+      font-weight: 600;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    button {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--accent-color);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 117, 143, 0.08);
+    }
+    .footer {
+      font-size: 10px;
+      text-align: center;
+      color: var(--text-muted);
+      margin-top: 16px;
+    }
+    .error-msg {
+      color: #d90429;
+      font-size: 11px;
+      margin-top: 8px;
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-icon">🌸</div>
+    <div class="title-area">
+      <h1>SocialFeed Exporter</h1>
+      <span>Instagram & X Bookmarks Sync</span>
+    </div>
+  </div>
+
+  <div class="status-card">
+    <div class="status-item">
+      <span class="status-label">Active Page:</span>
+      <span class="status-value" id="page-type">Checking...</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Detected Posts:</span>
+      <span class="status-value" id="post-count">0</span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" id="btn-scan" disabled>Scan Page Bookmarks</button>
+    <button class="btn-secondary" id="btn-download" style="display: none;">Download JSON Package</button>
+  </div>
+
+  <div class="error-msg" id="error-box"></div>
+
+  <div class="footer">
+    Make sure you are on X Bookmarks or Instagram Saved page.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

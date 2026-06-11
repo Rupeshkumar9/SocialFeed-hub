@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SocialFeed Hub | Dashboard </title>
+  <meta name="description" content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- FontAwesome Icons for modern dashboard elements -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <div id="app-layout">
+    
+    
+    <!-- Top Action Bar / Navigation -->
+    <main id="main-panel">
+      <header class="main-header">
+        <div class="header-left">
+          <div class="header-logo">
+            <div class="logo-icon">
+              <i class="fa-solid fa-feather-pointed"></i>
+            </div>
+            <div class="logo-text">
+              <h1>SocialFeed</h1>
+              <span>Bookmark Manager</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-center">
+          <div class="search-bar-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="search-input" class="search-input" placeholder="Search author, content, tags, notes...">
+          </div>
+          
+          <div class="filter-group">
+            <select id="filter-platform" class="filter-select">
+              <option value="all">All Platforms</option>
+              <option value="x">X / Twitter</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <select id="filter-collection" class="filter-select">
+              <option value="all">All Collections</option>
+              <option value="uncategorized">Uncategorized</option>
+              <!-- Collections will be dynamically injected here -->
+            </select>
+          </div>
+
+          <div class="dropdown" id="tags-dropdown">
+            <button class="btn-secondary dropdown-toggle" id="tags-dropdown-btn">
+              <i class="fa-solid fa-tags"></i> Tags <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="dropdown-menu" id="tags-dropdown-menu">
+              <div class="dropdown-item active" data-tag="all">All Tags</div>
+              <!-- Tags will be dynamically injected here -->
+            </div>
+          </div>
+
+          <div class="layout-switcher">
+            <button class="btn-layout active" id="layout-grid-btn" title="Grid View">
+              <i class="fa-solid fa-grip"></i>
+            </button>
+            <button class="btn-layout" id="layout-list-btn" title="List View">
+              <i class="fa-solid fa-list"></i>
+            </button>
+            <button class="btn-layout" id="layout-compact-btn" title="Compact View">
+              <i class="fa-solid fa-bars"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="header-right">
+          <button class="btn-secondary" id="btn-select-mode" title="Toggle Multi-Selection Mode">
+            <i class="fa-solid fa-square-check"></i> <span class="btn-text">Select Mode</span>
+          </button>
+          <button class="btn-secondary" id="btn-add-bookmark" title="Add Bookmark Manually">
+            <i class="fa-solid fa-plus"></i> <span class="btn-text">Add Link</span>
+          </button>
+          <button class="btn-secondary" id="action-import" title="Import Bookmarks Archive">
+            <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import</span>
+          </button>
+          <button class="btn-secondary" id="action-export-json" title="Download JSON Database">
+            <i class="fa-solid fa-download"></i> <span class="btn-text">Export JSON</span>
+          </button>
+          <button class="btn-secondary" id="action-export-md" title="Export as Markdown for Obsidian">
+            <i class="fa-solid fa-file-markdown"></i> <span class="btn-text">Export MD</span>
+          </button>
+          <button class="btn-secondary" id="btn-admin-login" title="Admin Login">
+            <i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>
+          </button>
+          <button class="btn-primary" id="btn-sync-now" title="Force sync from server">
+            <i class="fa-solid fa-rotate"></i> <span class="btn-text">Sync</span>
+          </button>
+          <button id="sync-btn" class="sync-status-btn" title="Sync status">
+            <span class="sync-dot" id="sync-dot"></span>
+            <span id="sync-status-text" class="btn-text">Server Connected</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Feed Grid -->
+      <section class="feed-content">
+        <div class="feed-section-header">
+          <div class="feed-title-area">
+            <h2 id="feed-title">All Bookmarks</h2>
+            <p id="feed-subtitle">Showing all saved bookmark feeds</p>
+          </div>
+          
+          <button class="btn-secondary" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
+            <i class="fa-solid fa-chart-line"></i> <span class="btn-text">Analytics</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Stats Panel -->
+        <div class="stats-panel" id="stats-panel" style="display: none;">
+          <div class="stats-grid">
+            <!-- Platform splits -->
+            <div class="stats-card">
+              <h3><i class="fa-solid fa-circle-nodes"></i> Platform Splits</h3>
+              <div class="stats-metric-row">
+                <div class="metric-info">
+                  <span>X / Twitter</span>
+                  <span id="stat-x-count">0</span>
+                </div>
+                <div class="metric-bar-container">
+                  <div class="metric-bar x-bar" id="stat-x-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+              <div class="stats-metric-row">
+                <div class="metric-info">
+                  <span>Instagram</span>
+                  <span id="stat-ig-count">0</span>
+                </div>
+                <div class="metric-bar-container">
+                  <div class="metric-bar ig-bar" id="stat-ig-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top collections -->
+            <div class="stats-card">
+              <h3><i class="fa-solid fa-folder-open"></i> Top Collections</h3>
+              <div class="stats-list" id="stat-collections-list">
+                <!-- dynamically filled -->
+              </div>
+            </div>
+
+            <!-- Top tags -->
+            <div class="stats-card">
+              <h3><i class="fa-solid fa-tags"></i> Top Tags</h3>
+              <div class="stats-list" id="stat-tags-list">
+                <!-- dynamically filled -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bookmarks-grid" id="bookmarks-grid">
+          <!-- Bookmark Cards will be dynamically injected here -->
+        </div>
+      </section>
+      
+    </main>
+
+
+
+    <!-- Import Modal Overlay -->
+    <div class="modal-overlay" id="import-modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Import Bookmarks Archive</h3>
+          <button class="close-btn" id="close-import-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="drag-drop-zone" id="drag-drop-zone">
+            <div class="drag-drop-icon">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <p>Drag and drop your exported archive file here</p>
+            <p class="drag-drop-sub">Supports Twitter bookmark HTML/JSON or Instagram saved_posts.json</p>
+            <button class="btn-secondary" style="margin-top: 8px;" id="btn-select-file">Browse File</button>
+            <input type="file" id="import-file-input" style="display: none;" accept=".json,.html,.js">
+          </div>
+
+          <div class="import-instructions">
+            <h4>Where to get export archives:</h4>
+            <ul>
+              <li><strong>X / Twitter</strong>: Go to Settings &gt; Your Account &gt; Download an archive of your data. The export contains a file named `bookmarks.js` or `bookmarks.json` in your data folder.</li>
+              <li><strong>Instagram</strong>: Go to Account Center &gt; Your Information and Permissions &gt; Download your information. Request standard JSON format, select "Saved Items" only. Look for `saved_posts.json` inside the ZIP.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Link Modal Overlay (Manual Bookmark) -->
+    <div class="modal-overlay" id="add-modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Add Bookmark Manually</h3>
+          <button class="close-btn" id="close-add-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="add-bookmark-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="add-url" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Post URL</label>
+              <input type="url" id="add-url" class="search-input" style="padding-left: 14px;" placeholder="https://twitter.com/... or https://instagram.com/p/..." required>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="add-author-name" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Author Name (Optional)</label>
+              <input type="text" id="add-author-name" class="search-input" style="padding-left: 14px;" placeholder="NASA or National Geographic">
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="add-content" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Caption / Post Content</label>
+              <textarea id="add-content" class="notes-textarea" style="min-height: 80px;" placeholder="Enter tweet content or post description here..."></textarea>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="add-tags" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Initial Tags (Comma separated)</label>
+              <input type="text" id="add-tags" class="search-input" style="padding-left: 14px;" placeholder="space, webb, photography">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn-secondary" id="btn-add-cancel">Cancel</button>
+              <button type="submit" class="btn-primary">Add to Feed</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Login Modal Overlay -->
+    <div class="modal-overlay" id="login-modal-overlay">
+      <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3>Admin Authentication</h3>
+          <button class="close-btn" id="close-login-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="login-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">Enter the admin password to unlock write operations like adding, editing, and deleting bookmarks.</p>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="login-password" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Password</label>
+              <input type="password" id="login-password" class="search-input" style="padding-left: 14px;" placeholder="••••••••" required>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn-secondary" id="btn-login-cancel">Cancel</button>
+              <button type="submit" class="btn-primary">Authenticate</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    <!-- Bulk Action Bar -->
+    <div id="bulk-action-bar" class="bulk-action-bar">
+      <div class="bulk-action-content">
+        <div class="bulk-info"><i class="fa-solid fa-square-check"></i> <span id="selected-count">0</span> items selected</div>
+        <div class="bulk-buttons">
+          <button class="btn-secondary" id="btn-bulk-select-all">Select All</button>
+          <button class="btn-secondary" id="btn-bulk-deselect-all">Clear</button>
+          <button class="btn-primary btn-danger" id="btn-bulk-delete">
+            <i class="fa-solid fa-trash"></i> Delete Selected
+          </button>
+          <button class="btn-secondary" id="btn-bulk-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Social Widgets Embed Scripts (will be control loaded on demand by embeds.js) -->
+  <!-- We do NOT pre-load the scripts synchronously to prevent visual lag; scripts are dynamically fetched -->
+
+  <!-- Application scripts -->
+  <script src="js/importer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
