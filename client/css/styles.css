@@ -2104,4 +2104,11 @@ body.visitor-mode #sync-btn {
   .mobile-menu-toggle {
     display: inline-flex;
   }
+
+  /* Force select mode, add link, and import buttons to show inside mobile drawer dropdown even in visitor mode */
+  body.visitor-mode #mobile-drawer-body #btn-select-mode,
+  body.visitor-mode #mobile-drawer-body #btn-add-bookmark,
+  body.visitor-mode #mobile-drawer-body #action-import {
+    display: flex !important;
+  }
 }
