@@ -1932,9 +1932,7 @@ body.visitor-mode #btn-select-mode,
 body.visitor-mode #btn-add-bookmark,
 body.visitor-mode #action-import,
 body.visitor-mode .card-folder-area,
-body.visitor-mode .btn-card-menu,
-body.visitor-mode #btn-sync-now,
-body.visitor-mode #sync-btn {
+body.visitor-mode .btn-card-menu {
   display: none !important;
 }
 
