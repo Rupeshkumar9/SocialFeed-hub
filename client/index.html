@@ -19,6 +19,9 @@
     <main id="main-panel">
       <header class="main-header">
         <div class="header-left">
+          <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Navigation Menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
           <a href="/" class="logo-link">
             <div class="header-logo">
               <div class="logo-icon">
@@ -273,6 +276,21 @@
               <button type="submit" class="btn-primary">Authenticate</button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Side Drawer -->
+    <div class="mobile-drawer-overlay" id="mobile-drawer-overlay">
+      <div class="mobile-drawer" id="mobile-drawer">
+        <div class="drawer-header">
+          <div class="drawer-logo">
+            <i class="fa-solid fa-feather-pointed"></i> SocialFeed Hub
+          </div>
+          <button class="close-btn" id="close-mobile-drawer">&times;</button>
+        </div>
+        <div class="drawer-body" id="mobile-drawer-body">
+          <!-- Navigation elements will be dynamically moved here on mobile viewports -->
         </div>
       </div>
     </div>

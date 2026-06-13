@@ -78,6 +78,7 @@ const DOM = {
 // Initialize Application
 document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
+  checkMobileDrawerLayout();
   checkServerConnection()
     .then(loadData)
     .catch(() => {
@@ -1566,6 +1567,36 @@ function initEventListeners() {
   if (DOM.loginForm) {
     DOM.loginForm.addEventListener('submit', handleAdminLoginSubmit);
   }
+
+  // Mobile side drawer toggles
+  const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+  const closeMobileDrawer = document.getElementById('close-mobile-drawer');
+  const mobileDrawerOverlay = document.getElementById('mobile-drawer-overlay');
+
+  if (mobileMenuToggle && mobileDrawerOverlay) {
+    mobileMenuToggle.addEventListener('click', () => {
+      mobileDrawerOverlay.classList.add('active');
+    });
+  }
+
+  if (closeMobileDrawer && mobileDrawerOverlay) {
+    closeMobileDrawer.addEventListener('click', () => {
+      mobileDrawerOverlay.classList.remove('active');
+    });
+  }
+
+  if (mobileDrawerOverlay) {
+    mobileDrawerOverlay.addEventListener('click', (e) => {
+      if (e.target === mobileDrawerOverlay) {
+        mobileDrawerOverlay.classList.remove('active');
+      }
+    });
+  }
+
+  // Handle window resize dynamically to move elements between header and drawer
+  window.addEventListener('resize', debounce(() => {
+    checkMobileDrawerLayout();
+  }, 100));
 }
 
 /**
@@ -1712,4 +1743,56 @@ function handleAdminLoginSubmit(e) {
       console.error("Authentication check failed:", err);
       showToast("Authentication request failed.", "error");
     });
+}
+
+/**
+ * Reposition filter elements dynamically between Header and Mobile Drawer depending on screen width
+ */
+function checkMobileDrawerLayout() {
+  const isMobile = window.innerWidth <= 768;
+  const headerRight = document.querySelector('.header-right');
+  const drawerBody = document.getElementById('mobile-drawer-body');
+  
+  const collectionEl = document.querySelector('.filter-group:has(#filter-collection)') || document.getElementById('filter-collection')?.parentNode;
+  const platformEl = document.querySelector('.filter-group:has(#filter-platform)') || document.getElementById('filter-platform')?.parentNode;
+  const tagsEl = document.getElementById('tags-dropdown');
+  const feedManagerEl = document.getElementById('feed-manager-dropdown');
+  
+  if (isMobile) {
+    if (drawerBody) {
+      if (collectionEl) {
+        collectionEl.setAttribute('data-label', 'Collections');
+        if (collectionEl.parentNode !== drawerBody) drawerBody.appendChild(collectionEl);
+      }
+      if (platformEl) {
+        platformEl.setAttribute('data-label', 'Platforms');
+        if (platformEl.parentNode !== drawerBody) drawerBody.appendChild(platformEl);
+      }
+      if (tagsEl) {
+        tagsEl.setAttribute('data-label', 'Tags');
+        if (tagsEl.parentNode !== drawerBody) drawerBody.appendChild(tagsEl);
+      }
+      if (feedManagerEl) {
+        feedManagerEl.setAttribute('data-label', 'Feed Actions');
+        if (feedManagerEl.parentNode !== drawerBody) drawerBody.appendChild(feedManagerEl);
+      }
+    }
+  } else {
+    // Put them back in the header in correct order
+    const syncBtnNow = document.getElementById('btn-sync-now');
+    if (headerRight && syncBtnNow) {
+      if (collectionEl && collectionEl.parentNode !== headerRight) {
+        headerRight.insertBefore(collectionEl, syncBtnNow);
+      }
+      if (platformEl && platformEl.parentNode !== headerRight) {
+        headerRight.insertBefore(platformEl, syncBtnNow);
+      }
+      if (tagsEl && tagsEl.parentNode !== headerRight) {
+        headerRight.insertBefore(tagsEl, syncBtnNow);
+      }
+      if (feedManagerEl && feedManagerEl.parentNode !== headerRight) {
+        headerRight.insertBefore(feedManagerEl, syncBtnNow);
+      }
+    }
+  }
 }

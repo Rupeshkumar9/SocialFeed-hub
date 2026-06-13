@@ -382,6 +382,10 @@ body {
   outline: none;
 }
 
+.dropdown-menu .btn-text {
+  display: inline !important;
+}
+
 .dropdown-menu.active {
   display: flex;
 }
@@ -1180,7 +1184,7 @@ body {
 
 @media (max-width: 768px) {
   .bookmarks-grid {
-    column-count: 3;
+    column-count: 2;
   }
   
   .btn-text {
@@ -1194,7 +1198,7 @@ body {
 
 @media (max-width: 550px) {
   .bookmarks-grid {
-    column-count: 3;
+    column-count: 2;
   }
   
   .main-header {
@@ -1207,24 +1211,24 @@ body {
 }
 
 @media (max-width: 600px) {
-  /* Shrink bookmark card internals to look gorgeous on 3-column mobile grid */
+  /* Shrink bookmark card internals to look gorgeous on 2-column mobile grid */
   .bookmarks-grid:not(.list-view) .bookmark-card {
-    border-radius: 10px;
-    margin-bottom: 10px;
+    border-radius: 12px;
+    margin-bottom: 12px;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .card-header {
-    padding: 6px 8px 4px 8px;
+    padding: 8px 10px 6px 10px;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .author-avatar {
-    width: 20px;
-    height: 20px;
-    font-size: 0.55rem;
+    width: 22px;
+    height: 22px;
+    font-size: 0.6rem;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .author-names {
     gap: 0;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .author-name {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .author-username {
@@ -1234,41 +1238,41 @@ body {
     display: none !important;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .card-platform-icon {
-    width: 18px;
-    height: 18px;
-    font-size: 0.6rem;
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .btn-card-menu {
-    width: 18px;
-    height: 18px;
-    font-size: 0.7rem;
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .card-body {
-    padding: 0 8px 6px 8px;
-    gap: 4px;
+    padding: 0 10px 8px 10px;
+    gap: 6px;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .post-content {
-    font-size: 0.75rem;
-    line-height: 1.35;
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .fallback-media {
-    height: 80px;
+    height: 110px;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .fallback-icon {
-    font-size: 1.1rem;
+    font-size: 1.3rem;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .fallback-title {
-    font-size: 0.65rem;
+    font-size: 0.72rem;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .fallback-subtitle {
     display: none;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .card-footer {
-    padding: 4px 8px 8px 8px;
+    padding: 6px 10px 10px 10px;
   }
   .bookmarks-grid:not(.list-view) .bookmark-card .card-tag {
-    font-size: 0.6rem;
-    padding: 2px 4px;
+    font-size: 0.65rem;
+    padding: 2px 5px;
   }
 }
 
@@ -1932,4 +1936,172 @@ body.visitor-mode .btn-card-menu,
 body.visitor-mode #btn-sync-now,
 body.visitor-mode #sync-btn {
   display: none !important;
+}
+
+/* Mobile Sidebar Drawer Styling */
+.mobile-menu-toggle {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  transition: var(--transition-smooth);
+}
+
+.mobile-menu-toggle:hover {
+  background-color: rgba(244, 63, 94, 0.05);
+  color: var(--accent-blue);
+}
+
+.mobile-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(45, 18, 28, 0.35);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-drawer-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: -290px;
+  width: 290px;
+  height: 100vh;
+  background-color: #ffffff;
+  border-right: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+  z-index: 1001;
+  transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-drawer-overlay.active .mobile-drawer {
+  left: 0;
+}
+
+.drawer-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.drawer-logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-logo i {
+  color: var(--accent-blue);
+}
+
+.drawer-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.drawer-header .close-btn:hover {
+  color: var(--accent-blue);
+}
+
+.drawer-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+/* Styles for filters when relocated inside Mobile Drawer */
+#mobile-drawer-body .filter-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#mobile-drawer-body .filter-group::before {
+  content: attr(data-label);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+#mobile-drawer-body .filter-select {
+  width: 100%;
+}
+
+#mobile-drawer-body .dropdown {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#mobile-drawer-body .dropdown::before {
+  content: attr(data-label);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+#mobile-drawer-body .dropdown-toggle {
+  width: 100%;
+  justify-content: space-between;
+}
+
+#mobile-drawer-body .dropdown-menu {
+  position: static !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+  background-color: rgba(244, 63, 94, 0.02) !important;
+  width: 100% !important;
+  max-height: 250px;
+  margin-top: 4px;
+  transform: none !important;
+}
+
+#mobile-drawer-body .dropdown-menu.active {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: inline-flex;
+  }
 }
