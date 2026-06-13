@@ -1363,11 +1363,26 @@ function initEventListeners() {
   DOM.tagsDropdownBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     DOM.tagsDropdownMenu.classList.toggle('active');
+    const feedManagerMenu = document.getElementById('feed-manager-dropdown-menu');
+    if (feedManagerMenu) feedManagerMenu.classList.remove('active');
   });
+
+  // Feed Manager dropdown click toggle
+  const feedManagerBtn = document.getElementById('feed-manager-dropdown-btn');
+  const feedManagerMenu = document.getElementById('feed-manager-dropdown-menu');
+  if (feedManagerBtn && feedManagerMenu) {
+    feedManagerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      feedManagerMenu.classList.toggle('active');
+      DOM.tagsDropdownMenu.classList.remove('active');
+    });
+  }
 
   // Global click to close active dropdowns
   document.addEventListener('click', () => {
     DOM.tagsDropdownMenu.classList.remove('active');
+    const feedManagerMenu = document.getElementById('feed-manager-dropdown-menu');
+    if (feedManagerMenu) feedManagerMenu.classList.remove('active');
     document.querySelectorAll('.card-menu-dropdown.active').forEach(el => {
       el.classList.remove('active');
     });

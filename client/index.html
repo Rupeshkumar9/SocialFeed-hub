@@ -19,31 +19,21 @@
     <main id="main-panel">
       <header class="main-header">
         <div class="header-left">
-          <div class="header-logo">
-            <div class="logo-icon">
-              <i class="fa-solid fa-feather-pointed"></i>
+          <a href="/" class="logo-link">
+            <div class="header-logo">
+              <div class="logo-icon">
+                <i class="fa-solid fa-feather-pointed"></i>
+              </div>
+              <div class="logo-text">
+                <h1>SocialFeed</h1>
+                <span>Bookmark Manager</span>
+              </div>
             </div>
-            <div class="logo-text">
-              <h1>SocialFeed</h1>
-              <span>Bookmark Manager</span>
-            </div>
-          </div>
+          </a>
         </div>
 
-        <div class="header-center">
-          <div class="search-bar-container">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="search-input" class="search-input" placeholder="Search author, content, tags, notes...">
-          </div>
-          
-          <div class="filter-group">
-            <select id="filter-platform" class="filter-select">
-              <option value="all">All Platforms</option>
-              <option value="x">X / Twitter</option>
-              <option value="instagram">Instagram</option>
-            </select>
-          </div>
-
+        <div class="header-right">
+          <!-- All collections -->
           <div class="filter-group">
             <select id="filter-collection" class="filter-select">
               <option value="all">All Collections</option>
@@ -52,6 +42,16 @@
             </select>
           </div>
 
+          <!-- All platforms -->
+          <div class="filter-group">
+            <select id="filter-platform" class="filter-select">
+              <option value="all">All Platforms</option>
+              <option value="x">X / Twitter</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </div>
+
+          <!-- tags -->
           <div class="dropdown" id="tags-dropdown">
             <button class="btn-secondary dropdown-toggle" id="tags-dropdown-btn">
               <i class="fa-solid fa-tags"></i> Tags <i class="fa-solid fa-chevron-down"></i>
@@ -62,45 +62,49 @@
             </div>
           </div>
 
-          <div class="layout-switcher">
-            <button class="btn-layout active" id="layout-grid-btn" title="Grid View">
-              <i class="fa-solid fa-grip"></i>
+          <!-- dropdown (Feed Manager) -->
+          <div class="dropdown" id="feed-manager-dropdown">
+            <button class="btn-secondary dropdown-toggle" id="feed-manager-dropdown-btn" title="Feed Management Options">
+              <i class="fa-solid fa-sliders"></i> Feed Manager <i class="fa-solid fa-chevron-down"></i>
             </button>
-            <button class="btn-layout" id="layout-list-btn" title="List View">
-              <i class="fa-solid fa-list"></i>
-            </button>
-            <button class="btn-layout" id="layout-compact-btn" title="Compact View">
-              <i class="fa-solid fa-bars"></i>
-            </button>
+            <div class="dropdown-menu dropdown-menu-right" id="feed-manager-dropdown-menu">
+              <button class="dropdown-item" id="btn-select-mode" title="Toggle Multi-Selection Mode">
+                <i class="fa-solid fa-square-check"></i> <span class="btn-text">Select Mode</span>
+              </button>
+              <button class="dropdown-item" id="btn-add-bookmark" title="Add Bookmark Manually">
+                <i class="fa-solid fa-plus"></i> <span class="btn-text">Add Link</span>
+              </button>
+              <button class="dropdown-item" id="action-import" title="Import Bookmarks Archive">
+                <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import</span>
+              </button>
+              <button class="dropdown-item" id="action-export-json" title="Download JSON Database">
+                <i class="fa-solid fa-download"></i> <span class="btn-text">Export JSON</span>
+              </button>
+              <button class="dropdown-item" id="action-export-md" title="Export as Markdown for Obsidian">
+                <i class="fa-solid fa-file-markdown"></i> <span class="btn-text">Export MD</span>
+              </button>
+              <button class="dropdown-item" id="btn-admin-login" title="Admin Login">
+                <i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>
+              </button>
+            </div>
           </div>
-        </div>
-        
-        <div class="header-right">
-          <button class="btn-secondary" id="btn-select-mode" title="Toggle Multi-Selection Mode">
-            <i class="fa-solid fa-square-check"></i> <span class="btn-text">Select Mode</span>
-          </button>
-          <button class="btn-secondary" id="btn-add-bookmark" title="Add Bookmark Manually">
-            <i class="fa-solid fa-plus"></i> <span class="btn-text">Add Link</span>
-          </button>
-          <button class="btn-secondary" id="action-import" title="Import Bookmarks Archive">
-            <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import</span>
-          </button>
-          <button class="btn-secondary" id="action-export-json" title="Download JSON Database">
-            <i class="fa-solid fa-download"></i> <span class="btn-text">Export JSON</span>
-          </button>
-          <button class="btn-secondary" id="action-export-md" title="Export as Markdown for Obsidian">
-            <i class="fa-solid fa-file-markdown"></i> <span class="btn-text">Export MD</span>
-          </button>
-          <button class="btn-secondary" id="btn-admin-login" title="Admin Login">
-            <i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>
-          </button>
+
+          <!-- sync -->
           <button class="btn-primary" id="btn-sync-now" title="Force sync from server">
             <i class="fa-solid fa-rotate"></i> <span class="btn-text">Sync</span>
           </button>
+
+          <!-- server synchronised -->
           <button id="sync-btn" class="sync-status-btn" title="Sync status">
             <span class="sync-dot" id="sync-dot"></span>
             <span id="sync-status-text" class="btn-text">Server Connected</span>
           </button>
+
+          <!-- search bar -->
+          <div class="search-bar-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="search-input" class="search-input" placeholder="Search author, content, tags, notes...">
+          </div>
         </div>
       </header>
 
@@ -112,9 +116,22 @@
             <p id="feed-subtitle">Showing all saved bookmark feeds</p>
           </div>
           
-          <button class="btn-secondary" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
-            <i class="fa-solid fa-chart-line"></i> <span class="btn-text">Analytics</span>
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="layout-switcher">
+              <button class="btn-layout active" id="layout-grid-btn" title="Grid View">
+                <i class="fa-solid fa-grip"></i>
+              </button>
+              <button class="btn-layout" id="layout-list-btn" title="List View">
+                <i class="fa-solid fa-list"></i>
+              </button>
+              <button class="btn-layout" id="layout-compact-btn" title="Compact View">
+                <i class="fa-solid fa-bars"></i>
+              </button>
+            </div>
+            <button class="btn-secondary" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
+              <i class="fa-solid fa-chart-line"></i> <span class="btn-text">Analytics</span>
+            </button>
+          </div>
         </div>
 
         <!-- Collapsible Stats Panel -->

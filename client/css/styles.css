@@ -274,6 +274,12 @@ body {
   flex-shrink: 0;
 }
 
+.logo-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
 .header-logo {
   display: flex;
   align-items: center;
@@ -301,8 +307,10 @@ body {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 12px;
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 /* Select Dropdown styling */
@@ -357,6 +365,23 @@ body {
   gap: 4px;
 }
 
+.dropdown-menu-right {
+  left: auto;
+  right: 0;
+}
+
+.dropdown-menu button.dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-main);
+  outline: none;
+}
+
 .dropdown-menu.active {
   display: flex;
 }
@@ -388,9 +413,10 @@ body {
   box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15);
 }
 
-.header-center .search-bar-container {
+.header-right .search-bar-container {
   flex: 1;
-  max-width: 320px;
+  min-width: 160px;
+  max-width: 280px;
   position: relative;
 }
 
@@ -1138,21 +1164,23 @@ body {
     gap: 12px;
   }
   
-  .header-center {
-    order: 3;
-    width: 100%;
-    max-width: none;
-    margin-top: 4px;
+  .header-right {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
   }
   
-  .header-center .search-bar-container {
+  .header-right .search-bar-container {
     max-width: none;
+    width: 100%;
+    order: 10;
+    margin-top: 4px;
   }
 }
 
 @media (max-width: 768px) {
   .bookmarks-grid {
-    column-count: 2;
+    column-count: 3;
   }
   
   .btn-text {
@@ -1166,7 +1194,7 @@ body {
 
 @media (max-width: 550px) {
   .bookmarks-grid {
-    column-count: 1;
+    column-count: 3;
   }
   
   .main-header {
@@ -1175,6 +1203,72 @@ body {
   
   .feed-content {
     padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Shrink bookmark card internals to look gorgeous on 3-column mobile grid */
+  .bookmarks-grid:not(.list-view) .bookmark-card {
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-header {
+    padding: 6px 8px 4px 8px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-avatar {
+    width: 20px;
+    height: 20px;
+    font-size: 0.55rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-names {
+    gap: 0;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-username {
+    display: none !important;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-folder-area {
+    display: none !important;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-platform-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 0.6rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .btn-card-menu {
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-body {
+    padding: 0 8px 6px 8px;
+    gap: 4px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .post-content {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-media {
+    height: 80px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-icon {
+    font-size: 1.1rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-title {
+    font-size: 0.65rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-subtitle {
+    display: none;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-footer {
+    padding: 4px 8px 8px 8px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-tag {
+    font-size: 0.6rem;
+    padding: 2px 4px;
   }
 }
 
@@ -1564,7 +1658,7 @@ body {
     grid-template-columns: 180px 1fr;
   }
   .bookmarks-grid.compact-view {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
   }
   .stats-grid {
     grid-template-columns: 1fr;
@@ -1574,7 +1668,7 @@ body {
 
 @media (max-width: 650px) {
   .bookmarks-grid.compact-view {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(3, 1fr) !important;
   }
 }
 
