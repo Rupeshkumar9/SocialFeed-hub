@@ -15,6 +15,7 @@ const AppState = {
   activeTag: 'all',
   activeCollection: 'all',
   activeLayout: 'grid',
+  activeSort: 'date-desc',
   searchQuery: '',
   activeBookmark: null,
   isServerConnected: false,
@@ -32,6 +33,7 @@ const DOM = {
   feedTitle: document.getElementById('feed-title'),
   feedSubtitle: document.getElementById('feed-subtitle'),
   filterPlatform: document.getElementById('filter-platform'),
+  filterSort: document.getElementById('filter-sort'),
   tagsDropdownBtn: document.getElementById('tags-dropdown-btn'),
   tagsDropdownMenu: document.getElementById('tags-dropdown-menu'),
   
@@ -102,7 +104,7 @@ function checkServerConnection() {
     .then(data => {
       if (data && data.status === 'ok') {
         AppState.isServerConnected = true;
-        updateSyncStatusUI(true, 'Connected to Server');
+        updateSyncStatusUI(true);
         
         if (data.isAdmin) {
           AppState.isAdmin = true;
@@ -121,7 +123,7 @@ function checkServerConnection() {
         AppState.isAdmin = true;
         document.body.classList.remove('visitor-mode');
         updateAdminLoginUI(true);
-        updateSyncStatusUI(false, 'Offline (Click to Save)');
+        updateSyncStatusUI(false);
       }
     })
     .catch(() => {
@@ -129,23 +131,25 @@ function checkServerConnection() {
       AppState.isAdmin = true;
       document.body.classList.remove('visitor-mode');
       updateAdminLoginUI(true);
-      updateSyncStatusUI(false, 'Offline (Click to Save)');
+      updateSyncStatusUI(false);
     });
 }
 
 /**
  * Update UI Sync Button indicator state
  */
-function updateSyncStatusUI(connected, message) {
+function updateSyncStatusUI(connected) {
   if (connected) {
     DOM.syncDot.className = 'sync-dot';
-    DOM.syncStatusText.textContent = message;
-    DOM.syncBtn.title = "Local server is running. Changes will save automatically!";
+    DOM.syncStatusText.textContent = 'Server Connected';
+    DOM.syncBtn.title = 'connected';
+    DOM.syncDot.title = 'connected';
     DOM.syncBtn.classList.remove('saving');
   } else {
     DOM.syncDot.className = 'sync-dot offline';
-    DOM.syncStatusText.textContent = message;
-    DOM.syncBtn.title = "No local server running. Clicking this button will download your updated bookmarks.json file.";
+    DOM.syncStatusText.textContent = 'Connecting to Server';
+    DOM.syncBtn.title = 'connecting to server';
+    DOM.syncDot.title = 'connecting to server';
   }
 }
 
@@ -344,9 +348,30 @@ function applyFiltersAndSearch() {
     return true;
   });
 
-  // Sort bookmarks by timestamp (newest first)
+  // Sort bookmarks by active criteria
   AppState.filteredBookmarks.sort((a, b) => {
-    return new Date(b.timestamp) - new Date(a.timestamp);
+    if (AppState.activeSort === 'date-desc') {
+      let dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+      let dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
+      if (isNaN(dateA.getTime())) dateA = new Date(0);
+      if (isNaN(dateB.getTime())) dateB = new Date(0);
+      return dateB - dateA;
+    } else if (AppState.activeSort === 'date-asc') {
+      let dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+      let dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
+      if (isNaN(dateA.getTime())) dateA = new Date(0);
+      if (isNaN(dateB.getTime())) dateB = new Date(0);
+      return dateA - dateB;
+    } else if (AppState.activeSort === 'author-asc') {
+      const nameA = (a.authorName || '').toLowerCase();
+      const nameB = (b.authorName || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    } else if (AppState.activeSort === 'author-desc') {
+      const nameA = (a.authorName || '').toLowerCase();
+      const nameB = (b.authorName || '').toLowerCase();
+      return nameB.localeCompare(nameA);
+    }
+    return 0;
   });
 
   // Reset pagination on any filter/search change
@@ -369,6 +394,8 @@ function updateFeedHeaders() {
   let title = 'All Bookmarks';
   if (AppState.activePlatform === 'x') title = 'X / Twitter';
   if (AppState.activePlatform === 'instagram') title = 'Instagram';
+  if (AppState.activePlatform === 'threads') title = 'Threads';
+  if (AppState.activePlatform === 'facebook') title = 'Facebook';
   
   if (AppState.activeCollection && AppState.activeCollection !== 'all') {
     title += ` in ${AppState.activeCollection === '__uncategorized__' || AppState.activeCollection === 'uncategorized' ? 'Uncategorized' : AppState.activeCollection}`;
@@ -485,6 +512,42 @@ function buildCardElement(bm) {
         </div>
       `;
     }
+  } else if (bm.platform === 'threads') {
+    if (bm.thumbnail) {
+      mediaMarkup = `
+        <div class="card-media">
+          <img src="${bm.thumbnail}" alt="Threads Post" loading="lazy" onerror="handleImageError(this, '${bm.id}', 'threads')">
+        </div>
+      `;
+    } else {
+      mediaMarkup = `
+        <div class="card-media fallback-media" style="background: linear-gradient(135deg, #262626 0%, #000000 100%); border-color: rgba(255,255,255,0.05);">
+          <div class="fallback-gradient" style="color: #f8fafc;">
+            <i class="fa-brands fa-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
+            <span class="fallback-title" style="color: #f8fafc;">Threads Post</span>
+            <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
+          </div>
+        </div>
+      `;
+    }
+  } else if (bm.platform === 'facebook') {
+    if (bm.thumbnail) {
+      mediaMarkup = `
+        <div class="card-media">
+          <img src="${bm.thumbnail}" alt="Facebook Post" loading="lazy" onerror="handleImageError(this, '${bm.id}', 'facebook')">
+        </div>
+      `;
+    } else {
+      mediaMarkup = `
+        <div class="card-media fallback-media" style="background: linear-gradient(135deg, #e7f3ff 0%, #cbd5e1 100%);">
+          <div class="fallback-gradient" style="color: var(--platform-fb);">
+            <i class="fa-brands fa-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
+            <span class="fallback-title" style="color: var(--text-primary);">Facebook Post</span>
+            <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
+          </div>
+        </div>
+      `;
+    }
   }
 
   const checkboxMarkup = `
@@ -517,7 +580,13 @@ function buildCardElement(bm) {
         </div>
 
         <div class="card-platform-icon" title="Original Platform: ${bm.platform.toUpperCase()}">
-          <i class="${bm.platform === 'x' ? 'fa-brands fa-x-twitter' : 'fa-brands fa-instagram'}"></i>
+          <i class="${(() => {
+            if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
+            if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
+            if (bm.platform === 'threads') return 'fa-brands fa-threads';
+            if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
+            return 'fa-solid fa-circle-nodes';
+          })()}"></i>
         </div>
       </div>
     </div>
@@ -842,15 +911,23 @@ function updateStatsAnalytics() {
   // Platform Splits
   const xCount = dataList.filter(bm => bm.platform === 'x').length;
   const igCount = dataList.filter(bm => bm.platform === 'instagram').length;
+  const threadsCount = dataList.filter(bm => bm.platform === 'threads').length;
+  const fbCount = dataList.filter(bm => bm.platform === 'facebook').length;
   
   const xPct = total > 0 ? (xCount / total) * 100 : 0;
   const igPct = total > 0 ? (igCount / total) * 100 : 0;
+  const threadsPct = total > 0 ? (threadsCount / total) * 100 : 0;
+  const fbPct = total > 0 ? (fbCount / total) * 100 : 0;
   
   document.getElementById('stat-x-count').textContent = `${xCount} (${Math.round(xPct)}%)`;
   document.getElementById('stat-ig-count').textContent = `${igCount} (${Math.round(igPct)}%)`;
+  document.getElementById('stat-threads-count').textContent = `${threadsCount} (${Math.round(threadsPct)}%)`;
+  document.getElementById('stat-fb-count').textContent = `${fbCount} (${Math.round(fbPct)}%)`;
   
   document.getElementById('stat-x-bar').style.width = `${xPct}%`;
   document.getElementById('stat-ig-bar').style.width = `${igPct}%`;
+  document.getElementById('stat-threads-bar').style.width = `${threadsPct}%`;
+  document.getElementById('stat-fb-bar').style.width = `${fbPct}%`;
   
   // Collections Stats
   const collectionCounts = {};
@@ -983,12 +1060,12 @@ function saveDataToServer() {
       })
       .then(data => {
         showToast("Synchronized successfully with Server disk!", "success");
-        updateSyncStatusUI(true, 'Server Synchronized');
+        updateSyncStatusUI(true);
       })
       .catch(err => {
         console.error("Save failure:", err);
         showToast("Server sync failed. Data is cached in memory.", "error");
-        updateSyncStatusUI(false, 'Sync Failed (Click Save)');
+        updateSyncStatusUI(false);
       });
   } else {
     // If not connected to local sync server, notify user they are in offline mode
@@ -1068,13 +1145,22 @@ function handleManualBookmarkSubmit(e) {
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
   const tagListInput = DOM.addTags.value.trim();
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post'];
+  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'facebook'];
+
+  const addPlatformSelect = document.getElementById('add-platform');
+  const platform = addPlatformSelect ? addPlatformSelect.value : '';
+
+  if (!platform) {
+    showToast("Please select a platform.", "error");
+    return;
+  }
 
   if (AppState.editingId) {
     const idx = AppState.bookmarks.findIndex(bm => bm.id === AppState.editingId);
     if (idx !== -1) {
       const bm = AppState.bookmarks[idx];
-      bm.authorName = authorName || (bm.platform === 'x' ? 'X User' : 'Instagram Creator');
+      bm.platform = platform;
+      bm.authorName = authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : 'Facebook User');
       bm.authorUsername = authorName ? authorName.toLowerCase().replace(/\s+/g, '') : bm.authorUsername;
       bm.content = content || bm.content;
       
@@ -1102,30 +1188,28 @@ function handleManualBookmarkSubmit(e) {
   }
 
   const url = DOM.addUrl.value.trim();
-  
-  // Auto detect platform
-  const lowerUrl = url.toLowerCase();
-  let platform = '';
-  if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) platform = 'x';
-  else if (lowerUrl.includes('instagram.com')) platform = 'instagram';
-  
-  if (!platform) {
-    showToast("Invalid URL. Must be an X (Twitter) or Instagram post URL.", "error");
-    return;
-  }
 
   // Parse tags
   const tags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
   if (!tags.includes('manual')) tags.push('manual');
+  if (!tags.includes(platform)) tags.push(platform);
 
   // Extract unique code or ID for deduplication keys
   let id = '';
   if (platform === 'x') {
     const match = url.match(/\/status\/(\d+)/i);
     id = `x_${match ? match[1] : Date.now()}`;
-  } else {
+  } else if (platform === 'instagram') {
     const code = BookmarksImporter.extractInstagramCode(url);
     id = `ig_${code || Date.now()}`;
+  } else if (platform === 'threads') {
+    const match = url.match(/\/post\/([A-Za-z0-9_-]+)/i);
+    id = `threads_${match ? match[1] : Date.now()}`;
+  } else if (platform === 'facebook') {
+    const match = url.match(/\/posts\/([A-Za-z0-9_-]+)/i) || url.match(/story_fbid=([0-9]+)/i);
+    id = `fb_${match ? match[1] : Date.now()}`;
+  } else {
+    id = `${platform}_${Date.now()}`;
   }
 
   // Create new bookmark record
@@ -1133,7 +1217,7 @@ function handleManualBookmarkSubmit(e) {
     id: id,
     platform: platform,
     url: url,
-    authorName: authorName || (platform === 'x' ? 'X User' : 'Instagram Creator'),
+    authorName: authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : 'Facebook User'),
     authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : 'username',
     content: content || `Saved ${platform.toUpperCase()} Post (click to load embed)`,
     timestamp: new Date().toISOString(),
@@ -1183,10 +1267,15 @@ function openEditBookmarkModal(bm) {
   DOM.addUrl.value = bm.url;
   DOM.addUrl.readOnly = true;
   
+  const addPlatformSelect = document.getElementById('add-platform');
+  if (addPlatformSelect) {
+    addPlatformSelect.value = bm.platform;
+  }
+
   DOM.addAuthorName.value = bm.authorName || '';
   DOM.addContent.value = bm.content || '';
   
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post'];
+  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'facebook'];
   const userTags = bm.tags ? bm.tags.filter(t => !SYSTEM_TAGS.includes(t.toLowerCase())) : [];
   DOM.addTags.value = userTags.join(', ');
   
@@ -1350,6 +1439,14 @@ function initEventListeners() {
   DOM.filterPlatform.addEventListener('change', (e) => {
     filterByPlatform(e.target.value);
   });
+
+  // Sort select in navbar change
+  if (DOM.filterSort) {
+    DOM.filterSort.addEventListener('change', (e) => {
+      AppState.activeSort = e.target.value;
+      applyFiltersAndSearch();
+    });
+  }
 
   // Collection select in navbar change
   const filterCollection = document.getElementById('filter-collection');
@@ -1673,6 +1770,25 @@ function handleImageError(img, id, platform) {
         <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
       </div>
     `;
+  } else if (platform === 'threads') {
+    container.style.background = 'linear-gradient(135deg, #262626 0%, #000000 100%)';
+    container.style.borderColor = 'rgba(255,255,255,0.05)';
+    container.innerHTML = `
+      <div class="fallback-gradient" style="color: #f8fafc;">
+        <i class="fa-brands fa-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
+        <span class="fallback-title" style="color: #f8fafc;">Threads Post</span>
+        <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
+      </div>
+    `;
+  } else if (platform === 'facebook') {
+    container.style.background = 'linear-gradient(135deg, #e7f3ff 0%, #cbd5e1 100%)';
+    container.innerHTML = `
+      <div class="fallback-gradient" style="color: var(--platform-fb);">
+        <i class="fa-brands fa-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
+        <span class="fallback-title" style="color: var(--text-primary);">Facebook Post</span>
+        <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
+      </div>
+    `;
   } else {
     if (id) {
       container.style.background = getInstagramFallbackGradient(id);
@@ -1755,6 +1871,7 @@ function checkMobileDrawerLayout() {
   
   const collectionEl = document.querySelector('.filter-group:has(#filter-collection)') || document.getElementById('filter-collection')?.parentNode;
   const platformEl = document.querySelector('.filter-group:has(#filter-platform)') || document.getElementById('filter-platform')?.parentNode;
+  const sortEl = document.querySelector('.filter-group:has(#filter-sort)') || document.getElementById('filter-sort')?.parentNode;
   const tagsEl = document.getElementById('tags-dropdown');
   const feedManagerEl = document.getElementById('feed-manager-dropdown');
   
@@ -1767,6 +1884,10 @@ function checkMobileDrawerLayout() {
       if (platformEl) {
         platformEl.setAttribute('data-label', 'Platforms');
         if (platformEl.parentNode !== drawerBody) drawerBody.appendChild(platformEl);
+      }
+      if (sortEl) {
+        sortEl.setAttribute('data-label', 'Sort Order');
+        if (sortEl.parentNode !== drawerBody) drawerBody.appendChild(sortEl);
       }
       if (tagsEl) {
         tagsEl.setAttribute('data-label', 'Tags');
@@ -1786,6 +1907,9 @@ function checkMobileDrawerLayout() {
       }
       if (platformEl && platformEl.parentNode !== headerRight) {
         headerRight.insertBefore(platformEl, syncBtnNow);
+      }
+      if (sortEl && sortEl.parentNode !== headerRight) {
+        headerRight.insertBefore(sortEl, syncBtnNow);
       }
       if (tagsEl && tagsEl.parentNode !== headerRight) {
         headerRight.insertBefore(tagsEl, syncBtnNow);

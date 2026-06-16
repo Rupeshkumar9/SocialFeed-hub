@@ -80,17 +80,29 @@ module.exports = async (req, res) => {
 
     for (const item of scrapedItems) {
       const normUrl = normalizeUrl(item.url);
-      const shortcodeMatch = item.url.match(/\/p\/([a-zA-Z0-9_\-]+)/i) || item.url.match(/\/reel\/([a-zA-Z0-9_\-]+)/i);
-      const shortcode = shortcodeMatch ? shortcodeMatch[1] : `scraped_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      const bookmarkId = `ig_${shortcode}`;
+      const itemPlatform = item.platform || (item.url.includes('instagram.com') ? 'instagram' : 'x');
+      
+      let bookmarkId = item.id;
+      if (!bookmarkId) {
+        if (itemPlatform === 'instagram') {
+          const shortcodeMatch = item.url.match(/\/p\/([a-zA-Z0-9_\-]+)/i) || item.url.match(/\/reel\/([a-zA-Z0-9_\-]+)/i);
+          const shortcode = shortcodeMatch ? shortcodeMatch[1] : `scraped_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+          bookmarkId = `ig_${shortcode}`;
+        } else {
+          const tweetIdMatch = item.url.match(/\/status\/(\d+)/i);
+          const tweetId = tweetIdMatch ? tweetIdMatch[1] : `scraped_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+          bookmarkId = `x_${tweetId}`;
+        }
+      }
 
-      // Upload remote image to Cloudinary if configured
+      // Handle thumbnail: use item.thumbnail (supports Base64 data URI) or fallback to item.imageUrl
+      let imageSource = item.thumbnail || item.imageUrl;
       let thumbnailUrl = '';
-      if (item.imageUrl) {
+      if (imageSource) {
         if (cloudinaryConfigured) {
           try {
-            console.log(`Uploading scraped remote image to Cloudinary: ${item.imageUrl}`);
-            const uploadRes = await cloudinary.uploader.upload(item.imageUrl, {
+            console.log(`Uploading scraped image to Cloudinary for post: ${bookmarkId}`);
+            const uploadRes = await cloudinary.uploader.upload(imageSource, {
               folder: 'bookmarks_feed',
               public_id: bookmarkId,
               overwrite: true,
@@ -99,25 +111,40 @@ module.exports = async (req, res) => {
             thumbnailUrl = uploadRes.secure_url;
             imageUploadedCount++;
           } catch (err) {
-            console.error(`Failed to upload remote image to Cloudinary for ${shortcode}:`, err.message);
-            // Fallback to original remote image CDN
-            thumbnailUrl = item.imageUrl;
+            console.error(`Failed to upload scraped image to Cloudinary for ${bookmarkId}:`, err.message);
+            // Fallback to original image URL/Base64
+            thumbnailUrl = imageSource;
           }
         } else {
-          // If Cloudinary isn't configured, fall back to keeping original CDN URL
-          thumbnailUrl = item.imageUrl;
+          // If Cloudinary isn't configured, fall back to keeping original image URL/Base64
+          thumbnailUrl = imageSource;
         }
       }
 
-      // Parse tags
-      const cleanCaption = (item.content || '').trim();
-      const hashtagRegex = /#(\w+)/g;
+      // Parse tags (default to standard tags and whatever comes in the item or content hashtags)
       const tags = ['imported'];
-      let tagMatch;
-      while ((tagMatch = hashtagRegex.exec(cleanCaption)) !== null) {
-        const tag = tagMatch[1].toLowerCase();
-        if (!tags.includes(tag)) {
-          tags.push(tag);
+      if (itemPlatform === 'instagram') {
+        tags.push('instagram');
+      } else {
+        tags.push('x-post');
+      }
+
+      if (Array.isArray(item.tags)) {
+        item.tags.forEach(t => {
+          const cleanT = t.toLowerCase().trim();
+          if (cleanT && !tags.includes(cleanT)) {
+            tags.push(cleanT);
+          }
+        });
+      } else {
+        const cleanCaption = (item.content || '').trim();
+        const hashtagRegex = /#(\w+)/g;
+        let tagMatch;
+        while ((tagMatch = hashtagRegex.exec(cleanCaption)) !== null) {
+          const tag = tagMatch[1].toLowerCase();
+          if (!tags.includes(tag)) {
+            tags.push(tag);
+          }
         }
       }
 
@@ -127,14 +154,14 @@ module.exports = async (req, res) => {
         // Add new bookmark
         const newBm = {
           id: bookmarkId,
-          platform: 'instagram',
+          platform: itemPlatform,
           url: item.url,
-          authorName: item.authorName || 'Instagram Creator',
-          authorUsername: item.authorUsername || 'instagram_user',
-          content: cleanCaption || 'Saved Instagram Post',
-          timestamp: new Date().toISOString(),
+          authorName: item.authorName || (itemPlatform === 'instagram' ? 'Instagram Creator' : 'X User'),
+          authorUsername: item.authorUsername || (itemPlatform === 'instagram' ? 'instagram_user' : 'twitter_user'),
+          content: item.content || (itemPlatform === 'instagram' ? 'Saved Instagram Post' : 'Bookmarked X post'),
+          timestamp: item.timestamp || new Date().toISOString(),
           tags: tags,
-          notes: '',
+          notes: item.notes || '',
           thumbnail: thumbnailUrl
         };
         bookmarks.unshift(newBm);
@@ -147,7 +174,7 @@ module.exports = async (req, res) => {
           const existing = bookmarks[idx];
           existing.authorName = item.authorName || existing.authorName;
           existing.authorUsername = item.authorUsername || existing.authorUsername;
-          existing.content = cleanCaption || existing.content;
+          existing.content = item.content || existing.content;
           if (thumbnailUrl) {
             existing.thumbnail = thumbnailUrl;
           }

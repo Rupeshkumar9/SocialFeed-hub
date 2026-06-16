@@ -3,14 +3,69 @@ document.addEventListener('DOMContentLoaded', async () => {
   const postCountEl = document.getElementById('post-count');
   const btnScan = document.getElementById('btn-scan');
   const btnDownload = document.getElementById('btn-download');
+  const btnSync = document.getElementById('btn-sync');
   const errorBox = document.getElementById('error-box');
+  const successBox = document.getElementById('success-box');
+
+  const btnSettingsToggle = document.getElementById('btn-settings-toggle');
+  const settingsPanel = document.getElementById('settings-panel');
+  const inputApiUrl = document.getElementById('input-api-url');
+  const inputAdminPassword = document.getElementById('input-admin-password');
+  const btnSaveSettings = document.getElementById('btn-save-settings');
 
   let activeTab = null;
   let detectedPlatform = null;
   let scrapedData = null;
   let isScanning = false;
 
-  // 1. Detect if we are on Instagram or X
+  // 1. Storage Helpers
+  function getSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['apiUrl', 'adminPassword'], (res) => {
+        resolve({
+          apiUrl: res.apiUrl || 'http://localhost:3000',
+          adminPassword: res.adminPassword || ''
+        });
+      });
+    });
+  }
+
+  function saveSettings(apiUrl, adminPassword) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ apiUrl, adminPassword }, () => {
+        resolve();
+      });
+    });
+  }
+
+  // 2. Initialize Settings
+  try {
+    const settings = await getSettings();
+    inputApiUrl.value = settings.apiUrl;
+    inputAdminPassword.value = settings.adminPassword;
+  } catch (err) {
+    console.error('Error loading settings:', err);
+  }
+
+  // 3. Toggle Settings Panel
+  btnSettingsToggle.addEventListener('click', () => {
+    settingsPanel.classList.toggle('active');
+  });
+
+  // 4. Save Settings Button
+  btnSaveSettings.addEventListener('click', async () => {
+    const urlVal = inputApiUrl.value.trim() || 'http://localhost:3000';
+    const passVal = inputAdminPassword.value.trim();
+    
+    await saveSettings(urlVal, passVal);
+    showSuccess('Settings saved!');
+    setTimeout(() => {
+      successBox.style.display = 'none';
+      settingsPanel.classList.remove('active');
+    }, 1000);
+  });
+
+  // 5. Detect if we are on Instagram or X
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tabs || tabs.length === 0) {
@@ -37,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showError('Error initializing extension popup.');
   }
 
-  // 2. Listen for scroll progress messages from content.js
+  // 6. Listen for scroll progress messages from content.js
   chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     if (message.action === "scan_progress") {
       postCountEl.textContent = `${message.count} detected`;
@@ -54,7 +109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Start processing collected items (Base64 conversion)
       btnScan.disabled = true;
-      btnScan.classList.remove('btn-danger');
       btnScan.style.background = '#ccc';
       
       scrapedData = [];
@@ -90,12 +144,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       btnScan.style.display = 'none';
+      btnSync.style.display = 'block';
       btnDownload.style.display = 'block';
       postCountEl.textContent = `${scrapedData.length} posts ready`;
     }
   });
 
-  // 3. Scan button click handler (Toggles between start scan & stop scan)
+  // 7. Scan button click handler (Toggles between start scan & stop scan)
   btnScan.addEventListener('click', () => {
     if (isScanning) {
       // Trigger stop scan inside content script
@@ -112,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response && response.status === "started") {
           isScanning = true;
           errorBox.style.display = 'none';
+          successBox.style.display = 'none';
           btnScan.textContent = 'Stop & Export (0)';
           btnScan.style.background = '#d90429'; // Red warning button for stop
           postCountEl.textContent = '0 detected';
@@ -120,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 4. Download button click handler
+  // 8. Download button click handler
   btnDownload.addEventListener('click', () => {
     if (!scrapedData || scrapedData.length === 0) return;
 
@@ -137,6 +193,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, () => {
       URL.revokeObjectURL(url);
     });
+  });
+
+  // 9. Sync button click handler (Save to database)
+  btnSync.addEventListener('click', async () => {
+    if (!scrapedData || scrapedData.length === 0) return;
+
+    errorBox.style.display = 'none';
+    successBox.style.display = 'none';
+
+    const currentSettings = await getSettings();
+    if (!currentSettings.adminPassword) {
+      showError('Admin Password is required to sync. Click ⚙️ to configure.');
+      settingsPanel.classList.add('active');
+      return;
+    }
+
+    btnSync.disabled = true;
+    btnSync.textContent = 'Saving to database...';
+    btnDownload.disabled = true;
+
+    try {
+      const response = await fetch(`${currentSettings.apiUrl}/api/import-scraped`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSettings.adminPassword}`
+        },
+        body: JSON.stringify(scrapedData)
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(resData.error || `HTTP error! Status: ${response.status}`);
+      }
+
+      showSuccess(`Successfully synced! Added: ${resData.added || 0}, Updated: ${resData.updated || 0}`);
+      btnSync.textContent = 'Synced!';
+      btnDownload.disabled = false;
+    } catch (err) {
+      console.error('Database sync failed:', err);
+      showError(`Sync failed: ${err.message}`);
+      btnSync.disabled = false;
+      btnSync.textContent = 'Save to Social Feed';
+      btnDownload.disabled = false;
+    }
   });
 
   // Helper to fetch image and encode in base64
@@ -168,8 +270,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showError(msg) {
+    successBox.style.display = 'none';
     errorBox.textContent = msg;
     errorBox.style.display = 'block';
+  }
+
+  function showSuccess(msg) {
+    errorBox.style.display = 'none';
+    successBox.textContent = msg;
+    successBox.style.display = 'block';
   }
 
   function resetScanButton() {

@@ -22,6 +22,10 @@
   --platform-x-bg: #f3f4f6;
   --platform-ig: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
   --platform-ig-solid: #dc2743;
+  --platform-threads: #000000;
+  --platform-threads-bg: #f3f4f6;
+  --platform-fb: #1877f2;
+  --platform-fb-bg: #e7f3ff;
   
   --shadow-sm: 0 4px 16px rgba(244, 63, 94, 0.03);
   --shadow-md: 0 12px 36px rgba(244, 63, 94, 0.07);
@@ -240,8 +244,8 @@ body {
 }
 
 .sync-dot.offline {
-  background-color: var(--text-muted);
-  box-shadow: none;
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
 }
 
 /* Main Content Panel */
@@ -646,6 +650,18 @@ body {
   color: #fff;
 }
 
+.bookmark-card.threads-post .card-platform-icon {
+  background-color: var(--platform-threads-bg);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--platform-threads);
+}
+
+.bookmark-card.facebook-post .card-platform-icon {
+  background-color: var(--platform-fb-bg);
+  border: 1px solid rgba(24, 119, 242, 0.1);
+  color: var(--platform-fb);
+}
+
 .card-body {
   padding: 0 14px 10px 14px;
   flex: 1;
@@ -809,6 +825,16 @@ body {
 .bookmark-card.ig-post .card-notes-preview {
   background-color: rgba(220, 39, 67, 0.03);
   border-left-color: var(--platform-ig-solid);
+}
+
+.bookmark-card.threads-post .card-notes-preview {
+  background-color: rgba(0, 0, 0, 0.03);
+  border-left-color: var(--platform-threads);
+}
+
+.bookmark-card.facebook-post .card-notes-preview {
+  background-color: rgba(24, 119, 242, 0.03);
+  border-left-color: var(--platform-fb);
 }
 
 .card-footer {
@@ -1918,6 +1944,14 @@ body {
 
 .bookmark-card.ig-post .card-notes-display {
   border-left-color: var(--platform-ig-solid);
+}
+
+.bookmark-card.threads-post .card-notes-display {
+  border-left-color: var(--platform-threads);
+}
+
+.bookmark-card.facebook-post .card-notes-display {
+  border-left-color: var(--platform-fb);
 }
 
 body.visitor-mode .card-notes-edit {

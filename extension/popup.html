@@ -23,10 +23,36 @@
     .header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
       margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 1px solid var(--border-color);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-settings-toggle {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      width: 28px;
+      height: 28px;
+      outline: none;
+    }
+    .btn-settings-toggle:hover {
+      background: rgba(255, 117, 143, 0.1);
+      color: var(--accent-color);
+      transform: rotate(30deg);
     }
     .logo-icon {
       background: var(--accent-color);
@@ -49,6 +75,62 @@
     .title-area span {
       font-size: 11px;
       color: var(--text-muted);
+    }
+    .settings-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px rgba(255, 117, 143, 0.04);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .settings-panel.active {
+      display: flex;
+    }
+    .settings-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #590d22;
+      margin: 0 0 4px 0;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-group input {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 117, 143, 0.2);
+      font-size: 12px;
+      outline: none;
+      color: var(--text-color);
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: var(--accent-color);
+    }
+    .btn-save-settings {
+      background: var(--accent-color);
+      color: white;
+      padding: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      margin-top: 4px;
+    }
+    .btn-save-settings:hover {
+      background: var(--accent-hover);
     }
     .status-card {
       background: var(--card-bg);
@@ -107,6 +189,19 @@
     .btn-secondary:hover {
       background: rgba(255, 117, 143, 0.08);
     }
+    .btn-sync {
+      background: linear-gradient(135deg, #7209b7, #3f37c9);
+      color: white;
+    }
+    .btn-sync:hover {
+      background: linear-gradient(135deg, #560bad, #3f37c9);
+      box-shadow: 0 4px 10px rgba(63, 55, 201, 0.3);
+    }
+    .btn-sync:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
     .footer {
       font-size: 10px;
       text-align: center;
@@ -120,15 +215,40 @@
       display: none;
       text-align: center;
     }
+    .success-msg {
+      color: #2b9348;
+      font-size: 11px;
+      margin-top: 8px;
+      display: none;
+      text-align: center;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo-icon">🌸</div>
-    <div class="title-area">
-      <h1>SocialFeed Exporter</h1>
-      <span>Instagram & X Bookmarks Sync</span>
+    <div class="header-left">
+      <div class="logo-icon">🌸</div>
+      <div class="title-area">
+        <h1>SocialFeed Exporter</h1>
+        <span>Instagram & X Bookmarks Sync</span>
+      </div>
     </div>
+    <button class="btn-settings-toggle" id="btn-settings-toggle" title="Connection Settings">⚙️</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settings-panel">
+    <h3 class="settings-title">Connection Settings</h3>
+    <div class="form-group">
+      <label for="input-api-url">API Server URL</label>
+      <input type="text" id="input-api-url" placeholder="http://localhost:3000">
+    </div>
+    <div class="form-group">
+      <label for="input-admin-password">Admin Password</label>
+      <input type="password" id="input-admin-password" placeholder="Enter password/token">
+    </div>
+    <button class="btn-save-settings" id="btn-save-settings">Save Settings</button>
   </div>
 
   <div class="status-card">
@@ -144,10 +264,12 @@
 
   <div class="actions">
     <button class="btn-primary" id="btn-scan" disabled>Scan Page Bookmarks</button>
+    <button class="btn-sync" id="btn-sync" style="display: none;">Save to Social Feed</button>
     <button class="btn-secondary" id="btn-download" style="display: none;">Download JSON Package</button>
   </div>
 
   <div class="error-msg" id="error-box"></div>
+  <div class="success-msg" id="success-box"></div>
 
   <div class="footer">
     Make sure you are on X Bookmarks or Instagram Saved page.

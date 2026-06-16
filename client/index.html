@@ -51,6 +51,18 @@
               <option value="all">All Platforms</option>
               <option value="x">X / Twitter</option>
               <option value="instagram">Instagram</option>
+              <option value="threads">Threads</option>
+              <option value="facebook">Facebook</option>
+            </select>
+          </div>
+
+          <!-- Sort Bookmarks -->
+          <div class="filter-group">
+            <select id="filter-sort" class="filter-select" title="Sort Order">
+              <option value="date-desc">Newest First</option>
+              <option value="date-asc">Oldest First</option>
+              <option value="author-asc">Author A-Z</option>
+              <option value="author-desc">Author Z-A</option>
             </select>
           </div>
 
@@ -161,6 +173,24 @@
                   <div class="metric-bar ig-bar" id="stat-ig-bar" style="width: 0%;"></div>
                 </div>
               </div>
+              <div class="stats-metric-row">
+                <div class="metric-info">
+                  <span>Threads</span>
+                  <span id="stat-threads-count">0</span>
+                </div>
+                <div class="metric-bar-container">
+                  <div class="metric-bar threads-bar" id="stat-threads-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+              <div class="stats-metric-row">
+                <div class="metric-info">
+                  <span>Facebook</span>
+                  <span id="stat-fb-count">0</span>
+                </div>
+                <div class="metric-bar-container">
+                  <div class="metric-bar fb-bar" id="stat-fb-bar" style="width: 0%;"></div>
+                </div>
+              </div>
             </div>
 
             <!-- Top collections -->
@@ -228,6 +258,17 @@
         </div>
         <div class="modal-body">
           <form id="add-bookmark-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="add-platform" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Select Platform</label>
+              <select id="add-platform" class="filter-select" style="padding-left: 14px; width: 100%; height: 42px;" required>
+                <option value="" disabled selected>Choose a platform</option>
+                <option value="x">X / Twitter</option>
+                <option value="instagram">Instagram</option>
+                <option value="threads">Threads</option>
+                <option value="facebook">Facebook</option>
+              </select>
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 6px;">
               <label for="add-url" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Post URL</label>
               <input type="url" id="add-url" class="search-input" style="padding-left: 14px;" placeholder="https://twitter.com/... or https://instagram.com/p/..." required>

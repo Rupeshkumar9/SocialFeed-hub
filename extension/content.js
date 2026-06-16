@@ -192,8 +192,7 @@
         const textDiv = el.querySelector('[data-testid="tweetText"]');
         const content = textDiv ? textDiv.textContent.trim() : 'Bookmarked X post';
 
-        const timeEl = el.querySelector('time');
-        const timestamp = timeEl ? timeEl.getAttribute('datetime') : new Date().toISOString();
+        const timestamp = new Date().toISOString();
 
         const photoImg = el.querySelector('[data-testid="tweetPhoto"] img, [data-testid="card.layoutLarge.detail"] img');
         let imageUrl = photoImg ? photoImg.getAttribute('src') : null;

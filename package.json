@@ -2,10 +2,10 @@
   "name": "Social_Feed_Hub-vercel",
   "version": "1.0.0",
   "description": "Premium Social Feed Bookmarks Dashboard backed by MongoDB Atlas and Cloudinary on Vercel Serverless.",
-  "main": "sync.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node sync.js",
-    "dev": "node sync.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
     "mongodb": "^6.5.0",
