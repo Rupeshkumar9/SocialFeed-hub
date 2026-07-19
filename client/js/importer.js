@@ -380,6 +380,7 @@ const BookmarksImporter = {
       // Ensure hostname is generic
       let host = urlObj.hostname.replace('mobile.', '').replace('www.', '');
       if (host === 'x.com') host = 'twitter.com';
+      if (host === 'redd.it') host = 'reddit.com';
       
       let path = urlObj.pathname;
       if (path.endsWith('/')) {
@@ -392,3 +393,4 @@ const BookmarksImporter = {
     }
   }
 };
+

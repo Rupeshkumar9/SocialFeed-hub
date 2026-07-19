@@ -59,10 +59,20 @@ body {
 /* Main Container Layout */
 #app-layout {
   display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
   position: relative;
   z-index: 2; /* Sits cleanly over back particles */
+  overflow: hidden;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - 74px);
+  overflow: hidden;
 }
 
 /* Sidebar Styling */
@@ -204,34 +214,29 @@ body {
 }
 
 .sync-status-btn {
-  height: 42px;
-  padding: 0 16px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px dashed var(--border-color);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  font-family: var(--font-main);
-  font-size: 0.8rem;
-  font-weight: 500;
+  height: 38px;
+  width: 38px;
+  min-width: 38px;
+  background-color: transparent;
+  border: none;
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: var(--transition-smooth);
-  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.02);
+  transition: background-color 0.2s ease;
 }
 
 .sync-status-btn:hover {
-  border-color: var(--accent-blue);
-  background-color: rgba(244, 63, 94, 0.02);
-  color: var(--accent-blue);
+  background-color: rgba(16, 185, 129, 0.08);
 }
 
-.sync-status-btn.saving {
-  border-color: var(--accent-green);
-  background-color: rgba(16, 185, 129, 0.05);
-  color: var(--accent-green);
+.sync-status-btn.offline:hover {
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
+#sync-status-text {
+  display: none !important;
 }
 
 .sync-dot {
@@ -421,10 +426,10 @@ body {
   box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15);
 }
 
-.header-right .search-bar-container {
+.search-bar-container {
   flex: 1;
   min-width: 160px;
-  max-width: 280px;
+  max-width: 320px;
   position: relative;
 }
 
@@ -679,43 +684,60 @@ body {
   display: block;
 }
 
-.card-hover-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 12px 14px;
+/* Card action buttons (Read full post / Add note) */
+.card-actions-row {
   display: flex;
-  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+.btn-card-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-  overflow-y: auto;
-  z-index: 5;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.02);
+  padding: 8px 12px;
+  background-color: rgba(244, 63, 94, 0.04);
+  border: 1px solid rgba(244, 63, 94, 0.1);
+  border-radius: 20px;
+  color: #e11d48; /* Premium Rose accent color */
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.bookmark-card:hover .card-hover-overlay {
-  opacity: 1;
-  pointer-events: auto;
+.btn-card-action:hover {
+  background-color: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.2);
+  color: #be123c;
 }
 
-.hover-overlay-quote {
-  font-size: 0.8rem;
-  color: var(--accent-blue);
-  opacity: 0.3;
+body.dark-mode .btn-card-action {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #93c5fd;
 }
 
-.hover-overlay-content {
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: var(--text-primary);
-  word-break: break-word;
-  white-space: pre-wrap;
+body.dark-mode .btn-card-action:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #60a5fa;
+}
+
+/* Post modal content */
+.modal-post-card {
+  background-color: rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+body.dark-mode .modal-post-card {
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* Perfectly sized media thumbnail like a social media post */
@@ -1157,21 +1179,32 @@ body {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #fff5f7; /* Very pale pink background */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(244, 63, 94, 0.1);
-  border-radius: 4px;
+  background: #f43f5e; /* Medium rose/magenta */
+  border-radius: 6px;
+  border: 2px solid #fff5f7; /* Creates a gap to make it look nicer */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(244, 63, 94, 0.2);
+  background: #e11d48; /* Darker version on hover */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #be123c; /* Even darker active color */
+}
+
+/* Firefox scrollbar-color fallback */
+* {
+  scrollbar-color: #f43f5e #fff5f7;
+  scrollbar-width: auto;
 }
 
 /* Mobile & Responsive Adjustments */
@@ -1188,23 +1221,16 @@ body {
   }
   
   .main-header {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     padding: 12px 20px;
-    height: auto;
+    height: 74px;
     gap: 12px;
   }
   
   .header-right {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
     gap: 8px;
-  }
-  
-  .header-right .search-bar-container {
-    max-width: none;
-    width: 100%;
-    order: 10;
-    margin-top: 4px;
   }
 }
 
@@ -1217,8 +1243,60 @@ body {
     display: none;
   }
   
-  .btn-primary, .btn-secondary, .sync-status-btn {
+  #btn-admin-login, #btn-sync-now {
+    height: 38px;
+    width: 38px;
+    padding: 0;
+    min-width: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .main-header {
+    height: 64px;
     padding: 0 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left {
+    gap: 4px;
+  }
+
+  .logo-text span {
+    display: none !important;
+  }
+
+  .logo-text h1 {
+    font-size: 1.05rem;
+  }
+
+  .search-bar-container {
+    min-width: 100px;
+    max-width: 220px;
+  }
+
+  .search-input {
+    padding: 10px 10px 10px 34px;
+    font-size: 0.8rem;
+    height: 38px;
+  }
+
+  .search-icon {
+    left: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .feed-section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .action-toolbar {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -1228,7 +1306,7 @@ body {
   }
   
   .main-header {
-    padding: 12px 14px;
+    padding: 0 10px;
   }
   
   .feed-content {
@@ -1430,15 +1508,7 @@ body {
   line-height: 1.5;
 }
 
-.bookmarks-grid.list-view .bookmark-card .hover-overlay-content {
-  font-size: 1rem;
-  line-height: 1.5;
-}
 
-.bookmarks-grid.list-view .bookmark-card .card-notes-textarea {
-  font-size: 0.82rem;
-  height: 50px; /* Reduced height to 50px to save vertical space */
-}
 
 .bookmarks-grid.list-view .bookmark-card .author-name {
   font-size: 0.95rem;
@@ -1501,14 +1571,7 @@ body {
   padding: 2px 6px;
 }
 
-.bookmarks-grid.compact-view .bookmark-card .folder-select {
-  font-size: 0.72rem;
-}
 
-/* Disable hover overlay in compact-view to preserve grid density */
-.bookmarks-grid.compact-view .bookmark-card .card-hover-overlay {
-  display: none !important;
-}
 
 .bookmarks-grid.compact-view .bookmark-card .card-footer {
   padding: 6px 12px 10px 12px;
@@ -1528,6 +1591,19 @@ body {
 .card-folder-area i {
   font-size: 0.65rem;
   color: var(--accent-blue);
+}
+
+.folder-name {
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .folder-select {
@@ -2143,4 +2219,271 @@ body.visitor-mode .btn-card-menu {
   body.visitor-mode #mobile-drawer-body #action-import {
     display: flex !important;
   }
+}
+
+/* Sidebar dashboard refinements */
+.menu-item button {
+  min-height: 38px;
+}
+
+.menu-item button span:nth-child(2) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-count {
+  margin-left: auto;
+  min-width: 28px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background-color: rgba(244, 63, 94, 0.06);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.menu-item.active .menu-count {
+  background-color: #ffffff;
+  color: var(--accent-blue);
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.sidebar-action {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: rgba(244, 63, 94, 0.025);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.sidebar-action:hover {
+  background-color: #ffffff;
+  color: var(--accent-blue);
+  border-color: rgba(244, 63, 94, 0.18);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-filter-source {
+  display: none;
+}
+
+.sync-status-btn.offline {
+  border-color: rgba(239, 68, 68, 0.25);
+  background-color: rgba(239, 68, 68, 0.04);
+  color: #dc2626;
+}
+
+.btn-primary.saving,
+.sync-status-btn.saving {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.bookmark-card.reddit-post .card-platform-icon {
+  background-color: #fff1eb;
+  border: 1px solid rgba(255, 69, 0, 0.14);
+  color: #ff4500;
+}
+
+.reddit-fallback {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+}
+
+@media (max-width: 768px) {
+  #sidebar {
+    display: none;
+  }
+
+  #main-panel {
+    width: 100%;
+  }
+
+  #mobile-drawer-body .nav-filter-source {
+    display: flex;
+  }
+}
+
+/* Desktop Sidebar and Header layout */
+@media (min-width: 769px) {
+  .main-header {
+    height: 74px;
+    padding-left: 24px;
+  }
+}
+
+/* Action Toolbar styling */
+.action-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  height: 40px;
+  width: 40px;
+  max-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 11px;
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-sizing: border-box;
+  transition: max-width 0.18s cubic-bezier(0.25, 0.8, 0.25, 1),
+              background-color 0.18s ease,
+              border-color 0.18s ease,
+              color 0.18s ease,
+              padding 0.18s ease,
+              box-shadow 0.18s ease;
+}
+
+.toolbar-btn i {
+  font-size: 1rem;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.toolbar-btn .btn-label {
+  opacity: 0;
+  margin-left: 0;
+  transition: opacity 0.15s ease, margin-left 0.15s ease;
+  display: inline-block;
+  pointer-events: none;
+}
+
+/* Active buttons styling (Select Mode and layout switcher) */
+.toolbar-btn.active {
+  background-color: rgba(244, 63, 94, 0.08);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px var(--accent-blue);
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+/* Hover/focus expansion on desktop */
+@media (hover: hover) and (pointer: fine) {
+  .toolbar-btn:hover,
+  .toolbar-btn:focus,
+  .toolbar-btn:focus-within {
+    max-width: 180px;
+    padding: 0 14px;
+    background-color: rgba(244, 63, 94, 0.04);
+    color: var(--accent-blue);
+    border-color: rgba(244, 63, 94, 0.15);
+  }
+  
+  .toolbar-btn:hover .btn-label,
+  .toolbar-btn:focus .btn-label,
+  .toolbar-btn:focus-within .btn-label {
+    opacity: 1;
+    margin-left: 8px;
+  }
+  
+  .toolbar-btn.active:hover {
+    background-color: rgba(244, 63, 94, 0.12);
+  }
+}
+
+/* Prefers Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn {
+    transition: none !important;
+  }
+  .toolbar-btn .btn-label {
+    transition: none !important;
+  }
+}
+
+/* Sort Dropdown styling */
+.toolbar-dropdown {
+  position: relative;
+}
+
+.toolbar-dropdown .dropdown-menu {
+  top: calc(100% + 6px);
+  min-width: 180px;
+}
+
+.toolbar-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.toolbar-dropdown .dropdown-item.active {
+  background-color: rgba(244, 63, 94, 0.08);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.toolbar-dropdown .dropdown-item .check-icon {
+  font-size: 0.8rem;
+  width: 12px;
+  text-align: center;
+  color: var(--accent-blue);
+}
+
+/* Sidebar Tags Collapsible sublist styles */
+.sidebar-tags-sublist {
+  max-height: 250px;
+  overflow-y: auto;
+  margin-left: 4px;
+  border-left: 1px dashed var(--border-color);
+  padding-left: 8px !important;
+}
+
+.sidebar-tags-sublist .menu-item button {
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+/* Rotate chevron icon in tags row */
+.tags-group-toggle .chevron-icon {
+  margin-left: auto;
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+.tags-group-toggle[aria-expanded="true"] .chevron-icon {
+  transform: rotate(180deg);
 }

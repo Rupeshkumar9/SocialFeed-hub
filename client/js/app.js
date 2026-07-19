@@ -15,7 +15,7 @@ const AppState = {
   activeTag: 'all',
   activeCollection: 'all',
   activeLayout: 'grid',
-  activeSort: 'date-desc',
+  activeSort: 'recent-desc',
   searchQuery: '',
   activeBookmark: null,
   isServerConnected: false,
@@ -23,7 +23,8 @@ const AppState = {
   visibleCount: POSTS_PER_PAGE,
   editingId: null,
   isSelectionMode: false,
-  selectedIds: new Set()
+  selectedIds: new Set(),
+  isTagsExpanded: false
 };
 
 // DOM Cache
@@ -34,6 +35,8 @@ const DOM = {
   feedSubtitle: document.getElementById('feed-subtitle'),
   filterPlatform: document.getElementById('filter-platform'),
   filterSort: document.getElementById('filter-sort'),
+  sidebarPlatformList: document.getElementById('sidebar-platform-list'),
+  sidebarCollectionList: document.getElementById('sidebar-collection-list'),
   tagsDropdownBtn: document.getElementById('tags-dropdown-btn'),
   tagsDropdownMenu: document.getElementById('tags-dropdown-menu'),
   
@@ -57,6 +60,8 @@ const DOM = {
   addAuthorName: document.getElementById('add-author-name'),
   addContent: document.getElementById('add-content'),
   addTags: document.getElementById('add-tags'),
+  addCategory: document.getElementById('add-category'),
+  addCategoryNew: document.getElementById('add-category-new'),
   
   // Sync Actions
   syncBtn: document.getElementById('sync-btn'),
@@ -64,6 +69,24 @@ const DOM = {
   syncDot: document.getElementById('sync-dot'),
   btnSyncNow: document.getElementById('btn-sync-now'),
   btnExportJson: document.getElementById('action-export-json'),
+  
+  // Post View & Note Modal Elements
+  postModalOverlay: document.getElementById('post-modal-overlay'),
+  closePostModal: document.getElementById('close-post-modal'),
+  modalPostCardContent: document.getElementById('modal-post-card-content'),
+  modalNoteTextarea: document.getElementById('modal-note-textarea'),
+  modalNoteCharCount: document.getElementById('modal-note-char-count'),
+  
+  // Bulk Edit Elements
+  bulkEditModalOverlay: document.getElementById('bulk-edit-modal-overlay'),
+  closeBulkEditModal: document.getElementById('close-bulk-edit-modal'),
+  bulkEditForm: document.getElementById('bulk-edit-form'),
+  bulkEditCategory: document.getElementById('bulk-edit-category'),
+  bulkEditCategoryNew: document.getElementById('bulk-edit-category-new'),
+  bulkEditPlatform: document.getElementById('bulk-edit-platform'),
+  bulkEditCountLabel: document.getElementById('bulk-edit-count-label'),
+  btnBulkEditCancel: document.getElementById('btn-bulk-edit-cancel'),
+  btnBulkEditTrigger: document.getElementById('btn-bulk-edit'),
   
   // Admin Login Elements
   btnAdminLogin: document.getElementById('btn-admin-login'),
@@ -99,8 +122,13 @@ function checkServerConnection() {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  updateSyncStatusUI(false, 'Checking Server');
+
   return fetch('/api/status', { method: 'GET', headers: headers, cache: 'no-store' })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
+      return res.json();
+    })
     .then(data => {
       if (data && data.status === 'ok') {
         AppState.isServerConnected = true;
@@ -118,38 +146,38 @@ function checkServerConnection() {
             localStorage.removeItem('admin_token');
           }
         }
-      } else {
-        AppState.isServerConnected = false;
-        AppState.isAdmin = true;
-        document.body.classList.remove('visitor-mode');
-        updateAdminLoginUI(true);
-        updateSyncStatusUI(false);
+        return data;
       }
+      throw new Error('Server status was not ok');
     })
-    .catch(() => {
+    .catch(err => {
+      console.warn('Server status check failed:', err);
       AppState.isServerConnected = false;
-      AppState.isAdmin = true;
-      document.body.classList.remove('visitor-mode');
-      updateAdminLoginUI(true);
+      AppState.isAdmin = false;
+      document.body.classList.add('visitor-mode');
+      updateAdminLoginUI(false);
       updateSyncStatusUI(false);
+      throw err;
     });
 }
 
 /**
  * Update UI Sync Button indicator state
  */
-function updateSyncStatusUI(connected) {
+function updateSyncStatusUI(connected, label) {
+  if (!DOM.syncBtn || !DOM.syncDot || !DOM.syncStatusText) return;
+  DOM.syncBtn.classList.remove('saving', 'offline');
   if (connected) {
     DOM.syncDot.className = 'sync-dot';
-    DOM.syncStatusText.textContent = 'Server Connected';
-    DOM.syncBtn.title = 'connected';
+    DOM.syncStatusText.textContent = label || 'Server Connected';
+    DOM.syncBtn.title = 'Server connected. Click to save local edits.';
     DOM.syncDot.title = 'connected';
-    DOM.syncBtn.classList.remove('saving');
   } else {
     DOM.syncDot.className = 'sync-dot offline';
-    DOM.syncStatusText.textContent = 'Connecting to Server';
-    DOM.syncBtn.title = 'connecting to server';
-    DOM.syncDot.title = 'connecting to server';
+    DOM.syncStatusText.textContent = label || 'Server Offline';
+    DOM.syncBtn.title = 'Server disconnected. Click Sync to retry.';
+    DOM.syncDot.title = 'disconnected';
+    DOM.syncBtn.classList.add('offline');
   }
 }
 
@@ -195,7 +223,6 @@ function onDataLoadedSuccess() {
   changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
   
   applyFiltersAndSearch();
-  renderTagCloud();
   showToast("Bookmarks loaded successfully!", "success");
 }
 
@@ -253,33 +280,7 @@ function processTags() {
  * Render the Tag Dropdown filter options
  */
 function renderTagCloud() {
-  const currentActiveTag = AppState.activeTag;
-  DOM.tagsDropdownMenu.innerHTML = '';
-  
-  // Create All Tags option
-  const allTagEl = document.createElement('div');
-  allTagEl.className = `dropdown-item ${currentActiveTag === 'all' ? 'active' : ''}`;
-  allTagEl.textContent = 'All Tags';
-  allTagEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    filterByTag('all');
-    DOM.tagsDropdownMenu.classList.remove('active');
-  });
-  DOM.tagsDropdownMenu.appendChild(allTagEl);
-
-  // Render sorted tags
-  const sortedTags = Array.from(AppState.tags).sort();
-  sortedTags.forEach(tag => {
-    const tagEl = document.createElement('div');
-    tagEl.className = `dropdown-item ${currentActiveTag === tag ? 'active' : ''}`;
-    tagEl.textContent = `#${tag}`;
-    tagEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      filterByTag(tag);
-      DOM.tagsDropdownMenu.classList.remove('active');
-    });
-    DOM.tagsDropdownMenu.appendChild(tagEl);
-  });
+  // Redundant. Now handled dynamically inside updateSidebarNavigation() tag group sublist
 }
 
 /**
@@ -295,18 +296,186 @@ function filterByPlatform(platform) {
  */
 function filterByTag(tag) {
   AppState.activeTag = tag;
-  
-  // Update toggle button text to show selected tag
-  const btn = DOM.tagsDropdownBtn;
-  if (tag === 'all') {
-    btn.innerHTML = `<i class="fa-solid fa-tags"></i> Tags <i class="fa-solid fa-chevron-down"></i>`;
-  } else {
-    btn.innerHTML = `<i class="fa-solid fa-tags"></i> #${tag} <i class="fa-solid fa-chevron-down"></i>`;
-  }
-
   applyFiltersAndSearch();
 }
 
+function getBookmarkDateMs(bm, fields) {
+  for (const field of fields) {
+    const value = bm && bm[field];
+    if (!value) continue;
+    const ms = new Date(value).getTime();
+    if (!Number.isNaN(ms)) return ms;
+  }
+  return 0;
+}
+
+function platformLabel(platform) {
+  const labels = {
+    all: 'All Bookmarks',
+    x: 'X / Twitter',
+    instagram: 'Instagram',
+    threads: 'Threads',
+    reddit: 'Reddit',
+    facebook: 'Facebook',
+    web: 'Web'
+  };
+  return labels[platform] || platform;
+}
+
+function syncFilterSelects() {
+  if (DOM.filterPlatform) DOM.filterPlatform.value = AppState.activePlatform;
+  const collectionSelect = document.getElementById('filter-collection');
+  if (collectionSelect) collectionSelect.value = AppState.activeCollection;
+}
+
+function updateSidebarNavigation() {
+  const platformCounts = { all: AppState.bookmarks.length, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0 };
+  AppState.bookmarks.forEach(bm => {
+    let platform = (bm.platform || 'web').toLowerCase().trim();
+    if (platform === 'twitter') platform = 'x';
+    if (platformCounts[platform] !== undefined) {
+      platformCounts[platform]++;
+    }
+  });
+
+  Object.entries(platformCounts).forEach(([platform, count]) => {
+    const el = document.getElementById(`count-platform-${platform}`);
+    if (el) el.textContent = count;
+  });
+
+  if (DOM.sidebarPlatformList) {
+    DOM.sidebarPlatformList.querySelectorAll('.menu-item').forEach(item => {
+      const btn = item.querySelector('[data-platform]');
+      item.classList.toggle('active', btn && btn.dataset.platform === AppState.activePlatform);
+    });
+  }
+
+  const counts = { all: AppState.bookmarks.length, uncategorized: 0, 'Tech': 0, 'Art & Design': 0, 'Food': 0 };
+  AppState.bookmarks.forEach(bm => {
+    let folder = bm.folder && bm.folder.trim() ? bm.folder.trim() : 'uncategorized';
+    const lower = folder.toLowerCase();
+    if (lower === 'uncategorized' || lower === 'others') {
+      folder = 'uncategorized';
+    } else if (lower === 'tech') {
+      folder = 'Tech';
+    } else if (lower === 'art & design') {
+      folder = 'Art & Design';
+    } else if (lower === 'food') {
+      folder = 'Food';
+    }
+    counts[folder] = (counts[folder] || 0) + 1;
+  });
+
+  const collectionList = DOM.sidebarCollectionList;
+  if (collectionList) {
+    collectionList.innerHTML = '';
+    const baseItems = [
+      { value: 'all', label: 'All', icon: 'fa-solid fa-folder-tree' },
+      { value: 'uncategorized', label: 'Others', icon: 'fa-regular fa-folder' },
+      { value: 'Tech', label: 'Tech', icon: 'fa-solid fa-folder' },
+      { value: 'Art & Design', label: 'Art & Design', icon: 'fa-solid fa-folder' },
+      { value: 'Food', label: 'Food', icon: 'fa-solid fa-folder' }
+    ];
+    
+    const baseKeys = ['all', 'uncategorized', 'tech', 'art & design', 'food'];
+    const customItems = Array.from(AppState.collections)
+      .filter(folder => !baseKeys.includes(folder.toLowerCase()))
+      .sort()
+      .map(folder => ({
+        value: folder,
+        label: folder,
+        icon: 'fa-solid fa-folder'
+      }));
+
+    [...baseItems, ...customItems].forEach(item => {
+      const li = document.createElement('li');
+      li.className = `menu-item ${AppState.activeCollection === item.value ? 'active' : ''}`;
+      li.innerHTML = `
+        <button type="button" data-collection="${escapeHTML(item.value)}">
+          <i class="${item.icon}"></i>
+          <span>${escapeHTML(item.label)}</span>
+          <span class="menu-count">${counts[item.value] || 0}</span>
+        </button>
+      `;
+      collectionList.appendChild(li);
+    });
+
+    // Append collapsible Tags row
+    const tagsLi = document.createElement('li');
+    tagsLi.className = `menu-item tags-group-row`;
+    const tagCount = AppState.tags.size;
+    tagsLi.innerHTML = `
+      <button type="button" class="tags-group-toggle" aria-expanded="${AppState.isTagsExpanded}" style="width: 100%; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i class="fa-solid fa-tags"></i>
+          <span>Tags</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="menu-count">${tagCount}</span>
+          <i class="fa-solid fa-chevron-down chevron-icon" style="transition: transform 0.2s; transform: ${AppState.isTagsExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};"></i>
+        </div>
+      </button>
+      <ul class="sidebar-tags-sublist" style="display: ${AppState.isTagsExpanded ? 'block' : 'none'}; list-style: none; margin-top: 8px;">
+      </ul>
+    `;
+    collectionList.appendChild(tagsLi);
+
+    const toggleBtn = tagsLi.querySelector('.tags-group-toggle');
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      AppState.isTagsExpanded = !AppState.isTagsExpanded;
+      updateSidebarNavigation();
+    });
+
+    const sublist = tagsLi.querySelector('.sidebar-tags-sublist');
+    if (sublist) {
+      // 1. All Tags
+      const allLi = document.createElement('li');
+      allLi.className = `menu-item ${AppState.activeTag === 'all' ? 'active' : ''}`;
+      allLi.innerHTML = `
+        <button type="button" data-tag="all" style="padding: 6px 12px; font-size: 0.9rem; display: flex; align-items: center; width: 100%;">
+          <i class="fa-solid fa-hashtag" style="font-size: 0.8rem;"></i>
+          <span>All Tags</span>
+        </button>
+      `;
+      sublist.appendChild(allLi);
+
+      // 2. Sorted Tags
+      const sortedTags = Array.from(AppState.tags).sort();
+      
+      // Auto reset active tag if it no longer exists
+      if (AppState.activeTag !== 'all' && !AppState.tags.has(AppState.activeTag)) {
+        AppState.activeTag = 'all';
+      }
+
+      sortedTags.forEach(tag => {
+        const li = document.createElement('li');
+        li.className = `menu-item ${AppState.activeTag === tag ? 'active' : ''}`;
+        li.innerHTML = `
+          <button type="button" data-tag="${escapeHTML(tag)}" title="${escapeHTML(tag)}" style="padding: 6px 12px; font-size: 0.9rem; display: flex; align-items: center; width: 100%;">
+            <i class="fa-solid fa-hashtag" style="font-size: 0.8rem; flex-shrink: 0;"></i>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; flex: 1;">${escapeHTML(tag)}</span>
+          </button>
+        `;
+        sublist.appendChild(li);
+      });
+
+      // Add click listener to the sublist
+      sublist.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-tag]');
+        if (!btn) return;
+        e.stopPropagation();
+        const tag = btn.dataset.tag;
+        AppState.activeTag = tag;
+        applyFiltersAndSearch();
+        const drawer = document.getElementById('mobile-drawer-overlay');
+        if (drawer) drawer.classList.remove('active');
+      });
+    }
+  }
+
+  syncFilterSelects();
+}
 /**
  * Apply both active platform and tag filters along with text search query
  */
@@ -324,7 +493,7 @@ function applyFiltersAndSearch() {
       if (AppState.activeCollection === 'uncategorized') {
         if (bm.folder && bm.folder.trim()) return false;
       } else {
-        if (bm.folder !== AppState.activeCollection) return false;
+        if ((bm.folder || '').trim() !== AppState.activeCollection) return false;
       }
     }
     
@@ -348,20 +517,16 @@ function applyFiltersAndSearch() {
     return true;
   });
 
-  // Sort bookmarks by active criteria
+  // Sort bookmarks by active criteria.
   AppState.filteredBookmarks.sort((a, b) => {
-    if (AppState.activeSort === 'date-desc') {
-      let dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
-      let dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
-      if (isNaN(dateA.getTime())) dateA = new Date(0);
-      if (isNaN(dateB.getTime())) dateB = new Date(0);
-      return dateB - dateA;
+    if (AppState.activeSort === 'recent-desc') {
+      return getBookmarkDateMs(b, ['createdAt', 'timestamp', 'sourceSavedAt']) - getBookmarkDateMs(a, ['createdAt', 'timestamp', 'sourceSavedAt']);
+    } else if (AppState.activeSort === 'recent-asc') {
+      return getBookmarkDateMs(a, ['createdAt', 'timestamp', 'sourceSavedAt']) - getBookmarkDateMs(b, ['createdAt', 'timestamp', 'sourceSavedAt']);
+    } else if (AppState.activeSort === 'date-desc') {
+      return getBookmarkDateMs(b, ['sourceSavedAt', 'timestamp', 'createdAt']) - getBookmarkDateMs(a, ['sourceSavedAt', 'timestamp', 'createdAt']);
     } else if (AppState.activeSort === 'date-asc') {
-      let dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
-      let dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
-      if (isNaN(dateA.getTime())) dateA = new Date(0);
-      if (isNaN(dateB.getTime())) dateB = new Date(0);
-      return dateA - dateB;
+      return getBookmarkDateMs(a, ['sourceSavedAt', 'timestamp', 'createdAt']) - getBookmarkDateMs(b, ['sourceSavedAt', 'timestamp', 'createdAt']);
     } else if (AppState.activeSort === 'author-asc') {
       const nameA = (a.authorName || '').toLowerCase();
       const nameB = (b.authorName || '').toLowerCase();
@@ -385,6 +550,9 @@ function applyFiltersAndSearch() {
   
   // Render final filtered list
   renderFeedGrid();
+
+  // Sync sidebar active highlights and platform/category/tag counts
+  updateSidebarNavigation();
 }
 
 /**
@@ -396,6 +564,7 @@ function updateFeedHeaders() {
   if (AppState.activePlatform === 'instagram') title = 'Instagram';
   if (AppState.activePlatform === 'threads') title = 'Threads';
   if (AppState.activePlatform === 'facebook') title = 'Facebook';
+  if (AppState.activePlatform === 'reddit') title = 'Reddit';
   
   if (AppState.activeCollection && AppState.activeCollection !== 'all') {
     title += ` in ${AppState.activeCollection === '__uncategorized__' || AppState.activeCollection === 'uncategorized' ? 'Uncategorized' : AppState.activeCollection}`;
@@ -432,7 +601,8 @@ function getInstagramFallbackGradient(id) {
  */
 function buildCardElement(bm) {
   const card = document.createElement('div');
-  card.className = `bookmark-card ${bm.platform}-post`;
+  const platformClass = bm.platform === 'instagram' ? 'ig-post instagram-post' : `${bm.platform}-post`;
+  card.className = `bookmark-card ${platformClass}`;
   card.setAttribute('data-id', bm.id);
   
   const initials = bm.authorName ? bm.authorName.split(' ').map(n=>n[0]).join('').substring(0, 2).toUpperCase() : '?';
@@ -447,28 +617,28 @@ function buildCardElement(bm) {
     }
   }
 
-  // Editable Notes markup
+  // Action Buttons and Notes markup
   const notesVal = bm.notes || '';
   const notesMarkup = `
-    <div class="card-notes-edit">
-      <textarea class="card-notes-textarea" placeholder="Write custom notes...">${escapeHTML(notesVal)}</textarea>
+    <div class="card-actions-row">
+      <button type="button" class="btn-card-action btn-read-post" data-id="${bm.id}">
+        Read full post <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; margin-left: 2px;"></i>
+      </button>
+      <button type="button" class="btn-card-action btn-add-note" data-id="${bm.id}">
+        <i class="fa-solid fa-file-pen" style="font-size: 0.85rem; margin-right: 2px;"></i> ${notesVal ? 'Edit Note' : 'Add Note'}
+      </button>
     </div>
-    ${notesVal ? `<div class="card-notes-display"><i class="fa-solid fa-note-sticky"></i> ${escapeHTML(notesVal)}</div>` : ''}
+    ${notesVal ? `<div class="card-notes-display" style="margin-top: 8px;"><i class="fa-solid fa-note-sticky"></i> ${escapeHTML(notesVal)}</div>` : ''}
   `;
 
-  // Build folder select options
-  const folderOptions = Array.from(AppState.collections).sort().map(f => 
-    `<option value="${escapeHTML(f)}" ${bm.folder === f ? 'selected' : ''}>${escapeHTML(f)}</option>`
-  ).join('');
-
+  let folderVal = bm.folder && bm.folder.trim() ? bm.folder.trim() : 'Others';
+  if (folderVal.toLowerCase() === 'uncategorized') {
+    folderVal = 'Others';
+  }
   const folderMarkup = `
-    <div class="card-folder-area" title="Collection">
+    <div class="card-folder-area" title="Collection: ${escapeHTML(folderVal)}">
       <i class="fa-solid fa-folder"></i>
-      <select class="folder-select" data-id="${bm.id}">
-        <option value="">Uncategorized</option>
-        ${folderOptions}
-        <option value="__new__" style="color: var(--accent-blue); font-weight: bold;">+ New...</option>
-      </select>
+      <span class="folder-name">${escapeHTML(folderVal)}</span>
     </div>
   `;
 
@@ -526,6 +696,24 @@ function buildCardElement(bm) {
             <i class="fa-brands fa-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
             <span class="fallback-title" style="color: #f8fafc;">Threads Post</span>
             <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
+          </div>
+        </div>
+      `;
+    }
+  } else if (bm.platform === 'reddit') {
+    if (bm.thumbnail) {
+      mediaMarkup = `
+        <div class="card-media">
+          <img src="${bm.thumbnail}" alt="Reddit Post" loading="lazy" onerror="handleImageError(this, '${bm.id}', 'reddit')">
+        </div>
+      `;
+    } else {
+      mediaMarkup = `
+        <div class="card-media fallback-media reddit-fallback">
+          <div class="fallback-gradient" style="color: #ff4500;">
+            <i class="fa-brands fa-reddit-alien fallback-icon" style="background: none; -webkit-text-fill-color: #ff4500; color: #ff4500; font-size: 1.4rem; opacity: 0.9;"></i>
+            <span class="fallback-title" style="color: var(--text-primary);">Reddit Post</span>
+            <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
           </div>
         </div>
       `;
@@ -598,17 +786,7 @@ function buildCardElement(bm) {
         const words = contentVal.split(/\s+/);
         const hasMore = words.length > 50;
         const summaryText = hasMore ? words.slice(0, 50).join(' ') + '...' : contentVal;
-        if (hasMore) {
-          return `
-            <div class="post-content">${escapeHTML(summaryText)}</div>
-            <div class="card-hover-overlay">
-              <div class="hover-overlay-quote"><i class="fa-solid fa-quote-left"></i></div>
-              <div class="hover-overlay-content">${escapeHTML(contentVal)}</div>
-            </div>
-          `;
-        } else {
-          return `<div class="post-content">${escapeHTML(contentVal)}</div>`;
-        }
+        return `<div class="post-content">${escapeHTML(summaryText)}</div>`;
       })()}
       ${mediaMarkup}
       ${notesMarkup}
@@ -620,49 +798,23 @@ function buildCardElement(bm) {
   `;
 
   // Attach handlers
-  const textarea = card.querySelector('.card-notes-textarea');
-  textarea.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
-  
-  textarea.addEventListener('blur', (e) => {
-    const newNotes = e.target.value.trim();
-    if (newNotes !== (bm.notes || '')) {
-      saveBookmarkNotes(bm.id, newNotes);
-    }
-  });
-
-  textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      textarea.blur();
-    }
-  });
-
-  const folderSelect = card.querySelector('.folder-select');
-  if (folderSelect) {
-    folderSelect.addEventListener('click', (e) => {
+  const readBtn = card.querySelector('.btn-read-post');
+  if (readBtn) {
+    readBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-    });
-    folderSelect.addEventListener('change', (e) => {
-      e.stopPropagation();
-      const val = e.target.value;
-      if (val === '__new__') {
-        const newFolder = prompt("Enter new collection name:");
-        if (newFolder && newFolder.trim()) {
-          const cleanFolder = newFolder.trim();
-          AppState.collections.add(cleanFolder);
-          bm.folder = cleanFolder;
-          saveBookmarkFolder(bm.id, cleanFolder);
-        } else {
-          e.target.value = bm.folder || "";
-        }
-      } else {
-        bm.folder = val;
-        saveBookmarkFolder(bm.id, val);
-      }
+      openPostModal(bm.id, false);
     });
   }
+
+  const addNoteBtn = card.querySelector('.btn-add-note');
+  if (addNoteBtn) {
+    addNoteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPostModal(bm.id, true);
+    });
+  }
+
+
 
   // Three-dots dropdown bindings
   const menuBtn = card.querySelector('.btn-card-menu');
@@ -876,13 +1028,31 @@ function changeLayout(layout, showFeedbackToast = true) {
   AppState.activeLayout = layout;
   localStorage.setItem('bookmarks_layout', layout);
   
-  const gridBtn = document.getElementById('layout-grid-btn');
-  const listBtn = document.getElementById('layout-list-btn');
-  const compactBtn = document.getElementById('layout-compact-btn');
+  const menu = document.getElementById('toolbar-layout-menu');
+  if (menu) {
+    menu.querySelectorAll('.dropdown-item').forEach(item => {
+      const isMatch = item.getAttribute('data-layout') === layout;
+      item.classList.toggle('active', isMatch);
+      const checkIcon = item.querySelector('.check-icon');
+      if (checkIcon) {
+        checkIcon.style.visibility = isMatch ? 'visible' : 'hidden';
+      }
+    });
+  }
   
-  if (gridBtn) gridBtn.classList.toggle('active', layout === 'grid');
-  if (listBtn) listBtn.classList.toggle('active', layout === 'list');
-  if (compactBtn) compactBtn.classList.toggle('active', layout === 'compact');
+  const activeIcon = document.getElementById('layout-active-icon');
+  const activeLabel = document.getElementById('layout-active-label');
+  if (activeIcon) {
+    activeIcon.className = (() => {
+      if (layout === 'grid') return 'fa-solid fa-grip';
+      if (layout === 'list') return 'fa-solid fa-list';
+      if (layout === 'compact') return 'fa-solid fa-bars';
+      return 'fa-solid fa-grip';
+    })();
+  }
+  if (activeLabel) {
+    activeLabel.textContent = layout.charAt(0).toUpperCase() + layout.slice(1) + ' View';
+  }
   
   if (DOM.bookmarksGrid) {
     DOM.bookmarksGrid.classList.remove('list-view', 'compact-view');
@@ -1145,7 +1315,17 @@ function handleManualBookmarkSubmit(e) {
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
   const tagListInput = DOM.addTags.value.trim();
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'facebook'];
+  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook'];
+
+  let categoryVal = '';
+  if (DOM.addCategory.value === '__new__') {
+    categoryVal = DOM.addCategoryNew.value.trim();
+  } else {
+    categoryVal = DOM.addCategory.value.trim();
+  }
+  if (categoryVal.toLowerCase() === 'uncategorized') {
+    categoryVal = '';
+  }
 
   const addPlatformSelect = document.getElementById('add-platform');
   const platform = addPlatformSelect ? addPlatformSelect.value : '';
@@ -1160,9 +1340,10 @@ function handleManualBookmarkSubmit(e) {
     if (idx !== -1) {
       const bm = AppState.bookmarks[idx];
       bm.platform = platform;
-      bm.authorName = authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : 'Facebook User');
+      bm.authorName = authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : platform === 'reddit' ? 'Reddit User' : 'Facebook User');
       bm.authorUsername = authorName ? authorName.toLowerCase().replace(/\s+/g, '') : bm.authorUsername;
       bm.content = content || bm.content;
+      bm.folder = categoryVal;
       
       const originalSystemTags = bm.tags ? bm.tags.filter(t => SYSTEM_TAGS.includes(t.toLowerCase())) : [];
       const newUserTags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
@@ -1217,11 +1398,12 @@ function handleManualBookmarkSubmit(e) {
     id: id,
     platform: platform,
     url: url,
-    authorName: authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : 'Facebook User'),
+    authorName: authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : platform === 'reddit' ? 'Reddit User' : 'Facebook User'),
     authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : 'username',
     content: content || `Saved ${platform.toUpperCase()} Post (click to load embed)`,
     timestamp: new Date().toISOString(),
     tags: tags,
+    folder: categoryVal,
     notes: ''
   };
 
@@ -1251,6 +1433,276 @@ function handleManualBookmarkSubmit(e) {
 }
 
 /**
+ * Populate the Category select dropdown in the Add/Edit bookmark modal
+ */
+function populateModalCategorySelect(selectedVal = '') {
+  if (!DOM.addCategory) return;
+  DOM.addCategory.innerHTML = '';
+  
+  // Default option
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = 'Others';
+  DOM.addCategory.appendChild(defaultOpt);
+  
+  // Hardcoded categories
+  const hardcodedCats = ['Tech', 'Art & Design', 'Food'];
+  
+  // Combine custom collections with hardcoded categories (avoiding duplicates)
+  const allCatsSet = new Set(hardcodedCats);
+  if (AppState.collections) {
+    Array.from(AppState.collections).forEach(c => {
+      const lower = c.toLowerCase();
+      if (lower !== 'all' && lower !== 'uncategorized' && lower !== '__uncategorized__' && lower !== 'others') {
+        allCatsSet.add(c);
+      }
+    });
+  }
+  
+  const sortedCollections = Array.from(allCatsSet).sort((a, b) => a.localeCompare(b));
+    
+  sortedCollections.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    DOM.addCategory.appendChild(opt);
+  });
+  
+  // Create New option
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ Create new category...';
+  newOpt.style.color = 'var(--accent-blue)';
+  newOpt.style.fontWeight = 'bold';
+  DOM.addCategory.appendChild(newOpt);
+  
+  // Set value
+  if (selectedVal) {
+    const lower = selectedVal.toLowerCase();
+    if (lower === 'uncategorized' || lower === 'others') {
+      DOM.addCategory.value = '';
+    } else {
+      const match = sortedCollections.find(c => c.toLowerCase() === lower);
+      if (match) {
+        DOM.addCategory.value = match;
+      } else {
+        const opt = document.createElement('option');
+        opt.value = selectedVal;
+        opt.textContent = selectedVal;
+        DOM.addCategory.insertBefore(opt, newOpt);
+        DOM.addCategory.value = selectedVal;
+      }
+    }
+  } else {
+    DOM.addCategory.value = '';
+  }
+  
+  // Reset and hide new category input
+  DOM.addCategoryNew.style.display = 'none';
+  DOM.addCategoryNew.value = '';
+}
+
+let currentPostModalBookmarkId = null;
+
+/**
+ * Open Modal to read the full post content and add custom notes
+ */
+function openPostModal(bmId, focusNote = false) {
+  const bm = AppState.bookmarks.find(b => b.id === bmId);
+  if (!bm) return;
+  
+  currentPostModalBookmarkId = bmId;
+  
+  // Populate post content
+  const initials = bm.authorName ? bm.authorName.split(' ').map(n=>n[0]).join('').substring(0, 2).toUpperCase() : '?';
+  const platformIconClass = (() => {
+    if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
+    if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
+    if (bm.platform === 'threads') return 'fa-brands fa-threads';
+    if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
+    return 'fa-solid fa-circle-nodes';
+  })();
+  
+  DOM.modalPostCardContent.innerHTML = `
+    <div class="modal-post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <div class="modal-post-author" style="display: flex; align-items: center; gap: 8px;">
+        <div class="author-avatar">${initials}</div>
+        <div class="author-names" style="display: flex; flex-direction: column;">
+          <span class="author-name" style="font-weight: 600; font-size: 0.9rem;">${escapeHTML(bm.authorName || 'Social Post')}</span>
+          <span class="author-username" style="font-size: 0.75rem; color: var(--text-muted);">@${escapeHTML(bm.authorUsername || 'user')}</span>
+        </div>
+      </div>
+      <div class="modal-post-platform" style="color: ${bm.platform === 'instagram' ? '#e1306c' : bm.platform === 'x' ? '#000000' : 'var(--accent-blue)'}; font-size: 1.2rem;">
+        <i class="${platformIconClass}"></i>
+      </div>
+    </div>
+    <div class="modal-post-text" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+      ${escapeHTML(bm.content || '')}
+    </div>
+    ${bm.thumbnail ? `
+      <div class="modal-post-media" style="margin-top: 12px; border-radius: 8px; overflow: hidden; max-height: 200px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color);">
+        <img src="${bm.thumbnail}" style="max-width: 100%; max-height: 200px; object-fit: contain;">
+      </div>
+    ` : ''}
+  `;
+  
+  // Populate note textarea
+  const noteVal = bm.notes || '';
+  DOM.modalNoteTextarea.value = noteVal;
+  DOM.modalNoteCharCount.textContent = `${noteVal.length} / 1000`;
+  
+  // Open modal
+  DOM.postModalOverlay.classList.add('active');
+  
+  if (focusNote) {
+    setTimeout(() => DOM.modalNoteTextarea.focus(), 150);
+  }
+}
+
+/**
+ * Save the note changes from the modal and close it
+ */
+function saveModalNoteAndClose() {
+  if (currentPostModalBookmarkId) {
+    const val = DOM.modalNoteTextarea.value.trim();
+    const bm = AppState.bookmarks.find(b => b.id === currentPostModalBookmarkId);
+    if (bm && (bm.notes || '') !== val) {
+      bm.notes = val;
+      saveBookmarkNotes(bm.id, val);
+      renderBookmarksGrid();
+    }
+  }
+  DOM.postModalOverlay.classList.remove('active');
+  currentPostModalBookmarkId = null;
+}
+
+/**
+ * Open Bulk Edit Modal to update multiple bookmarks simultaneously
+ */
+function openBulkEditModal() {
+  const selectedIds = Array.from(AppState.selectedIds);
+  if (selectedIds.length === 0) {
+    showToast("No bookmarks selected!", "error");
+    return;
+  }
+  
+  // Update label
+  DOM.bulkEditCountLabel.textContent = `Editing ${selectedIds.length} selected bookmarks.`;
+  
+  // Populate categories selector
+  DOM.bulkEditCategory.innerHTML = '';
+  
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '__no_change__';
+  defaultOpt.textContent = 'Keep Original';
+  DOM.bulkEditCategory.appendChild(defaultOpt);
+  
+  const othersOpt = document.createElement('option');
+  othersOpt.value = '';
+  othersOpt.textContent = 'Others';
+  DOM.bulkEditCategory.appendChild(othersOpt);
+  
+  // Hardcoded categories
+  const hardcodedCats = ['Tech', 'Art & Design', 'Food'];
+  const allCatsSet = new Set(hardcodedCats);
+  if (AppState.collections) {
+    Array.from(AppState.collections).forEach(c => {
+      const lower = c.toLowerCase();
+      if (lower !== 'all' && lower !== 'uncategorized' && lower !== '__uncategorized__' && lower !== 'others') {
+        allCatsSet.add(c);
+      }
+    });
+  }
+  
+  const sortedCollections = Array.from(allCatsSet).sort((a, b) => a.localeCompare(b));
+  sortedCollections.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    DOM.bulkEditCategory.appendChild(opt);
+  });
+  
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ Create new category...';
+  newOpt.style.color = 'var(--accent-blue)';
+  newOpt.style.fontWeight = 'bold';
+  DOM.bulkEditCategory.appendChild(newOpt);
+  
+  // Reset values to Keep Original
+  DOM.bulkEditCategory.value = '__no_change__';
+  DOM.bulkEditCategoryNew.style.display = 'none';
+  DOM.bulkEditCategoryNew.value = '';
+  DOM.bulkEditPlatform.value = '__no_change__';
+  
+  // Show modal
+  DOM.bulkEditModalOverlay.classList.add('active');
+}
+
+/**
+ * Handle form submission for bulk editing
+ */
+function handleBulkEditSubmit(e) {
+  e.preventDefault();
+  const selectedIds = Array.from(AppState.selectedIds);
+  if (selectedIds.length === 0) return;
+  
+  let categoryVal = DOM.bulkEditCategory.value;
+  if (categoryVal === '__new__') {
+    categoryVal = DOM.bulkEditCategoryNew.value.trim();
+    if (!categoryVal) {
+      showToast("Please enter a category name!", "error");
+      return;
+    }
+  }
+  
+  const platformVal = DOM.bulkEditPlatform.value;
+  
+  let changedCount = 0;
+  
+  AppState.bookmarks.forEach(bm => {
+    if (selectedIds.includes(bm.id)) {
+      let bookmarkChanged = false;
+      
+      // 1. Update Category
+      if (categoryVal !== '__no_change__') {
+        let normalFolder = categoryVal;
+        if (categoryVal.toLowerCase() === 'uncategorized' || categoryVal.toLowerCase() === 'others') {
+          normalFolder = '';
+        }
+        bm.folder = normalFolder;
+        bookmarkChanged = true;
+        
+        if (normalFolder && !AppState.collections.has(normalFolder)) {
+          AppState.collections.add(normalFolder);
+        }
+      }
+      
+      // 2. Update Platform
+      if (platformVal !== '__no_change__') {
+        bm.platform = platformVal;
+        bookmarkChanged = true;
+      }
+      
+      if (bookmarkChanged) changedCount++;
+    }
+  });
+  
+  if (changedCount > 0) {
+    saveDataToServer();
+    showToast(`Successfully updated ${changedCount} bookmarks!`, "success");
+    
+    DOM.bulkEditModalOverlay.classList.remove('active');
+    toggleSelectionMode(false);
+    
+    updateSidebarNavigation();
+    applyFiltersAndSearch();
+  } else {
+    DOM.bulkEditModalOverlay.classList.remove('active');
+  }
+}
+
+/**
  * Open Modal pre-filled with existing bookmark metadata for editing
  */
 function openEditBookmarkModal(bm) {
@@ -1275,9 +1727,12 @@ function openEditBookmarkModal(bm) {
   DOM.addAuthorName.value = bm.authorName || '';
   DOM.addContent.value = bm.content || '';
   
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'facebook'];
+  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook'];
   const userTags = bm.tags ? bm.tags.filter(t => !SYSTEM_TAGS.includes(t.toLowerCase())) : [];
   DOM.addTags.value = userTags.join(', ');
+  
+  // Prefill category
+  populateModalCategorySelect(bm.folder || '');
   
   DOM.addModalOverlay.classList.add('active');
 }
@@ -1435,12 +1890,14 @@ function initEventListeners() {
     applyFiltersAndSearch();
   }, 150));
   
-  // Platform select in navbar change
-  DOM.filterPlatform.addEventListener('change', (e) => {
-    filterByPlatform(e.target.value);
-  });
+  // Platform select in navbar change (hidden/backward compatibility)
+  if (DOM.filterPlatform) {
+    DOM.filterPlatform.addEventListener('change', (e) => {
+      filterByPlatform(e.target.value);
+    });
+  }
 
-  // Sort select in navbar change
+  // Sort select in navbar change (hidden/backward compatibility)
   if (DOM.filterSort) {
     DOM.filterSort.addEventListener('change', (e) => {
       AppState.activeSort = e.target.value;
@@ -1448,7 +1905,7 @@ function initEventListeners() {
     });
   }
 
-  // Collection select in navbar change
+  // Collection select in navbar change (hidden/backward compatibility)
   const filterCollection = document.getElementById('filter-collection');
   if (filterCollection) {
     filterCollection.addEventListener('change', (e) => {
@@ -1457,78 +1914,212 @@ function initEventListeners() {
     });
   }
   
-  // Tags dropdown click toggle
-  DOM.tagsDropdownBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    DOM.tagsDropdownMenu.classList.toggle('active');
-    const feedManagerMenu = document.getElementById('feed-manager-dropdown-menu');
-    if (feedManagerMenu) feedManagerMenu.classList.remove('active');
-  });
+  // Sidebar platform and category navigation
+  if (DOM.sidebarPlatformList) {
+    DOM.sidebarPlatformList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-platform]');
+      if (!btn) return;
+      AppState.activePlatform = btn.dataset.platform;
+      syncFilterSelects();
+      applyFiltersAndSearch();
+      const drawer = document.getElementById('mobile-drawer-overlay');
+      if (drawer) drawer.classList.remove('active');
+    });
+  }
 
-  // Feed Manager dropdown click toggle
-  const feedManagerBtn = document.getElementById('feed-manager-dropdown-btn');
-  const feedManagerMenu = document.getElementById('feed-manager-dropdown-menu');
-  if (feedManagerBtn && feedManagerMenu) {
-    feedManagerBtn.addEventListener('click', (e) => {
+  if (DOM.sidebarCollectionList) {
+    DOM.sidebarCollectionList.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-collection]');
+      if (!btn) return;
+      AppState.activeCollection = btn.dataset.collection;
+      syncFilterSelects();
+      applyFiltersAndSearch();
+      const drawer = document.getElementById('mobile-drawer-overlay');
+      if (drawer) drawer.classList.remove('active');
+    });
+  }
+
+  // Dropdown menu elements
+  const sortBtn = document.getElementById('toolbar-sort-btn');
+  const sortMenu = document.getElementById('toolbar-sort-menu');
+  const layoutBtn = document.getElementById('toolbar-layout-btn');
+  const layoutMenu = document.getElementById('toolbar-layout-menu');
+  const dataBtn = document.getElementById('toolbar-data-btn');
+  const dataMenu = document.getElementById('toolbar-data-menu');
+
+  const closeAllToolbarDropdowns = () => {
+    if (sortMenu) sortMenu.classList.remove('active');
+    if (sortBtn) sortBtn.setAttribute('aria-expanded', 'false');
+    if (layoutMenu) layoutMenu.classList.remove('active');
+    if (layoutBtn) layoutBtn.setAttribute('aria-expanded', 'false');
+    if (dataMenu) dataMenu.classList.remove('active');
+    if (dataBtn) dataBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  // Sort dropdown menu event listeners
+  if (sortBtn && sortMenu) {
+    sortBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      feedManagerMenu.classList.toggle('active');
-      DOM.tagsDropdownMenu.classList.remove('active');
+      const isOpen = sortMenu.classList.contains('active');
+      closeAllToolbarDropdowns();
+      if (!isOpen) {
+        sortMenu.classList.add('active');
+        sortBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    sortMenu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sortVal = item.dataset.sort;
+        AppState.activeSort = sortVal;
+        
+        sortMenu.querySelectorAll('.dropdown-item').forEach(el => {
+          const isSelected = el.dataset.sort === sortVal;
+          el.classList.toggle('active', isSelected);
+          const icon = el.querySelector('.check-icon');
+          if (icon) {
+            icon.style.visibility = isSelected ? 'visible' : 'hidden';
+          }
+        });
+        
+        const activeLabelEl = document.getElementById('sort-active-label');
+        const sortLabels = {
+          'recent-desc': 'Newest First',
+          'recent-asc': 'Oldest First',
+          'author-asc': 'Author A–Z',
+          'author-desc': 'Author Z–A'
+        };
+        if (activeLabelEl) {
+          activeLabelEl.textContent = sortLabels[sortVal] || 'Newest First';
+        }
+        
+        applyFiltersAndSearch();
+        closeAllToolbarDropdowns();
+        sortBtn.focus();
+      });
+    });
+  }
+
+  // Layout Dropdown Switcher bindings
+  if (layoutBtn && layoutMenu) {
+    layoutBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = layoutMenu.classList.contains('active');
+      closeAllToolbarDropdowns();
+      if (!isOpen) {
+        layoutMenu.classList.add('active');
+        layoutBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    layoutMenu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const layout = item.getAttribute('data-layout');
+        changeLayout(layout);
+        closeAllToolbarDropdowns();
+      });
+    });
+  }
+
+  // Data Actions Dropdown bindings
+  if (dataBtn && dataMenu) {
+    dataBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dataMenu.classList.contains('active');
+      closeAllToolbarDropdowns();
+      if (!isOpen) {
+        dataMenu.classList.add('active');
+        dataBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    dataMenu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Just dismiss, the separate click listeners on the item IDs will execute
+        closeAllToolbarDropdowns();
+      });
     });
   }
 
   // Global click to close active dropdowns
   document.addEventListener('click', () => {
-    DOM.tagsDropdownMenu.classList.remove('active');
-    const feedManagerMenu = document.getElementById('feed-manager-dropdown-menu');
-    if (feedManagerMenu) feedManagerMenu.classList.remove('active');
+    closeAllToolbarDropdowns();
     document.querySelectorAll('.card-menu-dropdown.active').forEach(el => {
       el.classList.remove('active');
     });
   });
 
-  // Layout Switcher bindings
-  const gridBtn = document.getElementById('layout-grid-btn');
-  const listBtn = document.getElementById('layout-list-btn');
-  const compactBtn = document.getElementById('layout-compact-btn');
-  if (gridBtn && listBtn && compactBtn) {
-    gridBtn.addEventListener('click', () => changeLayout('grid'));
-    listBtn.addEventListener('click', () => changeLayout('list'));
-    compactBtn.addEventListener('click', () => changeLayout('compact'));
-  }
+  // Global keydown for Escape to close dropdowns and modals
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (DOM.postModalOverlay && DOM.postModalOverlay.classList.contains('active')) {
+        saveModalNoteAndClose();
+        return;
+      }
+      
+      if (DOM.bulkEditModalOverlay && DOM.bulkEditModalOverlay.classList.contains('active')) {
+        DOM.bulkEditModalOverlay.classList.remove('active');
+        return;
+      }
+      
+      const activeMenu = [sortMenu, layoutMenu, dataMenu].find(m => m && m.classList.contains('active'));
+      const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : null;
+      
+      closeAllToolbarDropdowns();
+      
+      if (activeBtn) {
+        activeBtn.focus();
+      }
+    }
+  });
   
   // Sync Actions listeners
   DOM.syncBtn.addEventListener('click', () => {
     if (AppState.isServerConnected) {
-      checkServerConnection().then(saveDataToServer);
+      saveDataToServer();
     } else {
-      triggerManualDownload();
+      checkServerConnection().then(loadData).catch(() => {
+        showToast('Server is offline. Please check the dev server or Vercel API.', 'error');
+      });
     }
   });
   DOM.btnSyncNow.addEventListener('click', () => {
-    checkServerConnection().then(loadData);
+    DOM.btnSyncNow.classList.add('saving');
+    checkServerConnection()
+      .then(loadData)
+      .catch(() => showToast('Could not reach the server.', 'error'))
+      .finally(() => DOM.btnSyncNow.classList.remove('saving'));
   });
   DOM.btnExportJson.addEventListener('click', triggerManualDownload);
 
-  // Markdown Export listener
+  // Markdown Export listener (sidebar Quick Actions)
   const btnExportMd = document.getElementById('action-export-md');
   if (btnExportMd) {
     btnExportMd.addEventListener('click', exportBookmarksToMarkdown);
   }
 
-  // Analytics toggle stats panel
+  // Analytics toggle stats panel (sidebar item)
   const btnToggleStats = document.getElementById('btn-toggle-stats');
   const statsPanel = document.getElementById('stats-panel');
   if (btnToggleStats && statsPanel) {
     btnToggleStats.addEventListener('click', () => {
       const isOpen = statsPanel.style.display !== 'none';
+      const li = btnToggleStats.closest('.menu-item');
       if (isOpen) {
         statsPanel.style.display = 'none';
         btnToggleStats.classList.remove('active');
+        if (li) li.classList.remove('active');
       } else {
         statsPanel.style.display = 'block';
         btnToggleStats.classList.add('active');
+        if (li) li.classList.add('active');
         updateStatsAnalytics();
       }
+      // Close mobile drawer after activation
+      const drawer = document.getElementById('mobile-drawer-overlay');
+      if (drawer) drawer.classList.remove('active');
     });
   }
 
@@ -1573,7 +2164,20 @@ function initEventListeners() {
     if (submitBtn) submitBtn.textContent = 'Add to Feed';
     DOM.addUrl.readOnly = false;
     DOM.addBookmarkForm.reset();
+    populateModalCategorySelect('');
   };
+
+  if (DOM.addCategory) {
+    DOM.addCategory.addEventListener('change', (e) => {
+      if (e.target.value === '__new__') {
+        DOM.addCategoryNew.style.display = 'block';
+        DOM.addCategoryNew.focus();
+      } else {
+        DOM.addCategoryNew.style.display = 'none';
+        DOM.addCategoryNew.value = '';
+      }
+    });
+  }
 
   DOM.btnAddBookmark.addEventListener('click', () => {
     resetAddModal();
@@ -1596,6 +2200,42 @@ function initEventListeners() {
       resetAddModal();
     }
   });
+  
+  // Post View & Notes modal listeners
+  if (DOM.closePostModal) {
+    DOM.closePostModal.addEventListener('click', saveModalNoteAndClose);
+  }
+  if (DOM.postModalOverlay) {
+    DOM.postModalOverlay.addEventListener('click', (e) => {
+      if (e.target === DOM.postModalOverlay) {
+        saveModalNoteAndClose();
+      }
+    });
+  }
+  if (DOM.modalNoteTextarea) {
+    DOM.modalNoteTextarea.addEventListener('input', (e) => {
+      let val = e.target.value;
+      if (val.length > 1000) {
+        val = val.substring(0, 1000);
+        e.target.value = val;
+      }
+      if (DOM.modalNoteCharCount) {
+        DOM.modalNoteCharCount.textContent = `${val.length} / 1000`;
+      }
+    });
+    
+    DOM.modalNoteTextarea.addEventListener('blur', () => {
+      if (currentPostModalBookmarkId) {
+        const val = DOM.modalNoteTextarea.value.trim();
+        const bm = AppState.bookmarks.find(b => b.id === currentPostModalBookmarkId);
+        if (bm && (bm.notes || '') !== val) {
+          bm.notes = val;
+          saveBookmarkNotes(bm.id, val);
+          renderBookmarksGrid();
+        }
+      }
+    });
+  }
   
   DOM.addBookmarkForm.addEventListener('submit', handleManualBookmarkSubmit);
 
@@ -1628,6 +2268,42 @@ function initEventListeners() {
   const bulkDeleteBtn = document.getElementById('btn-bulk-delete');
   if (bulkDeleteBtn) {
     bulkDeleteBtn.addEventListener('click', bulkDeleteSelected);
+  }
+
+  // Bulk Edit Event Listeners
+  if (DOM.btnBulkEditTrigger) {
+    DOM.btnBulkEditTrigger.addEventListener('click', openBulkEditModal);
+  }
+  if (DOM.closeBulkEditModal) {
+    DOM.closeBulkEditModal.addEventListener('click', () => {
+      DOM.bulkEditModalOverlay.classList.remove('active');
+    });
+  }
+  if (DOM.btnBulkEditCancel) {
+    DOM.btnBulkEditCancel.addEventListener('click', () => {
+      DOM.bulkEditModalOverlay.classList.remove('active');
+    });
+  }
+  if (DOM.bulkEditModalOverlay) {
+    DOM.bulkEditModalOverlay.addEventListener('click', (e) => {
+      if (e.target === DOM.bulkEditModalOverlay) {
+        DOM.bulkEditModalOverlay.classList.remove('active');
+      }
+    });
+  }
+  if (DOM.bulkEditCategory) {
+    DOM.bulkEditCategory.addEventListener('change', (e) => {
+      if (e.target.value === '__new__') {
+        DOM.bulkEditCategoryNew.style.display = 'block';
+        DOM.bulkEditCategoryNew.focus();
+      } else {
+        DOM.bulkEditCategoryNew.style.display = 'none';
+        DOM.bulkEditCategoryNew.value = '';
+      }
+    });
+  }
+  if (DOM.bulkEditForm) {
+    DOM.bulkEditForm.addEventListener('submit', handleBulkEditSubmit);
   }
 
   // Admin Login Event Listeners
@@ -1866,57 +2542,24 @@ function handleAdminLoginSubmit(e) {
  */
 function checkMobileDrawerLayout() {
   const isMobile = window.innerWidth <= 768;
-  const headerRight = document.querySelector('.header-right');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarMenu = document.querySelector('.sidebar-menu');
   const drawerBody = document.getElementById('mobile-drawer-body');
   
-  const collectionEl = document.querySelector('.filter-group:has(#filter-collection)') || document.getElementById('filter-collection')?.parentNode;
-  const platformEl = document.querySelector('.filter-group:has(#filter-platform)') || document.getElementById('filter-platform')?.parentNode;
-  const sortEl = document.querySelector('.filter-group:has(#filter-sort)') || document.getElementById('filter-sort')?.parentNode;
-  const tagsEl = document.getElementById('tags-dropdown');
-  const feedManagerEl = document.getElementById('feed-manager-dropdown');
-  
   if (isMobile) {
-    if (drawerBody) {
-      if (collectionEl) {
-        collectionEl.setAttribute('data-label', 'Collections');
-        if (collectionEl.parentNode !== drawerBody) drawerBody.appendChild(collectionEl);
-      }
-      if (platformEl) {
-        platformEl.setAttribute('data-label', 'Platforms');
-        if (platformEl.parentNode !== drawerBody) drawerBody.appendChild(platformEl);
-      }
-      if (sortEl) {
-        sortEl.setAttribute('data-label', 'Sort Order');
-        if (sortEl.parentNode !== drawerBody) drawerBody.appendChild(sortEl);
-      }
-      if (tagsEl) {
-        tagsEl.setAttribute('data-label', 'Tags');
-        if (tagsEl.parentNode !== drawerBody) drawerBody.appendChild(tagsEl);
-      }
-      if (feedManagerEl) {
-        feedManagerEl.setAttribute('data-label', 'Feed Actions');
-        if (feedManagerEl.parentNode !== drawerBody) drawerBody.appendChild(feedManagerEl);
-      }
+    if (sidebarMenu && drawerBody && sidebarMenu.parentNode !== drawerBody) {
+      drawerBody.appendChild(sidebarMenu);
     }
   } else {
-    // Put them back in the header in correct order
-    const syncBtnNow = document.getElementById('btn-sync-now');
-    if (headerRight && syncBtnNow) {
-      if (collectionEl && collectionEl.parentNode !== headerRight) {
-        headerRight.insertBefore(collectionEl, syncBtnNow);
-      }
-      if (platformEl && platformEl.parentNode !== headerRight) {
-        headerRight.insertBefore(platformEl, syncBtnNow);
-      }
-      if (sortEl && sortEl.parentNode !== headerRight) {
-        headerRight.insertBefore(sortEl, syncBtnNow);
-      }
-      if (tagsEl && tagsEl.parentNode !== headerRight) {
-        headerRight.insertBefore(tagsEl, syncBtnNow);
-      }
-      if (feedManagerEl && feedManagerEl.parentNode !== headerRight) {
-        headerRight.insertBefore(feedManagerEl, syncBtnNow);
-      }
+    if (sidebarMenu && sidebar && sidebarMenu.parentNode !== sidebar) {
+      sidebar.appendChild(sidebarMenu);
     }
   }
 }
+
+
+
+
+
+
+

@@ -185,11 +185,16 @@ server.listen(PORT, () => {
     startCommand = `xdg-open ${url}`;
   }
   
-  exec(startCommand, (err) => {
-    if (err) {
-      console.log('Please open the URL manually in your preferred browser!');
-    } else {
-      console.log('👉 Automatically opened Dashboard page in your browser.');
-    }
-  });
+  try {
+    exec(startCommand, (err) => {
+      if (err) {
+        console.log('Please open the URL manually in your preferred browser!');
+      } else {
+        console.log('Automatically opened Dashboard page in your browser.');
+      }
+    });
+  } catch (err) {
+    console.log('Please open the URL manually in your preferred browser!');
+  }
 });
+

@@ -1,224 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SocialFeed Hub | Dashboard </title>
-  <meta name="description" content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
+  <meta name="description"
+    content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
   <link rel="stylesheet" href="css/styles.css">
-  
+
   <!-- FontAwesome Icons for modern dashboard elements -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
   <div id="app-layout">
-    
-    
-    <!-- Top Action Bar / Navigation -->
-    <main id="main-panel">
-      <header class="main-header">
-        <div class="header-left">
-          <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Navigation Menu">
-            <i class="fa-solid fa-bars"></i>
-          </button>
-          <a href="/" class="logo-link">
-            <div class="header-logo">
-              <div class="logo-icon">
-                <i class="fa-solid fa-feather-pointed"></i>
-              </div>
-              <div class="logo-text">
-                <h1>SocialFeed</h1>
-                <span>Bookmark Manager</span>
-              </div>
+    <header class="main-header">
+      <div class="header-left">
+        <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Navigation Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a href="/" class="logo-link">
+          <div class="header-logo">
+            <div class="logo-icon">
+              <i class="fa-solid fa-feather-pointed"></i>
             </div>
-          </a>
-        </div>
-
-        <div class="header-right">
-          <!-- All collections -->
-          <div class="filter-group">
-            <select id="filter-collection" class="filter-select">
-              <option value="all">All Collections</option>
-              <option value="uncategorized">Uncategorized</option>
-              <!-- Collections will be dynamically injected here -->
-            </select>
-          </div>
-
-          <!-- All platforms -->
-          <div class="filter-group">
-            <select id="filter-platform" class="filter-select">
-              <option value="all">All Platforms</option>
-              <option value="x">X / Twitter</option>
-              <option value="instagram">Instagram</option>
-              <option value="threads">Threads</option>
-              <option value="facebook">Facebook</option>
-            </select>
-          </div>
-
-          <!-- Sort Bookmarks -->
-          <div class="filter-group">
-            <select id="filter-sort" class="filter-select" title="Sort Order">
-              <option value="date-desc">Newest First</option>
-              <option value="date-asc">Oldest First</option>
-              <option value="author-asc">Author A-Z</option>
-              <option value="author-desc">Author Z-A</option>
-            </select>
-          </div>
-
-          <!-- tags -->
-          <div class="dropdown" id="tags-dropdown">
-            <button class="btn-secondary dropdown-toggle" id="tags-dropdown-btn">
-              <i class="fa-solid fa-tags"></i> Tags <i class="fa-solid fa-chevron-down"></i>
-            </button>
-            <div class="dropdown-menu" id="tags-dropdown-menu">
-              <div class="dropdown-item active" data-tag="all">All Tags</div>
-              <!-- Tags will be dynamically injected here -->
+            <div class="logo-text">
+              <h1>SocialFeed</h1>
+              <span>Bookmark Manager</span>
             </div>
           </div>
+        </a>
+      </div>
 
-          <!-- dropdown (Feed Manager) -->
-          <div class="dropdown" id="feed-manager-dropdown">
-            <button class="btn-secondary dropdown-toggle" id="feed-manager-dropdown-btn" title="Feed Management Options">
-              <i class="fa-solid fa-sliders"></i> Feed Manager <i class="fa-solid fa-chevron-down"></i>
-            </button>
-            <div class="dropdown-menu dropdown-menu-right" id="feed-manager-dropdown-menu">
-              <button class="dropdown-item" id="btn-select-mode" title="Toggle Multi-Selection Mode">
-                <i class="fa-solid fa-square-check"></i> <span class="btn-text">Select Mode</span>
-              </button>
-              <button class="dropdown-item" id="btn-add-bookmark" title="Add Bookmark Manually">
-                <i class="fa-solid fa-plus"></i> <span class="btn-text">Add Link</span>
-              </button>
-              <button class="dropdown-item" id="action-import" title="Import Bookmarks Archive">
-                <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import</span>
-              </button>
-              <button class="dropdown-item" id="action-export-json" title="Download JSON Database">
-                <i class="fa-solid fa-download"></i> <span class="btn-text">Export JSON</span>
-              </button>
-              <button class="dropdown-item" id="action-export-md" title="Export as Markdown for Obsidian">
-                <i class="fa-solid fa-file-markdown"></i> <span class="btn-text">Export MD</span>
-              </button>
-              <button class="dropdown-item" id="btn-admin-login" title="Admin Login">
-                <i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>
-              </button>
-            </div>
+      <!-- search bar -->
+      <div class="search-bar-container">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="search-input" class="search-input" placeholder="Search author, content, tags, notes...">
+      </div>
+
+      <div class="header-right">
+        <!-- server synchronised -->
+        <button id="sync-btn" class="sync-status-btn" title="Sync status">
+          <span class="sync-dot" id="sync-dot"></span>
+          <span id="sync-status-text" class="btn-text">Server Connected</span>
+        </button>
+
+        <!-- sync -->
+        <button class="btn-primary" id="btn-sync-now" title="Force sync from server">
+          <i class="fa-solid fa-rotate"></i> <span class="btn-text">Sync</span>
+        </button>
+
+        <!-- Admin Login -->
+        <button class="btn-secondary" id="btn-admin-login" title="Admin Login">
+          <i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>
+        </button>
+
+        <!-- Hidden elements for backward compatibility and JS selectors -->
+        <div style="display: none;">
+          <select id="filter-collection">
+            <option value="all">All Collections</option>
+            <option value="uncategorized">Uncategorized</option>
+          </select>
+          <select id="filter-platform">
+            <option value="all">All Platforms</option>
+            <option value="x">X / Twitter</option>
+            <option value="instagram">Instagram</option>
+            <option value="threads">Threads</option>
+            <option value="facebook">Facebook</option>
+          </select>
+          <select id="filter-sort">
+            <option value="recent-desc">Recently Added</option>
+          </select>
+          <div id="tags-dropdown">
+            <button id="tags-dropdown-btn"></button>
+            <div id="tags-dropdown-menu"></div>
           </div>
-
-          <!-- sync -->
-          <button class="btn-primary" id="btn-sync-now" title="Force sync from server">
-            <i class="fa-solid fa-rotate"></i> <span class="btn-text">Sync</span>
-          </button>
-
-          <!-- server synchronised -->
-          <button id="sync-btn" class="sync-status-btn" title="Sync status">
-            <span class="sync-dot" id="sync-dot"></span>
-            <span id="sync-status-text" class="btn-text">Server Connected</span>
-          </button>
-
-          <!-- search bar -->
-          <div class="search-bar-container">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="search-input" class="search-input" placeholder="Search author, content, tags, notes...">
+          <div id="feed-manager-dropdown">
+            <button id="feed-manager-dropdown-btn"></button>
+            <div id="feed-manager-dropdown-menu"></div>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <!-- Main Feed Grid -->
-      <section class="feed-content">
-        <div class="feed-section-header">
-          <div class="feed-title-area">
-            <h2 id="feed-title">All Bookmarks</h2>
-            <p id="feed-subtitle">Showing all saved bookmark feeds</p>
-          </div>
-          
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <div class="layout-switcher">
-              <button class="btn-layout active" id="layout-grid-btn" title="Grid View">
-                <i class="fa-solid fa-grip"></i>
+    <div class="app-body">
+      <aside id="sidebar" class="app-sidebar">
+        <div class="sidebar-menu">
+          <section class="sidebar-section">
+            <div class="menu-section-title">Platform</div>
+            <ul class="menu-list" id="sidebar-platform-list">
+              <li class="menu-item active"><button type="button" data-platform="all"><i
+                    class="fa-solid fa-layer-group"></i><span>All Platforms</span><span class="menu-count"
+                    id="count-platform-all">0</span></button></li>
+              <li class="menu-item"><button type="button" data-platform="instagram"><i
+                    class="fa-brands fa-instagram"></i><span>Instagram</span><span class="menu-count"
+                    id="count-platform-instagram">0</span></button></li>
+              <li class="menu-item"><button type="button" data-platform="x"><i
+                    class="fa-brands fa-x-twitter"></i><span>X</span><span class="menu-count"
+                    id="count-platform-x">0</span></button></li>
+              <li class="menu-item"><button type="button" data-platform="threads"><i
+                    class="fa-brands fa-threads"></i><span>Threads</span><span class="menu-count"
+                    id="count-platform-threads">0</span></button></li>
+              <li class="menu-item"><button type="button" data-platform="reddit"><i
+                    class="fa-brands fa-reddit-alien"></i><span>Reddit</span><span class="menu-count"
+                    id="count-platform-reddit">0</span></button></li>
+              <li class="menu-item"><button type="button" data-platform="facebook"><i
+                    class="fa-brands fa-facebook"></i><span>Facebook</span><span class="menu-count"
+                    id="count-platform-facebook">0</span></button></li>
+            </ul>
+          </section>
+
+          <section class="sidebar-section">
+            <div class="menu-section-title">Categories</div>
+            <ul class="menu-list" id="sidebar-collection-list">
+              <li class="menu-item active"><button type="button" data-collection="all"><i
+                    class="fa-solid fa-folder-tree"></i><span>All</span><span class="menu-count"
+                    id="count-collection-all">0</span></button></li>
+              <li class="menu-item"><button type="button" data-collection="uncategorized"><i
+                    class="fa-regular fa-folder"></i><span>Others</span><span class="menu-count"
+                    id="count-collection-uncategorized">0</span></button></li>
+            </ul>
+          </section>
+
+          <section class="sidebar-section">
+            <ul class="menu-list">
+              <li class="menu-item" id="sidebar-analytics-item">
+                <button type="button" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
+                  <i class="fa-solid fa-chart-line"></i>
+                  <span>Analytics</span>
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <section class="sidebar-section">
+            <div class="menu-section-title">Quick Actions</div>
+            <div class="sidebar-actions">
+              <button type="button" class="sidebar-action" id="action-export-md"
+                title="Export as Markdown for Obsidian">
+                <i class="fa-solid fa-file-markdown"></i><span>Export MD</span>
               </button>
-              <button class="btn-layout" id="layout-list-btn" title="List View">
-                <i class="fa-solid fa-list"></i>
+            </div>
+          </section>
+        </div>
+      </aside>
+
+      <main id="main-panel">
+        <section class="feed-content">
+          <div class="feed-section-header">
+            <div class="feed-title-area">
+              <h2 id="feed-title">All Bookmarks</h2>
+              <p id="feed-subtitle">Showing all saved bookmark feeds</p>
+            </div>
+
+            <div class="action-toolbar" id="action-toolbar">
+              <!-- Select mode -->
+              <button class="toolbar-btn" id="btn-select-mode" aria-label="Select Mode" title="Select Mode"
+                type="button">
+                <i class="fa-solid fa-square-check"></i>
+                <span class="btn-label">Select Mode</span>
               </button>
-              <button class="btn-layout" id="layout-compact-btn" title="Compact View">
-                <i class="fa-solid fa-bars"></i>
+
+              <!-- Add link -->
+              <button class="toolbar-btn" id="btn-add-bookmark" aria-label="Add Link" title="Add Link" type="button">
+                <i class="fa-solid fa-plus"></i>
+                <span class="btn-label">Add Link</span>
               </button>
+
+              <!-- Data Actions Dropdown -->
+              <div class="toolbar-dropdown" id="toolbar-data-dropdown" style="position: relative;">
+                <button class="toolbar-btn dropdown-toggle" id="toolbar-data-btn" aria-label="Data Actions"
+                  title="Data Actions" aria-expanded="false" type="button">
+                  <i class="fa-solid fa-database"></i>
+                  <span class="btn-label">Backup & Restore</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right" id="toolbar-data-menu">
+                  <button class="dropdown-item" id="action-import" type="button">
+                    <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import Archive</span>
+                  </button>
+                  <button class="dropdown-item" id="action-export-json" type="button">
+                    <i class="fa-solid fa-download"></i> <span class="btn-text">Export JSON</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter/sort -->
+              <div class="toolbar-dropdown" id="toolbar-sort-dropdown" style="position: relative;">
+                <button class="toolbar-btn dropdown-toggle" id="toolbar-sort-btn" aria-label="Filter & Sort"
+                  title="Filter & Sort" aria-expanded="false" type="button">
+                  <i class="fa-solid fa-arrow-down-wide-short"></i>
+                  <span class="btn-label" id="sort-active-label">Newest First</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right" id="toolbar-sort-menu">
+                  <button class="dropdown-item active" data-sort="recent-desc" type="button">
+                    <i class="fa-solid fa-check check-icon"></i> <span class="btn-text">Newest First</span>
+                  </button>
+                  <button class="dropdown-item" data-sort="recent-asc" type="button">
+                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                      class="btn-text">Oldest First</span>
+                  </button>
+                  <button class="dropdown-item" data-sort="author-asc" type="button">
+                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                      class="btn-text">Author A–Z</span>
+                  </button>
+                  <button class="dropdown-item" data-sort="author-desc" type="button">
+                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                      class="btn-text">Author Z–A</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Layout View Dropdown -->
+              <div class="toolbar-dropdown" id="toolbar-layout-dropdown" style="position: relative;">
+                <button class="toolbar-btn dropdown-toggle" id="toolbar-layout-btn" aria-label="Layout View"
+                  title="Layout View" aria-expanded="false" type="button">
+                  <i class="fa-solid fa-grip" id="layout-active-icon"></i>
+                  <span class="btn-label" id="layout-active-label">Grid View</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right" id="toolbar-layout-menu">
+                  <button class="dropdown-item active" data-layout="grid" type="button">
+                    <i class="fa-solid fa-check check-icon"></i> <span class="btn-text">Grid View</span>
+                  </button>
+                  <button class="dropdown-item" data-layout="list" type="button">
+                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">List
+                      View</span>
+                  </button>
+                  <button class="dropdown-item" data-layout="compact" type="button">
+                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                      class="btn-text">Compact View</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <button class="btn-secondary" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
-              <i class="fa-solid fa-chart-line"></i> <span class="btn-text">Analytics</span>
-            </button>
           </div>
-        </div>
 
-        <!-- Collapsible Stats Panel -->
-        <div class="stats-panel" id="stats-panel" style="display: none;">
-          <div class="stats-grid">
-            <!-- Platform splits -->
-            <div class="stats-card">
-              <h3><i class="fa-solid fa-circle-nodes"></i> Platform Splits</h3>
-              <div class="stats-metric-row">
-                <div class="metric-info">
-                  <span>X / Twitter</span>
-                  <span id="stat-x-count">0</span>
+          <!-- Collapsible Stats Panel -->
+          <div class="stats-panel" id="stats-panel" style="display: none;">
+            <div class="stats-grid">
+              <!-- Platform splits -->
+              <div class="stats-card">
+                <h3><i class="fa-solid fa-circle-nodes"></i> Platform Splits</h3>
+                <div class="stats-metric-row">
+                  <div class="metric-info">
+                    <span>X / Twitter</span>
+                    <span id="stat-x-count">0</span>
+                  </div>
+                  <div class="metric-bar-container">
+                    <div class="metric-bar x-bar" id="stat-x-bar" style="width: 0%;"></div>
+                  </div>
                 </div>
-                <div class="metric-bar-container">
-                  <div class="metric-bar x-bar" id="stat-x-bar" style="width: 0%;"></div>
+                <div class="stats-metric-row">
+                  <div class="metric-info">
+                    <span>Instagram</span>
+                    <span id="stat-ig-count">0</span>
+                  </div>
+                  <div class="metric-bar-container">
+                    <div class="metric-bar ig-bar" id="stat-ig-bar" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <div class="stats-metric-row">
+                  <div class="metric-info">
+                    <span>Threads</span>
+                    <span id="stat-threads-count">0</span>
+                  </div>
+                  <div class="metric-bar-container">
+                    <div class="metric-bar threads-bar" id="stat-threads-bar" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <div class="stats-metric-row">
+                  <div class="metric-info">
+                    <span>Facebook</span>
+                    <span id="stat-fb-count">0</span>
+                  </div>
+                  <div class="metric-bar-container">
+                    <div class="metric-bar fb-bar" id="stat-fb-bar" style="width: 0%;"></div>
+                  </div>
                 </div>
               </div>
-              <div class="stats-metric-row">
-                <div class="metric-info">
-                  <span>Instagram</span>
-                  <span id="stat-ig-count">0</span>
-                </div>
-                <div class="metric-bar-container">
-                  <div class="metric-bar ig-bar" id="stat-ig-bar" style="width: 0%;"></div>
-                </div>
-              </div>
-              <div class="stats-metric-row">
-                <div class="metric-info">
-                  <span>Threads</span>
-                  <span id="stat-threads-count">0</span>
-                </div>
-                <div class="metric-bar-container">
-                  <div class="metric-bar threads-bar" id="stat-threads-bar" style="width: 0%;"></div>
-                </div>
-              </div>
-              <div class="stats-metric-row">
-                <div class="metric-info">
-                  <span>Facebook</span>
-                  <span id="stat-fb-count">0</span>
-                </div>
-                <div class="metric-bar-container">
-                  <div class="metric-bar fb-bar" id="stat-fb-bar" style="width: 0%;"></div>
-                </div>
-              </div>
-            </div>
 
-            <!-- Top collections -->
-            <div class="stats-card">
-              <h3><i class="fa-solid fa-folder-open"></i> Top Collections</h3>
-              <div class="stats-list" id="stat-collections-list">
-                <!-- dynamically filled -->
+              <!-- Top collections -->
+              <div class="stats-card">
+                <h3><i class="fa-solid fa-folder-open"></i> Top Collections</h3>
+                <div class="stats-list" id="stat-collections-list">
+                  <!-- dynamically filled -->
+                </div>
               </div>
-            </div>
 
-            <!-- Top tags -->
-            <div class="stats-card">
-              <h3><i class="fa-solid fa-tags"></i> Top Tags</h3>
-              <div class="stats-list" id="stat-tags-list">
-                <!-- dynamically filled -->
+              <!-- Top tags -->
+              <div class="stats-card">
+                <h3><i class="fa-solid fa-tags"></i> Top Tags</h3>
+                <div class="stats-list" id="stat-tags-list">
+                  <!-- dynamically filled -->
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="bookmarks-grid" id="bookmarks-grid">
-          <!-- Bookmark Cards will be dynamically injected here -->
-        </div>
-      </section>
-      
-    </main>
-
-
+          <div class="bookmarks-grid" id="bookmarks-grid">
+            <!-- Bookmark Cards will be dynamically injected here -->
+          </div>
+        </section>
+      </main>
+    </div>
 
     <!-- Import Modal Overlay -->
     <div class="modal-overlay" id="import-modal-overlay">
@@ -241,8 +326,11 @@
           <div class="import-instructions">
             <h4>Where to get export archives:</h4>
             <ul>
-              <li><strong>X / Twitter</strong>: Go to Settings &gt; Your Account &gt; Download an archive of your data. The export contains a file named `bookmarks.js` or `bookmarks.json` in your data folder.</li>
-              <li><strong>Instagram</strong>: Go to Account Center &gt; Your Information and Permissions &gt; Download your information. Request standard JSON format, select "Saved Items" only. Look for `saved_posts.json` inside the ZIP.</li>
+              <li><strong>X / Twitter</strong>: Go to Settings &gt; Your Account &gt; Download an archive of your data.
+                The export contains a file named `bookmarks.js` or `bookmarks.json` in your data folder.</li>
+              <li><strong>Instagram</strong>: Go to Account Center &gt; Your Information and Permissions &gt; Download
+                your information. Request standard JSON format, select "Saved Items" only. Look for `saved_posts.json`
+                inside the ZIP.</li>
             </ul>
           </div>
         </div>
@@ -259,8 +347,10 @@
         <div class="modal-body">
           <form id="add-bookmark-form" style="display: flex; flex-direction: column; gap: 16px;">
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-platform" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Select Platform</label>
-              <select id="add-platform" class="filter-select" style="padding-left: 14px; width: 100%; height: 42px;" required>
+              <label for="add-platform"
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Select Platform</label>
+              <select id="add-platform" class="filter-select" style="padding-left: 14px; width: 100%; height: 42px;"
+                required>
                 <option value="" disabled selected>Choose a platform</option>
                 <option value="x">X / Twitter</option>
                 <option value="instagram">Instagram</option>
@@ -270,23 +360,43 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-url" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Post URL</label>
-              <input type="url" id="add-url" class="search-input" style="padding-left: 14px;" placeholder="https://twitter.com/... or https://instagram.com/p/..." required>
+              <label for="add-url" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Post
+                URL</label>
+              <input type="url" id="add-url" class="search-input" style="padding-left: 14px;"
+                placeholder="https://twitter.com/... or https://instagram.com/p/..." required>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;" id="add-category-group">
+              <label for="add-category"
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Category</label>
+              <select id="add-category" class="filter-select" style="padding-left: 14px; width: 100%; height: 42px;">
+                <!-- Filled dynamically -->
+              </select>
+              <input type="text" id="add-category-new" class="search-input"
+                style="padding-left: 14px; margin-top: 6px; display: none;" placeholder="Enter new category name">
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-author-name" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Author Name (Optional)</label>
-              <input type="text" id="add-author-name" class="search-input" style="padding-left: 14px;" placeholder="NASA or National Geographic">
+              <label for="add-author-name"
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Author Name
+                (Optional)</label>
+              <input type="text" id="add-author-name" class="search-input" style="padding-left: 14px;"
+                placeholder="NASA or National Geographic">
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-content" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Caption / Post Content</label>
-              <textarea id="add-content" class="notes-textarea" style="min-height: 80px;" placeholder="Enter tweet content or post description here..."></textarea>
+              <label for="add-content"
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Caption / Post
+                Content</label>
+              <textarea id="add-content" class="notes-textarea" style="min-height: 80px;"
+                placeholder="Enter tweet content or post description here..."></textarea>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-tags" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Initial Tags (Comma separated)</label>
-              <input type="text" id="add-tags" class="search-input" style="padding-left: 14px;" placeholder="space, webb, photography">
+              <label for="add-tags" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Initial
+                Tags (Comma separated)</label>
+              <input type="text" id="add-tags" class="search-input" style="padding-left: 14px;"
+                placeholder="space, webb, photography">
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
@@ -307,10 +417,13 @@
         </div>
         <div class="modal-body">
           <form id="login-form" style="display: flex; flex-direction: column; gap: 16px;">
-            <p style="font-size: 0.85rem; color: var(--text-secondary);">Enter the admin password to unlock write operations like adding, editing, and deleting bookmarks.</p>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">Enter the admin password to unlock write
+              operations like adding, editing, and deleting bookmarks.</p>
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="login-password" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Password</label>
-              <input type="password" id="login-password" class="search-input" style="padding-left: 14px;" placeholder="••••••••" required>
+              <label for="login-password"
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Password</label>
+              <input type="password" id="login-password" class="search-input" style="padding-left: 14px;"
+                placeholder="••••••••" required>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
               <button type="button" class="btn-secondary" id="btn-login-cancel">Cancel</button>
@@ -342,15 +455,101 @@
     <!-- Bulk Action Bar -->
     <div id="bulk-action-bar" class="bulk-action-bar">
       <div class="bulk-action-content">
-        <div class="bulk-info"><i class="fa-solid fa-square-check"></i> <span id="selected-count">0</span> items selected</div>
+        <div class="bulk-info"><i class="fa-solid fa-square-check"></i> <span id="selected-count">0</span> items
+          selected</div>
         <div class="bulk-buttons">
           <button class="btn-secondary" id="btn-bulk-select-all">Select All</button>
           <button class="btn-secondary" id="btn-bulk-deselect-all">Clear</button>
+          <button class="btn-primary" id="btn-bulk-edit"
+            style="background-color: var(--accent-purple); border-color: var(--accent-purple); color: white;">
+            <i class="fa-solid fa-pen-to-square"></i> Edit Selected
+          </button>
           <button class="btn-primary btn-danger" id="btn-bulk-delete">
             <i class="fa-solid fa-trash"></i> Delete Selected
           </button>
           <button class="btn-secondary" id="btn-bulk-cancel">Cancel</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Read Full Post & Edit Note Modal Overlay -->
+    <div class="modal-overlay" id="post-modal-overlay">
+      <div class="modal-box" style="max-width: 600px;">
+        <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+          <h3>View Bookmark Post</h3>
+          <button class="close-btn" id="close-post-modal">&times;</button>
+        </div>
+        <div class="modal-body" style="padding-top: 10px;">
+          <!-- Card content display -->
+          <div class="modal-post-card" id="modal-post-card-content">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Note block -->
+          <div class="modal-note-section" style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
+            <label for="modal-note-textarea"
+              style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">Your Note</label>
+            <textarea id="modal-note-textarea" class="notes-textarea"
+              style="min-height: 120px; width: 100%; box-sizing: border-box;"
+              placeholder="Add your insights, thoughts, or notes about this post..."></textarea>
+            <div style="display: flex; justify-content: flex-end; font-size: 0.75rem; color: var(--text-muted);"
+              id="modal-note-char-count">
+              0 / 1000
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Edit Modal Overlay -->
+    <div class="modal-overlay" id="bulk-edit-modal-overlay">
+      <div class="modal-box" style="max-width: 450px;">
+        <div class="modal-header">
+          <h3>Bulk Edit Bookmarks</h3>
+          <button class="close-btn" id="close-bulk-edit-modal">&times;</button>
+        </div>
+        <form id="bulk-edit-form">
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+            <p style="font-size: 0.88rem; color: var(--text-muted);" id="bulk-edit-count-label">Editing 0 selected
+              bookmarks.</p>
+
+            <!-- Category Edit -->
+            <div class="form-group">
+              <label for="bulk-edit-category" class="form-label"
+                style="font-weight: 600; margin-bottom: 6px; display: block;">Category</label>
+              <select id="bulk-edit-category" class="filter-select"
+                style="width: 100%; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px;">
+                <option value="__no_change__">Keep Original</option>
+                <option value="">Others</option>
+                <!-- Other categories will be dynamically loaded -->
+              </select>
+              <input type="text" id="bulk-edit-category-new" class="modal-input"
+                placeholder="Enter new category name..."
+                style="display: none; margin-top: 8px; width: 100%; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px;">
+            </div>
+
+            <!-- Platform Edit -->
+            <div class="form-group">
+              <label for="bulk-edit-platform" class="form-label"
+                style="font-weight: 600; margin-bottom: 6px; display: block;">Platform</label>
+              <select id="bulk-edit-platform" class="filter-select"
+                style="width: 100%; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px;">
+                <option value="__no_change__">Keep Original</option>
+                <option value="x">X / Twitter</option>
+                <option value="instagram">Instagram</option>
+                <option value="threads">Threads</option>
+                <option value="reddit">Reddit</option>
+                <option value="facebook">Facebook</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn-secondary" id="btn-bulk-edit-cancel">Cancel</button>
+            <button type="submit" class="btn-primary"
+              style="background-color: var(--accent-purple); border-color: var(--accent-purple); color: white;">Apply
+              Changes</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -363,4 +562,5 @@
   <script src="js/importer.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

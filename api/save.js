@@ -1,5 +1,6 @@
 const { connectToDatabase } = require('./lib/db');
 const cloudinary = require('cloudinary').v2;
+const { normalizeBookmark } = require('./lib/bookmark-utils');
 
 // Configure Cloudinary
 if (process.env.CLOUDINARY_URL) {
@@ -50,14 +51,20 @@ module.exports = async (req, res) => {
       return;
     }
 
-    console.log(`Received bulk save request with ${bookmarks.length} items.`);
+    const now = new Date().toISOString();
+    const normalizedBookmarks = bookmarks.map(bm => normalizeBookmark(bm, {
+      now,
+      preserveCreatedAt: true,
+      importSource: bm.importSource || 'manual'
+    }));
 
-    // 1. Process Base64 image conversions to Cloudinary
+    console.log(`Received bulk save request with ${normalizedBookmarks.length} items.`);
+
     let cloudinaryConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY));
     let uploadCount = 0;
 
     if (cloudinaryConfigured) {
-      for (const bm of bookmarks) {
+      for (const bm of normalizedBookmarks) {
         if (bm.thumbnail && bm.thumbnail.startsWith('data:image/')) {
           try {
             console.log(`Uploading Base64 thumbnail to Cloudinary for post: ${bm.id}`);
@@ -67,32 +74,29 @@ module.exports = async (req, res) => {
               overwrite: true,
               resource_type: 'image'
             });
-            // Overwrite Base64 with high-performance HTTPS secure URL
             bm.thumbnail = uploadRes.secure_url;
             uploadCount++;
           } catch (err) {
             console.error(`Failed to upload thumbnail to Cloudinary for ${bm.id}:`, err.message);
-            // Fallback: keep the Base64 in database so the image isn't lost
           }
         }
       }
     } else {
-      console.log('Cloudinary not configured. Skipping Base64 conversion (images will remain as Base64 in MongoDB).');
+      console.log('Cloudinary not configured. Skipping Base64 conversion.');
     }
 
-    // 2. Save bookmarks to MongoDB Atlas
     const db = await connectToDatabase();
     const collection = db.collection('bookmarks');
 
-    // Safe transaction-like bulk overwrite
+    // Keep the current bulk-save contract for note/folder edits, but preserve normalized fields.
     await collection.deleteMany({});
-    if (bookmarks.length > 0) {
-      await collection.insertMany(bookmarks);
+    if (normalizedBookmarks.length > 0) {
+      await collection.insertMany(normalizedBookmarks);
     }
 
-    res.status(200).json({ 
-      status: 'saved', 
-      count: bookmarks.length,
+    res.status(200).json({
+      status: 'saved',
+      count: normalizedBookmarks.length,
       cloudinaryUploads: uploadCount
     });
   } catch (err) {

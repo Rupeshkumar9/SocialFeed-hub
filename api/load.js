@@ -1,4 +1,5 @@
 const { connectToDatabase } = require('./lib/db');
+const { normalizeBookmark, sortBookmarksNewestFirst } = require('./lib/bookmark-utils');
 
 module.exports = async (req, res) => {
   // CORS Headers
@@ -20,11 +21,15 @@ module.exports = async (req, res) => {
     const db = await connectToDatabase();
     const collection = db.collection('bookmarks');
 
-    // Retrieve all bookmarks and sort by timestamp descending (newest first)
-    const bookmarks = await collection
+    // createdAt is the SocialFeed saved date. timestamp remains a legacy fallback.
+    const rawBookmarks = await collection
       .find({})
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1, timestamp: -1, _id: -1 })
       .toArray();
+
+    const bookmarks = rawBookmarks
+      .map(bm => normalizeBookmark(bm, { preserveCreatedAt: true }))
+      .sort(sortBookmarksNewestFirst);
 
     res.status(200).json(bookmarks);
   } catch (err) {
