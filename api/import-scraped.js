@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
       }
 
       const existing = await collection.findOne(identityFilter(bookmark), {
-        projection: { _id: 1, tags: 1, createdAt: 1 }
+        projection: { _id: 1, hashtags: 1, createdAt: 1 }
       });
 
       if (existing) {
@@ -86,6 +86,8 @@ module.exports = async (req, res) => {
           authorName: bookmark.authorName,
           authorUsername: bookmark.authorUsername,
           content: bookmark.content,
+          postUploadedAt: bookmark.postUploadedAt,
+          extensionScrapedAt: bookmark.extensionScrapedAt,
           timestamp: bookmark.timestamp,
           sourceSavedAt: bookmark.sourceSavedAt,
           updatedAt: now,
@@ -100,7 +102,7 @@ module.exports = async (req, res) => {
             update: {
               $set: setFields,
               $setOnInsert: { createdAt: bookmark.createdAt },
-              $addToSet: { tags: { $each: bookmark.tags } }
+              $addToSet: { hashtags: { $each: bookmark.hashtags || [] } }
             }
           }
         });

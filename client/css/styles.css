@@ -547,12 +547,20 @@ body {
   margin-top: 3px;
 }
 
-/* Bookmark Cards Grid — Pinterest Masonry Layout with 4 columns */
+/* Bookmark Cards Grid — True Pinterest Masonry Layout */
 .bookmarks-grid {
-  display: block;
-  column-count: 4;
-  column-gap: 16px;
+  display: flex;
+  gap: 16px;
   width: 100%;
+  align-items: flex-start;
+}
+
+.masonry-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .bookmark-card {
@@ -560,15 +568,13 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 14px;
   overflow: hidden;
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   cursor: pointer;
   /* NO backdrop-filter — it destroys scroll perf with 100+ cards */
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   height: auto;
   width: 100%;
-  break-inside: avoid;
-  margin-bottom: 16px;
   position: relative;
   box-shadow: var(--shadow-sm);
   will-change: transform;
@@ -1208,16 +1214,12 @@ body.dark-mode .modal-post-card {
 }
 
 /* Mobile & Responsive Adjustments */
-@media (max-width: 1400px) {
-  .bookmarks-grid {
-    column-count: 3;
-  }
-}
-
 @media (max-width: 1100px) {
   .bookmarks-grid {
-    column-count: 3;
-    column-gap: 12px;
+    gap: 12px;
+  }
+  .masonry-col {
+    gap: 12px;
   }
   
   .main-header {
@@ -1236,14 +1238,17 @@ body.dark-mode .modal-post-card {
 
 @media (max-width: 768px) {
   .bookmarks-grid {
-    column-count: 2;
+    gap: 12px;
+  }
+  .masonry-col {
+    gap: 12px;
   }
   
   .btn-text {
     display: none;
   }
   
-  #btn-admin-login, #btn-sync-now {
+   #btn-sync-now {
     height: 38px;
     width: 38px;
     padding: 0;
@@ -1302,7 +1307,10 @@ body.dark-mode .modal-post-card {
 
 @media (max-width: 550px) {
   .bookmarks-grid {
-    column-count: 2;
+    gap: 10px;
+  }
+  .masonry-col {
+    gap: 10px;
   }
   
   .main-header {
@@ -2486,4 +2494,22 @@ body.visitor-mode .btn-card-menu {
 
 .tags-group-toggle[aria-expanded="true"] .chevron-icon {
   transform: rotate(180deg);
+}
+
+/* Ensure mobile sidebar menu scrolls cleanly */
+@media (max-width: 768px) {
+  .mobile-drawer .sidebar-menu {
+    padding: 0;
+    overflow-y: visible;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .mobile-drawer .drawer-body {
+    overflow-y: auto;
+    max-height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+  }
 }

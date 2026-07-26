@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
     // createdAt is the SocialFeed saved date. timestamp remains a legacy fallback.
     const rawBookmarks = await collection
       .find({})
-      .sort({ createdAt: -1, timestamp: -1, _id: -1 })
+      .sort({ extensionScrapedAt: -1, createdAt: -1, _id: -1 })
       .toArray();
 
     const bookmarks = rawBookmarks

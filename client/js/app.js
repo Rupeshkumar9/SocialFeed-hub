@@ -268,9 +268,12 @@ function updateCollectionsFilterDropdown() {
 function processTags() {
   AppState.tags.clear();
   AppState.bookmarks.forEach(bm => {
-    if (bm.tags && Array.isArray(bm.tags)) {
-      bm.tags.forEach(tag => {
-        if (tag.trim()) AppState.tags.add(tag.trim().toLowerCase());
+    if (bm.hashtags && Array.isArray(bm.hashtags)) {
+      bm.hashtags.forEach(tag => {
+        const clean = tag.trim().toLowerCase();
+        if (clean) {
+          AppState.tags.add(clean);
+        }
       });
     }
   });
@@ -499,7 +502,7 @@ function applyFiltersAndSearch() {
     
     // 2. Tag Filter
     if (AppState.activeTag !== 'all') {
-      const hasTag = bm.tags && bm.tags.some(t => t.toLowerCase() === AppState.activeTag);
+      const hasTag = bm.hashtags && bm.hashtags.some(t => t.toLowerCase() === AppState.activeTag);
       if (!hasTag) return false;
     }
     
@@ -509,7 +512,7 @@ function applyFiltersAndSearch() {
       const matchUsername = bm.authorUsername && bm.authorUsername.toLowerCase().includes(query);
       const matchContent = bm.content && bm.content.toLowerCase().includes(query);
       const matchNotes = bm.notes && bm.notes.toLowerCase().includes(query);
-      const matchTags = bm.tags && bm.tags.some(t => t.toLowerCase().includes(query));
+      const matchTags = bm.hashtags && bm.hashtags.some(t => t.toLowerCase().includes(query));
       
       return matchAuthorName || matchUsername || matchContent || matchNotes || matchTags;
     }
@@ -517,16 +520,12 @@ function applyFiltersAndSearch() {
     return true;
   });
 
-  // Sort bookmarks by active criteria.
+  // Sort bookmarks by active criteria (strictly based on scraped date).
   AppState.filteredBookmarks.sort((a, b) => {
     if (AppState.activeSort === 'recent-desc') {
-      return getBookmarkDateMs(b, ['createdAt', 'timestamp', 'sourceSavedAt']) - getBookmarkDateMs(a, ['createdAt', 'timestamp', 'sourceSavedAt']);
+      return getBookmarkDateMs(b, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']) - getBookmarkDateMs(a, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']);
     } else if (AppState.activeSort === 'recent-asc') {
-      return getBookmarkDateMs(a, ['createdAt', 'timestamp', 'sourceSavedAt']) - getBookmarkDateMs(b, ['createdAt', 'timestamp', 'sourceSavedAt']);
-    } else if (AppState.activeSort === 'date-desc') {
-      return getBookmarkDateMs(b, ['sourceSavedAt', 'timestamp', 'createdAt']) - getBookmarkDateMs(a, ['sourceSavedAt', 'timestamp', 'createdAt']);
-    } else if (AppState.activeSort === 'date-asc') {
-      return getBookmarkDateMs(a, ['sourceSavedAt', 'timestamp', 'createdAt']) - getBookmarkDateMs(b, ['sourceSavedAt', 'timestamp', 'createdAt']);
+      return getBookmarkDateMs(a, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']) - getBookmarkDateMs(b, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']);
     } else if (AppState.activeSort === 'author-asc') {
       const nameA = (a.authorName || '').toLowerCase();
       const nameB = (b.authorName || '').toLowerCase();
@@ -607,13 +606,14 @@ function buildCardElement(bm) {
   
   const initials = bm.authorName ? bm.authorName.split(' ').map(n=>n[0]).join('').substring(0, 2).toUpperCase() : '?';
   
-  // Build tags markup (limit to 3 visible)
+  // Build tags markup (limit to 3 visible, only real hashtags)
   let tagsMarkup = '';
-  if (bm.tags && bm.tags.length > 0) {
-    const visibleTags = bm.tags.slice(0, 3);
+  const bmHashtags = bm.hashtags || [];
+  if (bmHashtags.length > 0) {
+    const visibleTags = bmHashtags.slice(0, 3);
     tagsMarkup = visibleTags.map(t => `<span class="card-tag">#${t}</span>`).join('');
-    if (bm.tags.length > 3) {
-      tagsMarkup += `<span class="card-tag" style="opacity:0.5;">+${bm.tags.length - 3}</span>`;
+    if (bmHashtags.length > 3) {
+      tagsMarkup += `<span class="card-tag" style="opacity:0.5;">+${bmHashtags.length - 3}</span>`;
     }
   }
 
@@ -782,7 +782,7 @@ function buildCardElement(bm) {
     <div class="card-body">
       <div class="post-quote-icon"><i class="fa-solid fa-quote-left"></i></div>
       ${(() => {
-        const contentVal = bm.content || 'Saved Post details';
+        const contentVal = cleanPostContent(bm.content, bm.platform) || 'Saved Post details';
         const words = contentVal.split(/\s+/);
         const hasMore = words.length > 50;
         const summaryText = hasMore ? words.slice(0, 50).join(' ') + '...' : contentVal;
@@ -960,6 +960,13 @@ function initInfiniteScrollObserver() {
   AppState.scrollObserver.observe(sentinel);
 }
 
+function getGridColumnCount() {
+  const w = window.innerWidth;
+  if (w <= 768) return 2;
+  if (w <= 1100) return 3;
+  return 4;
+}
+
 /**
  * Render paginated bookmarks grid — only the first visibleCount items
  */
@@ -983,12 +990,31 @@ function renderFeedGrid() {
   // Only render up to visibleCount
   const visibleSlice = AppState.filteredBookmarks.slice(0, AppState.visibleCount);
   
-  // Use DocumentFragment for fast batch DOM insertion
-  const fragment = document.createDocumentFragment();
-  visibleSlice.forEach(bm => {
-    fragment.appendChild(buildCardElement(bm));
-  });
-  DOM.bookmarksGrid.appendChild(fragment);
+  if (AppState.activeLayout === 'list' || AppState.activeLayout === 'compact') {
+    const fragment = document.createDocumentFragment();
+    visibleSlice.forEach(bm => {
+      fragment.appendChild(buildCardElement(bm));
+    });
+    DOM.bookmarksGrid.appendChild(fragment);
+  } else {
+    // True Pinterest Masonry Layout: Round-Robin Left-to-Right distribution across dynamic flex columns
+    const numCols = getGridColumnCount();
+    const cols = [];
+    for (let i = 0; i < numCols; i++) {
+      const colDiv = document.createElement('div');
+      colDiv.className = 'masonry-col';
+      cols.push(colDiv);
+    }
+    
+    visibleSlice.forEach((bm, index) => {
+      const targetCol = cols[index % numCols];
+      targetCol.appendChild(buildCardElement(bm));
+    });
+    
+    const fragment = document.createDocumentFragment();
+    cols.forEach(col => fragment.appendChild(col));
+    DOM.bookmarksGrid.appendChild(fragment);
+  }
 
   // Render Infinite Scroll Sentinel
   renderInfiniteScrollSentinel();
@@ -1063,6 +1089,8 @@ function changeLayout(layout, showFeedbackToast = true) {
     }
   }
   
+  renderFeedGrid();
+  
   if (showFeedbackToast) {
     showToast(`Switched to ${layout.charAt(0).toUpperCase() + layout.slice(1)} view`, 'info');
   }
@@ -1128,8 +1156,8 @@ function updateStatsAnalytics() {
   // Tags Stats
   const tagCounts = {};
   dataList.forEach(bm => {
-    if (bm.tags) {
-      bm.tags.forEach(t => {
+    if (bm.hashtags) {
+      bm.hashtags.forEach(t => {
         tagCounts[t] = (tagCounts[t] || 0) + 1;
       });
     }
@@ -1155,53 +1183,7 @@ function updateStatsAnalytics() {
   }
 }
 
-/**
- * Export active feed items as Obsidian-friendly Markdown files
- */
-function exportBookmarksToMarkdown() {
-  const listToExport = AppState.filteredBookmarks;
-  if (listToExport.length === 0) {
-    showToast("No bookmarks matching current filters to export", "error");
-    return;
-  }
-  
-  let markdown = `# Bookmarks Feed Export\n\n`;
-  markdown += `*Exported on: ${new Date().toLocaleString()}*\n`;
-  markdown += `*Total items: ${listToExport.length}*\n\n---\n\n`;
-  
-  listToExport.forEach(bm => {
-    markdown += `## ${bm.authorName || 'Social Post'} (@${bm.authorUsername || 'user'})\n\n`;
-    markdown += `- **Platform:** ${bm.platform.toUpperCase()}\n`;
-    markdown += `- **URL:** [Original Post](${bm.url})\n`;
-    if (bm.folder) {
-      markdown += `- **Collection:** [[${bm.folder}]]\n`;
-    }
-    if (bm.tags && bm.tags.length > 0) {
-      markdown += `- **Tags:** ${bm.tags.map(t => `#${t}`).join(' ')}\n`;
-    }
-    markdown += `- **Saved Date:** ${formatDate(bm.timestamp)}\n\n`;
-    
-    markdown += `### Content\n> ${bm.content ? bm.content.replace(/\n/g, '\n> ') : 'No content'}\n\n`;
-    
-    if (bm.notes && bm.notes.trim()) {
-      markdown += `### Personal Notes\n${bm.notes}\n\n`;
-    }
-    
-    markdown += `---\n\n`;
-  });
-  
-  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute("href", url);
-  downloadAnchor.setAttribute("download", `bookmarks_export_${new Date().toISOString().split('T')[0]}.md`);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-  URL.revokeObjectURL(url);
-  
-  showToast(`Exported ${listToExport.length} bookmarks to Markdown!`, "success");
-}
+
 
 /**
  * Core Data Sync Manager: Saves the active state back to data/bookmarks.json
@@ -1315,7 +1297,6 @@ function handleManualBookmarkSubmit(e) {
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
   const tagListInput = DOM.addTags.value.trim();
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook'];
 
   let categoryVal = '';
   if (DOM.addCategory.value === '__new__') {
@@ -1345,9 +1326,8 @@ function handleManualBookmarkSubmit(e) {
       bm.content = content || bm.content;
       bm.folder = categoryVal;
       
-      const originalSystemTags = bm.tags ? bm.tags.filter(t => SYSTEM_TAGS.includes(t.toLowerCase())) : [];
       const newUserTags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
-      bm.tags = Array.from(new Set([...originalSystemTags, ...newUserTags]));
+      bm.hashtags = newUserTags;
       
       // Reprocess state and write to server
       processCollections();
@@ -1370,10 +1350,8 @@ function handleManualBookmarkSubmit(e) {
 
   const url = DOM.addUrl.value.trim();
 
-  // Parse tags
-  const tags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
-  if (!tags.includes('manual')) tags.push('manual');
-  if (!tags.includes(platform)) tags.push(platform);
+  // Parse hashtags
+  const hashtags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
 
   // Extract unique code or ID for deduplication keys
   let id = '';
@@ -1402,7 +1380,7 @@ function handleManualBookmarkSubmit(e) {
     authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : 'username',
     content: content || `Saved ${platform.toUpperCase()} Post (click to load embed)`,
     timestamp: new Date().toISOString(),
-    tags: tags,
+    hashtags: hashtags,
     folder: categoryVal,
     notes: ''
   };
@@ -1504,6 +1482,24 @@ function populateModalCategorySelect(selectedVal = '') {
 
 let currentPostModalBookmarkId = null;
 
+function cleanPostContent(content, platform) {
+  if (!content) return platform === 'instagram' ? 'Saved Instagram Post' : 'Saved Post';
+  const str = String(content).trim();
+  return str || (platform === 'instagram' ? 'Saved Instagram Post' : 'Saved Post');
+}
+
+function formatConciseDate(dateVal) {
+  if (!dateVal) return null;
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric'
+  });
+}
+
 /**
  * Open Modal to read the full post content and add custom notes
  */
@@ -1512,6 +1508,11 @@ function openPostModal(bmId, focusNote = false) {
   if (!bm) return;
   
   currentPostModalBookmarkId = bmId;
+  
+  // Clean content & format concise post date (only if postUploadedAt is present & non-empty)
+  const cleanContent = cleanPostContent(bm.content, bm.platform);
+  const hasPostUploadedAt = bm.postUploadedAt && String(bm.postUploadedAt).trim() !== '';
+  const formattedPostDate = hasPostUploadedAt ? formatConciseDate(bm.postUploadedAt) : null;
   
   // Populate post content
   const initials = bm.authorName ? bm.authorName.split(' ').map(n=>n[0]).join('').substring(0, 2).toUpperCase() : '?';
@@ -1524,7 +1525,7 @@ function openPostModal(bmId, focusNote = false) {
   })();
   
   DOM.modalPostCardContent.innerHTML = `
-    <div class="modal-post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+    <div class="modal-post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: ${formattedPostDate ? '6px' : '12px'};">
       <div class="modal-post-author" style="display: flex; align-items: center; gap: 8px;">
         <div class="author-avatar">${initials}</div>
         <div class="author-names" style="display: flex; flex-direction: column;">
@@ -1536,8 +1537,14 @@ function openPostModal(bmId, focusNote = false) {
         <i class="${platformIconClass}"></i>
       </div>
     </div>
+    ${formattedPostDate ? `
+      <div class="modal-post-date" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color);">
+        <i class="fa-regular fa-calendar-days" style="color: var(--accent-rose, #e11d48); font-size: 0.8rem;"></i>
+        <span style="font-weight: 500;">${formattedPostDate}</span>
+      </div>
+    ` : ''}
     <div class="modal-post-text" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; max-height: 250px; overflow-y: auto; padding-right: 4px;">
-      ${escapeHTML(bm.content || '')}
+      ${escapeHTML(cleanContent)}
     </div>
     ${bm.thumbnail ? `
       <div class="modal-post-media" style="margin-top: 12px; border-radius: 8px; overflow: hidden; max-height: 200px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color);">
@@ -1727,8 +1734,7 @@ function openEditBookmarkModal(bm) {
   DOM.addAuthorName.value = bm.authorName || '';
   DOM.addContent.value = bm.content || '';
   
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook'];
-  const userTags = bm.tags ? bm.tags.filter(t => !SYSTEM_TAGS.includes(t.toLowerCase())) : [];
+  const userTags = bm.hashtags || [];
   DOM.addTags.value = userTags.join(', ');
   
   // Prefill category
@@ -2023,25 +2029,7 @@ function initEventListeners() {
     });
   }
 
-  // Data Actions Dropdown bindings
-  if (dataBtn && dataMenu) {
-    dataBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = dataMenu.classList.contains('active');
-      closeAllToolbarDropdowns();
-      if (!isOpen) {
-        dataMenu.classList.add('active');
-        dataBtn.setAttribute('aria-expanded', 'true');
-      }
-    });
 
-    dataMenu.querySelectorAll('.dropdown-item').forEach(item => {
-      item.addEventListener('click', () => {
-        // Just dismiss, the separate click listeners on the item IDs will execute
-        closeAllToolbarDropdowns();
-      });
-    });
-  }
 
   // Global click to close active dropdowns
   document.addEventListener('click', () => {
@@ -2094,11 +2082,7 @@ function initEventListeners() {
   });
   DOM.btnExportJson.addEventListener('click', triggerManualDownload);
 
-  // Markdown Export listener (sidebar Quick Actions)
-  const btnExportMd = document.getElementById('action-export-md');
-  if (btnExportMd) {
-    btnExportMd.addEventListener('click', exportBookmarksToMarkdown);
-  }
+
 
   // Analytics toggle stats panel (sidebar item)
   const btnToggleStats = document.getElementById('btn-toggle-stats');
@@ -2367,8 +2351,16 @@ function initEventListeners() {
   }
 
   // Handle window resize dynamically to move elements between header and drawer
+  let currentGridCols = getGridColumnCount();
   window.addEventListener('resize', debounce(() => {
     checkMobileDrawerLayout();
+    const newCols = getGridColumnCount();
+    if (newCols !== currentGridCols) {
+      currentGridCols = newCols;
+      if (!AppState.activeLayout || AppState.activeLayout === 'grid') {
+        renderFeedGrid();
+      }
+    }
   }, 100));
 }
 

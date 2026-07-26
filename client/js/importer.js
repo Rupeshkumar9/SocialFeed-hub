@@ -12,6 +12,12 @@ const BookmarksImporter = {
    */
   parse: function(fileName, fileContent) {
     const trimmedContent = fileContent.trim();
+    const lowerName = fileName.toLowerCase();
+    
+    // Explicitly reject markdown files
+    if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) {
+      return [];
+    }
     
     // 1. Check if it is the official Instagram HTML saved posts export
     if (trimmedContent.includes('class="_a6_q"') && trimmedContent.includes('instagram.com')) {
@@ -93,12 +99,12 @@ const BookmarksImporter = {
         
         // Parse hashtags from caption
         const hashtagRegex = /#(\w+)/g;
-        const tags = ['imported'];
+        const hashtags = [];
         let match;
         while ((match = hashtagRegex.exec(caption)) !== null) {
           const tag = match[1].toLowerCase();
-          if (!tags.includes(tag)) {
-            tags.push(tag);
+          if (!hashtags.includes(tag)) {
+            hashtags.push(tag);
           }
         }
         
@@ -110,7 +116,7 @@ const BookmarksImporter = {
           authorUsername: authorUsername,
           content: caption,
           timestamp: timestamp,
-          tags: tags,
+          hashtags: hashtags,
           notes: ''
         });
       });
@@ -155,7 +161,7 @@ const BookmarksImporter = {
           authorUsername: 'twitter_user',
           content: 'Bookmarked X post (click to load interactive embed details)',
           timestamp: timestamp,
-          tags: ['imported', 'x-archive'],
+          hashtags: [],
           notes: ''
         };
       });
@@ -195,7 +201,7 @@ const BookmarksImporter = {
             authorUsername: 'instagram_user',
             content: item.title || 'Saved Instagram post (click to view interactive embed comments)',
             timestamp: timestamp,
-            tags: ['imported', 'instagram-archive'],
+            hashtags: [],
             notes: ''
           });
         }
@@ -216,8 +222,10 @@ const BookmarksImporter = {
               authorName: item.authorName || (platform === 'x' ? 'X User' : 'Instagram Creator'),
               authorUsername: item.authorUsername || (platform === 'x' ? 'twitter_user' : 'instagram_user'),
               content: item.content || item.title || `Bookmarked ${platform.toUpperCase()} Link`,
-              timestamp: item.timestamp || new Date().toISOString(),
-              tags: Array.isArray(item.tags) ? item.tags : ['imported'],
+              postUploadedAt: item.postUploadedAt || '',
+              extensionScrapedAt: item.extensionScrapedAt || item.timestamp || new Date().toISOString(),
+              timestamp: item.extensionScrapedAt || item.timestamp || new Date().toISOString(),
+              hashtags: Array.isArray(item.hashtags) ? item.hashtags : [],
               notes: item.notes || '',
               thumbnail: item.thumbnail || ''
             });
@@ -263,7 +271,7 @@ const BookmarksImporter = {
         authorUsername: 'twitter_user',
         content: 'Extracted X link (click to load live embed)',
         timestamp: new Date().toISOString(),
-        tags: ['extracted-link'],
+        hashtags: [],
         notes: ''
       });
     }
@@ -283,7 +291,7 @@ const BookmarksImporter = {
         authorUsername: 'instagram_user',
         content: 'Extracted Instagram link (click to load live embed)',
         timestamp: new Date().toISOString(),
-        tags: ['extracted-link'],
+        hashtags: [],
         notes: ''
       });
     }
@@ -346,17 +354,24 @@ const BookmarksImporter = {
             matchItem.thumbnail = item.thumbnail;
             updatedCount++;
           }
-          if (item.authorName && (matchItem.authorName === 'X Link' || matchItem.authorName === 'Instagram Link' || matchItem.authorName === 'Instagram Creator')) {
+          if (item.authorName) {
             matchItem.authorName = item.authorName;
-            matchItem.authorUsername = item.authorUsername;
+            matchItem.authorUsername = item.authorUsername || item.authorName;
           }
-          if (item.content && (matchItem.content === 'Bookmarked X post' || matchItem.content.startsWith('Saved Instagram Post') || !matchItem.content)) {
+          if (item.content) {
             matchItem.content = item.content;
           }
+          if (item.postUploadedAt !== undefined) {
+            matchItem.postUploadedAt = item.postUploadedAt;
+          }
+          if (item.extensionScrapedAt) {
+            matchItem.extensionScrapedAt = item.extensionScrapedAt;
+          }
           
-          // Merge tags
-          if (item.tags) {
-            matchItem.tags = Array.from(new Set([...matchItem.tags, ...item.tags]));
+          // Merge hashtags
+          if (item.hashtags && item.hashtags.length > 0) {
+            const existing = Array.isArray(matchItem.hashtags) ? matchItem.hashtags : [];
+            matchItem.hashtags = Array.from(new Set([...existing, ...item.hashtags]));
           }
         }
       }

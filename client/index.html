@@ -52,11 +52,6 @@
           <i class="fa-solid fa-rotate"></i> <span class="btn-text">Sync</span>
         </button>
 
-        <!-- Admin Login -->
-        <button class="btn-secondary" id="btn-admin-login" title="Admin Login">
-          <i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>
-        </button>
-
         <!-- Hidden elements for backward compatibility and JS selectors -->
         <div style="display: none;">
           <select id="filter-collection">
@@ -137,10 +132,18 @@
 
           <section class="sidebar-section">
             <div class="menu-section-title">Quick Actions</div>
-            <div class="sidebar-actions">
-              <button type="button" class="sidebar-action" id="action-export-md"
-                title="Export as Markdown for Obsidian">
-                <i class="fa-solid fa-file-markdown"></i><span>Export MD</span>
+            <div class="sidebar-actions" style="display: flex; flex-direction: column; gap: 8px;">
+              <button type="button" class="sidebar-action" id="action-import"
+                title="Import Archive">
+                <i class="fa-solid fa-file-import"></i><span>Import Archive</span>
+              </button>
+              <button type="button" class="sidebar-action" id="action-export-json"
+                title="Export Bookmarks as JSON">
+                <i class="fa-solid fa-download"></i><span>Export JSON</span>
+              </button>
+              <button type="button" class="sidebar-action" id="btn-admin-login"
+                title="Admin Login">
+                <i class="fa-solid fa-lock"></i><span>Admin Login</span>
               </button>
             </div>
           </section>
@@ -169,22 +172,7 @@
                 <span class="btn-label">Add Link</span>
               </button>
 
-              <!-- Data Actions Dropdown -->
-              <div class="toolbar-dropdown" id="toolbar-data-dropdown" style="position: relative;">
-                <button class="toolbar-btn dropdown-toggle" id="toolbar-data-btn" aria-label="Data Actions"
-                  title="Data Actions" aria-expanded="false" type="button">
-                  <i class="fa-solid fa-database"></i>
-                  <span class="btn-label">Backup & Restore</span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right" id="toolbar-data-menu">
-                  <button class="dropdown-item" id="action-import" type="button">
-                    <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import Archive</span>
-                  </button>
-                  <button class="dropdown-item" id="action-export-json" type="button">
-                    <i class="fa-solid fa-download"></i> <span class="btn-text">Export JSON</span>
-                  </button>
-                </div>
-              </div>
+
 
               <!-- Filter/sort -->
               <div class="toolbar-dropdown" id="toolbar-sort-dropdown" style="position: relative;">

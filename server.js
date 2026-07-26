@@ -1,8 +1,6 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
-
 const PORT = 3000;
 
 // Load environment variables from .env file into process.env
@@ -173,28 +171,8 @@ server.listen(PORT, () => {
   console.log('   ADMIN_PASSWORD defined in your .env to save/edit.');
   console.log('======================================================\n');
 
-  // Auto-launch the web page in the default browser
-  const url = `http://localhost:${PORT}`;
-  let startCommand = '';
-  
-  if (process.platform === 'win32') {
-    startCommand = `start ${url}`;
-  } else if (process.platform === 'darwin') {
-    startCommand = `open ${url}`;
-  } else {
-    startCommand = `xdg-open ${url}`;
-  }
-  
-  try {
-    exec(startCommand, (err) => {
-      if (err) {
-        console.log('Please open the URL manually in your preferred browser!');
-      } else {
-        console.log('Automatically opened Dashboard page in your browser.');
-      }
-    });
-  } catch (err) {
-    console.log('Please open the URL manually in your preferred browser!');
-  }
 });
+
+
+
 

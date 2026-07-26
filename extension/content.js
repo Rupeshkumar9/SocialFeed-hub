@@ -82,7 +82,7 @@
     }
     isScanning = false;
 
-    // Send final payload to popup
+    // Send final payload to popup instantly
     chrome.runtime.sendMessage({
       action: "scan_complete",
       data: Array.from(collectedMap.values()),
@@ -110,25 +110,66 @@
         const imageUrl = imgEl ? imgEl.getAttribute('src') : null;
         const altText = imgEl ? imgEl.getAttribute('alt') || '' : '';
         
+        const container = el.closest('article, div[role="button"], div');
         let authorUsername = 'instagram_user';
         let authorName = 'Instagram Creator';
         let content = altText || 'Saved Instagram Post';
         
         if (altText) {
-          const matchAuthor = altText.match(/^Photo by ([a-zA-Z0-9_\-\.]+)/i) || 
-                              altText.match(/^([a-zA-Z0-9_\-\.]+)'s photo/i);
-          if (matchAuthor) {
-            authorUsername = matchAuthor[1];
-            authorName = matchAuthor[1];
+          const matchAuthor = altText.match(/^(?:Photo|Video|Reel|Media)(?:\s+shared)?\s+by\s+([^\s\.\,]+)/i) || 
+                              altText.match(/^([a-zA-Z0-9_\-\.]+)'s\s+(?:photo|video|reel|post)/i) ||
+                              altText.match(/by\s+([a-zA-Z0-9_\-\.]+)/i);
+          if (matchAuthor && matchAuthor[1]) {
+            authorUsername = matchAuthor[1].trim();
+            authorName = matchAuthor[1].trim();
           }
         }
 
+        // DOM Fallback: Check parent container for user profile link
+        if (authorUsername === 'instagram_user' && container) {
+          const profileLinks = container.querySelectorAll('a[href^="/"]');
+          for (const pLink of profileLinks) {
+            const href = pLink.getAttribute('href') || '';
+            const parts = href.split('?')[0].split('/').filter(Boolean);
+            if (parts.length === 1) {
+              const u = parts[0].trim();
+              const systemPages = ['p', 'reel', 'reels', 'explore', 'stories', 'your_activity', 'direct', 'accounts', 'developer'];
+              if (u && !systemPages.includes(u.toLowerCase())) {
+                authorUsername = u;
+                authorName = u;
+                break;
+              }
+            }
+          }
+        }
+
+        // Extract post upload date from DOM time tag or altText date string (or "" if not found)
+        let postUploadedAt = "";
+        const timeEl = el.querySelector('time') || (container ? container.querySelector('time') : null);
+        if (timeEl && timeEl.getAttribute('datetime')) {
+          const dt = timeEl.getAttribute('datetime');
+          const parsedDate = new Date(dt);
+          if (!isNaN(parsedDate.getTime())) {
+            postUploadedAt = parsedDate.toISOString();
+          }
+        } else if (altText) {
+          const matchDate = altText.match(/\bon\s+([A-Za-z]+\s+\d{1,2}(?:,\s+\d{4})?)/i);
+          if (matchDate) {
+            const parsedDate = new Date(matchDate[1]);
+            if (!isNaN(parsedDate.getTime())) {
+              postUploadedAt = parsedDate.toISOString();
+            }
+          }
+        }
+
+        const extensionScrapedAt = new Date().toISOString();
+
         const hashtagRegex = /#(\w+)/g;
-        const tags = ['imported', 'instagram'];
+        const hashtags = [];
         let tagMatch;
         while ((tagMatch = hashtagRegex.exec(content)) !== null) {
           const t = tagMatch[1].toLowerCase();
-          if (!tags.includes(t)) tags.push(t);
+          if (!hashtags.includes(t)) hashtags.push(t);
         }
         
         items.push({
@@ -137,8 +178,9 @@
           authorName: authorName,
           authorUsername: authorUsername,
           content: content,
-          timestamp: new Date().toISOString(),
-          tags: tags,
+          postUploadedAt: postUploadedAt,
+          extensionScrapedAt: extensionScrapedAt,
+          hashtags: hashtags,
           imageUrl: imageUrl
         });
       } catch (err) {
@@ -192,7 +234,16 @@
         const textDiv = el.querySelector('[data-testid="tweetText"]');
         const content = textDiv ? textDiv.textContent.trim() : 'Bookmarked X post';
 
-        const timestamp = new Date().toISOString();
+        const timeEl = el.querySelector('time');
+        let postUploadedAt = "";
+        if (timeEl && timeEl.getAttribute('datetime')) {
+          const dt = timeEl.getAttribute('datetime');
+          const parsedDate = new Date(dt);
+          if (!isNaN(parsedDate.getTime())) {
+            postUploadedAt = parsedDate.toISOString();
+          }
+        }
+        const extensionScrapedAt = new Date().toISOString();
 
         const photoImg = el.querySelector('[data-testid="tweetPhoto"] img, [data-testid="card.layoutLarge.detail"] img');
         let imageUrl = photoImg ? photoImg.getAttribute('src') : null;
@@ -205,11 +256,11 @@
         }
 
         const hashtagRegex = /#(\w+)/g;
-        const tags = ['imported', 'x-post'];
+        const hashtags = [];
         let tagMatch;
         while ((tagMatch = hashtagRegex.exec(content)) !== null) {
           const t = tagMatch[1].toLowerCase();
-          if (!tags.includes(t)) tags.push(t);
+          if (!hashtags.includes(t)) hashtags.push(t);
         }
 
         items.push({
@@ -218,8 +269,9 @@
           authorName: authorName,
           authorUsername: authorUsername,
           content: content,
-          timestamp: timestamp,
-          tags: tags,
+          postUploadedAt: postUploadedAt,
+          extensionScrapedAt: extensionScrapedAt,
+          hashtags: hashtags,
           imageUrl: imageUrl
         });
       } catch (err) {

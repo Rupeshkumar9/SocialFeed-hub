@@ -136,8 +136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           authorName: item.authorName,
           authorUsername: item.authorUsername,
           content: item.content,
-          timestamp: item.timestamp,
-          tags: item.tags,
+          postUploadedAt: item.postUploadedAt || '',
+          extensionScrapedAt: item.extensionScrapedAt || new Date().toISOString(),
+          hashtags: item.hashtags || [],
           notes: '',
           thumbnail: base64Image
         });

@@ -81,25 +81,34 @@ function buildBookmarkId(platform, platformItemId, fallbackId) {
   return `${platform || 'web'}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function normalizeTags(tags, platform, content = '') {
-  const out = new Set(['imported']);
-  if (platform === 'x') out.add('x-post');
-  if (platform && platform !== 'x' && platform !== 'web') out.add(platform);
+function normalizeHashtags(hashtags, content = '') {
+  const out = new Set();
 
-  if (Array.isArray(tags)) {
-    tags.forEach(tag => {
+  // Preserve existing hashtags
+  if (Array.isArray(hashtags)) {
+    hashtags.forEach(tag => {
       const clean = String(tag || '').toLowerCase().replace(/^#/, '').trim();
       if (clean) out.add(clean);
     });
   }
 
+  // Also extract hashtags from content text
   const hashtagRegex = /#([\w-]+)/g;
   let match;
   while ((match = hashtagRegex.exec(String(content || ''))) !== null) {
     out.add(match[1].toLowerCase());
   }
 
-  return Array.from(out);
+  // Filter out any system tags that may have leaked in from old data
+  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook'];
+  const result = Array.from(out).filter(t => !SYSTEM_TAGS.includes(t));
+  return result;
+}
+
+function cleanPostContent(content, platform) {
+  if (!content) return platform === 'instagram' ? 'Saved Instagram Post' : 'Saved Post';
+  const str = String(content).trim();
+  return str || (platform === 'instagram' ? 'Saved Instagram Post' : 'Saved Post');
 }
 
 function normalizeBookmark(item = {}, options = {}) {
@@ -107,8 +116,13 @@ function normalizeBookmark(item = {}, options = {}) {
   const platform = item.platform || detectPlatform(item.url);
   const platformItemId = item.platformItemId || extractPlatformItemId(item.url, platform);
   const canonical = item.canonicalUrl || canonicalUrl(item.url);
-  const sourceSavedAt = toISOStringOrNull(item.sourceSavedAt || item.timestamp);
-  const createdAt = toISOStringOrNull(item.createdAt) || (options.preserveCreatedAt ? sourceSavedAt : now) || now;
+  
+  const postUploadedAt = toISOStringOrNull(item.postUploadedAt) || '';
+  const extensionScrapedAt = toISOStringOrNull(item.extensionScrapedAt) || toISOStringOrNull(item.sourceSavedAt || item.timestamp) || toISOStringOrNull(item.createdAt) || now;
+  const createdAt = extensionScrapedAt;
+  
+  const rawContent = item.content || (platform === 'instagram' ? 'Saved Instagram Post' : `Saved ${platform.toUpperCase()} post`);
+  const cleanedContent = cleanPostContent(rawContent, platform);
 
   return {
     ...item,
@@ -118,13 +132,15 @@ function normalizeBookmark(item = {}, options = {}) {
     canonicalUrl: canonical,
     authorName: item.authorName || (platform === 'instagram' ? 'Instagram Creator' : platform === 'x' ? 'X User' : 'Social Creator'),
     authorUsername: item.authorUsername || (platform === 'instagram' ? 'instagram_user' : platform === 'x' ? 'twitter_user' : 'user'),
-    content: item.content || (platform === 'instagram' ? 'Saved Instagram Post' : `Saved ${platform.toUpperCase()} post`),
-    timestamp: sourceSavedAt || createdAt,
-    sourceSavedAt: sourceSavedAt || createdAt,
+    content: cleanedContent,
+    postUploadedAt,
+    extensionScrapedAt,
+    timestamp: extensionScrapedAt,
+    sourceSavedAt: extensionScrapedAt,
     createdAt,
     updatedAt: now,
     importSource: item.importSource || options.importSource || 'manual',
-    tags: normalizeTags(item.tags, platform, item.content),
+    hashtags: normalizeHashtags(item.hashtags, cleanedContent),
     notes: item.notes || '',
     thumbnail: item.thumbnail || item.imageUrl || ''
   };
@@ -138,8 +154,8 @@ function identityFilter(bookmark) {
 }
 
 function sortBookmarksNewestFirst(a, b) {
-  const bDate = parseDate(b.createdAt) || parseDate(b.timestamp) || parseDate(b.sourceSavedAt) || new Date(0);
-  const aDate = parseDate(a.createdAt) || parseDate(a.timestamp) || parseDate(a.sourceSavedAt) || new Date(0);
+  const bDate = parseDate(b.extensionScrapedAt) || parseDate(b.createdAt) || new Date(0);
+  const aDate = parseDate(a.extensionScrapedAt) || parseDate(a.createdAt) || new Date(0);
   const dateDiff = bDate - aDate;
   if (dateDiff !== 0) return dateDiff;
   return String(b._id || b.id || '').localeCompare(String(a._id || a.id || ''));
@@ -151,7 +167,7 @@ module.exports = {
   extractPlatformItemId,
   identityFilter,
   normalizeBookmark,
-  normalizeTags,
+  normalizeHashtags,
   parseDate,
   sortBookmarksNewestFirst,
   toISOStringOrNull
