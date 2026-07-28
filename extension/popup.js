@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         throw new Error(resData.error || `HTTP error! Status: ${response.status}`);
       }
 
-      showSuccess(`Successfully synced! Added: ${resData.added || 0}, Updated: ${resData.updated || 0}`);
+      showSuccess(`Successfully synced! Added: ${resData.added || 0}, Skipped: ${resData.skipped || 0}`);
       btnSync.textContent = 'Synced!';
       btnDownload.disabled = false;
     } catch (err) {

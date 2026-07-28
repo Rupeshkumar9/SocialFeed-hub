@@ -24,6 +24,7 @@ const AppState = {
   editingId: null,
   isSelectionMode: false,
   selectedIds: new Set(),
+  pendingDeletedIds: new Set(),
   isTagsExpanded: false
 };
 
@@ -523,9 +524,9 @@ function applyFiltersAndSearch() {
   // Sort bookmarks by active criteria (strictly based on scraped date).
   AppState.filteredBookmarks.sort((a, b) => {
     if (AppState.activeSort === 'recent-desc') {
-      return getBookmarkDateMs(b, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']) - getBookmarkDateMs(a, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']);
+      return getBookmarkDateMs(b, ['firstSavedAt', 'createdAt', 'extensionScrapedAt', 'sourceSavedAt', 'timestamp']) - getBookmarkDateMs(a, ['firstSavedAt', 'createdAt', 'extensionScrapedAt', 'sourceSavedAt', 'timestamp']);
     } else if (AppState.activeSort === 'recent-asc') {
-      return getBookmarkDateMs(a, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']) - getBookmarkDateMs(b, ['extensionScrapedAt', 'createdAt', 'sourceSavedAt', 'timestamp']);
+      return getBookmarkDateMs(a, ['firstSavedAt', 'createdAt', 'extensionScrapedAt', 'sourceSavedAt', 'timestamp']) - getBookmarkDateMs(b, ['firstSavedAt', 'createdAt', 'extensionScrapedAt', 'sourceSavedAt', 'timestamp']);
     } else if (AppState.activeSort === 'author-asc') {
       const nameA = (a.authorName || '').toLowerCase();
       const nameB = (b.authorName || '').toLowerCase();
@@ -1192,36 +1193,35 @@ function saveDataToServer() {
   if (AppState.isServerConnected) {
     DOM.syncBtn.classList.add('saving');
     DOM.syncStatusText.textContent = 'Syncing...';
-    
+
     const token = localStorage.getItem('admin_token');
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     fetch('/api/save', {
       method: 'POST',
-      headers: headers,
-      body: JSON.stringify(AppState.bookmarks)
+      headers,
+      body: JSON.stringify({
+        bookmarks: AppState.bookmarks,
+        deletedIds: Array.from(AppState.pendingDeletedIds)
+      })
     })
       .then(res => {
-        if (!res.ok) throw new Error("Server rejected save operation");
+        if (!res.ok) throw new Error('Server rejected save operation');
         return res.json();
       })
-      .then(data => {
-        showToast("Synchronized successfully with Server disk!", "success");
+      .then(() => {
+        AppState.pendingDeletedIds.clear();
+        showToast('Synchronized successfully with server!', 'success');
         updateSyncStatusUI(true);
       })
       .catch(err => {
-        console.error("Save failure:", err);
-        showToast("Server sync failed. Data is cached in memory.", "error");
+        console.error('Save failure:', err);
+        showToast('Server sync failed. Data is cached in memory.', 'error');
         updateSyncStatusUI(false);
       });
   } else {
-    // If not connected to local sync server, notify user they are in offline mode
-    showToast("App is offline. Click 'Offline (Click to Save)' in sidebar to download your updated database.", "error");
+    showToast('App is offline. Reconnect to save changes to the server.', 'error');
   }
 }
 
@@ -1251,7 +1251,7 @@ function handleFileImport(file) {
     const parsedItems = BookmarksImporter.parse(file.name, rawContent);
     
     if (parsedItems.length === 0) {
-      showToast("No valid X or Instagram bookmarks parsed from file.", "error");
+      showToast("No valid supported social bookmarks were found in this file.", "error");
       return;
     }
     
@@ -1277,7 +1277,7 @@ function handleFileImport(file) {
     if (added === 0 && updated === 0) {
       showToast("All imported bookmarks already exist in your feed.", "info");
     } else {
-      showToast(`Import complete! Added ${added} new, enriched ${updated} existing.`, "success");
+      showToast(`Import complete! Added ${added} new and skipped ${updated} duplicates.`, "success");
     }
   };
 
@@ -1749,6 +1749,7 @@ function openEditBookmarkModal(bm) {
 function deleteBookmark(id) {
   const idx = AppState.bookmarks.findIndex(bm => bm.id === id);
   if (idx !== -1) {
+    AppState.pendingDeletedIds.add(id);
     AppState.bookmarks.splice(idx, 1);
     
     // Reprocess metadata, update collections & tags filters, apply filters, save to server
@@ -1831,7 +1832,8 @@ function bulkDeleteSelected() {
   if (count === 0) return;
   
   if (confirm(`Are you sure you want to permanently delete all ${count} selected bookmarks?`)) {
-    // Filter out selected IDs
+    // Keep an explicit deletion list so server saves never infer deletions from a stale tab.
+    AppState.selectedIds.forEach(id => AppState.pendingDeletedIds.add(id));
     AppState.bookmarks = AppState.bookmarks.filter(bm => !AppState.selectedIds.has(bm.id));
     
     // Clear selection and exit selection mode

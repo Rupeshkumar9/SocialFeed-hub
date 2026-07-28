@@ -113,13 +113,21 @@ function cleanPostContent(content, platform) {
 
 function normalizeBookmark(item = {}, options = {}) {
   const now = options.now || new Date().toISOString();
-  const platform = item.platform || detectPlatform(item.url);
+  const platform = String(item.platform || detectPlatform(item.url)).toLowerCase();
   const platformItemId = item.platformItemId || extractPlatformItemId(item.url, platform);
   const canonical = item.canonicalUrl || canonicalUrl(item.url);
   
   const postUploadedAt = toISOStringOrNull(item.postUploadedAt) || '';
-  const extensionScrapedAt = toISOStringOrNull(item.extensionScrapedAt) || toISOStringOrNull(item.sourceSavedAt || item.timestamp) || toISOStringOrNull(item.createdAt) || now;
-  const createdAt = extensionScrapedAt;
+  // This value is immutable once a bookmark exists. A later scan must not
+  // change where the bookmark appears in the feed.
+  const firstSavedAt = toISOStringOrNull(item.firstSavedAt) ||
+    toISOStringOrNull(item.createdAt) ||
+    toISOStringOrNull(item.extensionScrapedAt) ||
+    toISOStringOrNull(item.sourceSavedAt || item.timestamp) ||
+    now;
+  const lastScannedAt = toISOStringOrNull(item.lastScannedAt) ||
+    toISOStringOrNull(item.extensionScrapedAt) ||
+    firstSavedAt;
   
   const rawContent = item.content || (platform === 'instagram' ? 'Saved Instagram Post' : `Saved ${platform.toUpperCase()} post`);
   const cleanedContent = cleanPostContent(rawContent, platform);
@@ -134,10 +142,12 @@ function normalizeBookmark(item = {}, options = {}) {
     authorUsername: item.authorUsername || (platform === 'instagram' ? 'instagram_user' : platform === 'x' ? 'twitter_user' : 'user'),
     content: cleanedContent,
     postUploadedAt,
-    extensionScrapedAt,
-    timestamp: extensionScrapedAt,
-    sourceSavedAt: extensionScrapedAt,
-    createdAt,
+    firstSavedAt,
+    lastScannedAt,
+    extensionScrapedAt: firstSavedAt,
+    timestamp: firstSavedAt,
+    sourceSavedAt: firstSavedAt,
+    createdAt: firstSavedAt,
     updatedAt: now,
     importSource: item.importSource || options.importSource || 'manual',
     hashtags: normalizeHashtags(item.hashtags, cleanedContent),
@@ -154,8 +164,8 @@ function identityFilter(bookmark) {
 }
 
 function sortBookmarksNewestFirst(a, b) {
-  const bDate = parseDate(b.extensionScrapedAt) || parseDate(b.createdAt) || new Date(0);
-  const aDate = parseDate(a.extensionScrapedAt) || parseDate(a.createdAt) || new Date(0);
+  const bDate = parseDate(b.firstSavedAt) || parseDate(b.createdAt) || parseDate(b.extensionScrapedAt) || new Date(0);
+  const aDate = parseDate(a.firstSavedAt) || parseDate(a.createdAt) || parseDate(a.extensionScrapedAt) || new Date(0);
   const dateDiff = bDate - aDate;
   if (dateDiff !== 0) return dateDiff;
   return String(b._id || b.id || '').localeCompare(String(a._id || a.id || ''));

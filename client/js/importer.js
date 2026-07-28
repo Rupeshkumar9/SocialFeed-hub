@@ -303,13 +303,12 @@ const BookmarksImporter = {
    * Helper: Detect Platform from URL
    */
   detectPlatform: function(url) {
-    const lowerUrl = url.toLowerCase();
-    if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) {
-      return 'x';
-    }
-    if (lowerUrl.includes('instagram.com')) {
-      return 'instagram';
-    }
+    const lowerUrl = String(url || '').toLowerCase();
+    if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) return 'x';
+    if (lowerUrl.includes('instagram.com')) return 'instagram';
+    if (lowerUrl.includes('threads.net')) return 'threads';
+    if (lowerUrl.includes('reddit.com') || lowerUrl.includes('redd.it')) return 'reddit';
+    if (lowerUrl.includes('facebook.com') || lowerUrl.includes('fb.watch')) return 'facebook';
     return null;
   },
 
@@ -342,38 +341,9 @@ const BookmarksImporter = {
         existingUrls.add(normUrl);
         addedCount++;
       } else {
-        // Enriched existing items (e.g. if they have no thumbnail, but the imported one does)
-        const idx = mergedList.findIndex(x => this.normalizeUrl(x.url) === normUrl);
-        if (idx !== -1) {
-          const matchItem = mergedList[idx];
-          
-          // Update details from extension scrape
-          const isBase64 = item.thumbnail && item.thumbnail.startsWith('data:');
-          const isExistingExpiredUrl = matchItem.thumbnail && (matchItem.thumbnail.startsWith('http://') || matchItem.thumbnail.startsWith('https://'));
-          if (item.thumbnail && (!matchItem.thumbnail || (isBase64 && isExistingExpiredUrl))) {
-            matchItem.thumbnail = item.thumbnail;
-            updatedCount++;
-          }
-          if (item.authorName) {
-            matchItem.authorName = item.authorName;
-            matchItem.authorUsername = item.authorUsername || item.authorName;
-          }
-          if (item.content) {
-            matchItem.content = item.content;
-          }
-          if (item.postUploadedAt !== undefined) {
-            matchItem.postUploadedAt = item.postUploadedAt;
-          }
-          if (item.extensionScrapedAt) {
-            matchItem.extensionScrapedAt = item.extensionScrapedAt;
-          }
-          
-          // Merge hashtags
-          if (item.hashtags && item.hashtags.length > 0) {
-            const existing = Array.isArray(matchItem.hashtags) ? matchItem.hashtags : [];
-            matchItem.hashtags = Array.from(new Set([...existing, ...item.hashtags]));
-          }
-        }
+        // A duplicate import is intentionally a no-op. The bookmark already in
+        // the feed owns its notes, tags, folder, thumbnail, and original date.
+        updatedCount++;
       }
     });
 

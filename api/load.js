@@ -31,6 +31,28 @@ module.exports = async (req, res) => {
       .map(bm => normalizeBookmark(bm, { preserveCreatedAt: true }))
       .sort(sortBookmarksNewestFirst);
 
+    // Existing records receive their immutable first-saved date automatically.
+    // The value is derived from their current stored date, so no re-import is needed.
+    const backfillOperations = rawBookmarks
+      .filter(raw => !raw.firstSavedAt)
+      .map(raw => {
+        const normalized = normalizeBookmark(raw, { preserveCreatedAt: true });
+        return {
+          updateOne: {
+            filter: { _id: raw._id },
+            update: {
+              $set: {
+                firstSavedAt: normalized.firstSavedAt,
+                lastScannedAt: raw.lastScannedAt || normalized.lastScannedAt
+              }
+            }
+          }
+        };
+      });
+    if (backfillOperations.length > 0) {
+      await collection.bulkWrite(backfillOperations, { ordered: false });
+    }
+
     res.status(200).json(bookmarks);
   } catch (err) {
     console.error('Failed to load bookmarks from MongoDB:', err);

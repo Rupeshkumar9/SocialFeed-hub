@@ -47,15 +47,35 @@ module.exports = async (req, res) => {
     const cloudinaryConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY));
 
     let addedCount = 0;
-    let updatedCount = 0;
+    let skippedCount = 0;
     let imageUploadedCount = 0;
     const operations = [];
+    const seenIdentities = new Set();
 
     for (const item of scrapedItems) {
       const bookmark = normalizeBookmark(item, {
         now,
         importSource: item.importSource || 'extension'
       });
+      const identity = bookmark.platformItemId
+        ? `${bookmark.platform}:${bookmark.platformItemId}`
+        : `url:${bookmark.canonicalUrl}`;
+
+      if (seenIdentities.has(identity)) {
+        skippedCount++;
+        continue;
+      }
+      seenIdentities.add(identity);
+
+      const existing = await collection.findOne(identityFilter(bookmark), {
+        projection: { _id: 1 }
+      });
+      // Repeated scans are deliberately ignored so notes, tags, folders,
+      // thumbnails, and the original first-saved timestamp stay unchanged.
+      if (existing) {
+        skippedCount++;
+        continue;
+      }
 
       if (bookmark.thumbnail && bookmark.thumbnail.startsWith('data:image/') && cloudinaryConfigured) {
         try {
@@ -72,44 +92,8 @@ module.exports = async (req, res) => {
         }
       }
 
-      const existing = await collection.findOne(identityFilter(bookmark), {
-        projection: { _id: 1, hashtags: 1, createdAt: 1 }
-      });
-
-      if (existing) {
-        updatedCount++;
-        const setFields = {
-          platform: bookmark.platform,
-          platformItemId: bookmark.platformItemId,
-          canonicalUrl: bookmark.canonicalUrl,
-          url: bookmark.url,
-          authorName: bookmark.authorName,
-          authorUsername: bookmark.authorUsername,
-          content: bookmark.content,
-          postUploadedAt: bookmark.postUploadedAt,
-          extensionScrapedAt: bookmark.extensionScrapedAt,
-          timestamp: bookmark.timestamp,
-          sourceSavedAt: bookmark.sourceSavedAt,
-          updatedAt: now,
-          importSource: bookmark.importSource,
-          notes: bookmark.notes || ''
-        };
-        if (bookmark.thumbnail) setFields.thumbnail = bookmark.thumbnail;
-
-        operations.push({
-          updateOne: {
-            filter: { _id: existing._id },
-            update: {
-              $set: setFields,
-              $setOnInsert: { createdAt: bookmark.createdAt },
-              $addToSet: { hashtags: { $each: bookmark.hashtags || [] } }
-            }
-          }
-        });
-      } else {
-        addedCount++;
-        operations.push({ insertOne: { document: bookmark } });
-      }
+      addedCount++;
+      operations.push({ insertOne: { document: bookmark } });
     }
 
     if (operations.length > 0) {
@@ -119,7 +103,8 @@ module.exports = async (req, res) => {
     res.status(200).json({
       status: 'ok',
       added: addedCount,
-      updated: updatedCount,
+      updated: 0,
+      skipped: skippedCount,
       cloudinaryUploads: imageUploadedCount
     });
   } catch (err) {
