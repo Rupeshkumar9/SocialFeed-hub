@@ -111,6 +111,11 @@ function cleanPostContent(content, platform) {
   return str || (platform === 'instagram' ? 'Saved Instagram Post' : 'Saved Post');
 }
 
+function normalizeFolderValue(value) {
+  const folder = String(value || "").trim();
+  return folder.toLowerCase() === "bookmarks bar" ? "" : folder;
+}
+
 function normalizeBookmark(item = {}, options = {}) {
   const now = options.now || new Date().toISOString();
   const platform = String(item.platform || detectPlatform(item.url)).toLowerCase();
@@ -138,6 +143,8 @@ function normalizeBookmark(item = {}, options = {}) {
     platform,
     platformItemId,
     canonicalUrl: canonical,
+    identityKey: item.identityKey || (platformItemId ? platform + ':' + platformItemId : 'url:' + canonical),
+    source: item.source || options.source || 'social',
     authorName: item.authorName || (platform === 'instagram' ? 'Instagram Creator' : platform === 'x' ? 'X User' : 'Social Creator'),
     authorUsername: item.authorUsername || (platform === 'instagram' ? 'instagram_user' : platform === 'x' ? 'twitter_user' : 'user'),
     content: cleanedContent,
@@ -152,7 +159,8 @@ function normalizeBookmark(item = {}, options = {}) {
     importSource: item.importSource || options.importSource || 'manual',
     hashtags: normalizeHashtags(item.hashtags, cleanedContent),
     notes: item.notes || '',
-    thumbnail: item.thumbnail || item.imageUrl || ''
+    thumbnail: item.thumbnail || item.imageUrl || "",
+    folder: normalizeFolderValue(item.folder)
   };
 }
 

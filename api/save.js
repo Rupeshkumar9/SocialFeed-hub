@@ -1,6 +1,7 @@
-const { connectToDatabase } = require('./lib/db');
+const { connectToDatabase, ensureBookmarkIndexes } = require('./lib/db');
 const cloudinary = require('cloudinary').v2;
 const { normalizeBookmark } = require('./lib/bookmark-utils');
+const { requireSession } = require('./lib/auth');
 
 // Configure Cloudinary
 if (process.env.CLOUDINARY_URL) {
@@ -14,30 +15,7 @@ if (process.env.CLOUDINARY_URL) {
 }
 
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  // Verify Admin authorization
-  let authorized = false;
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    if (process.env.ADMIN_PASSWORD && token === process.env.ADMIN_PASSWORD) {
-      authorized = true;
-    }
-  }
-
-  if (!authorized) {
-    res.status(401).json({ error: 'Unauthorized. Admin access required.' });
-    return;
-  }
+  if (!requireSession(req, res)) return;
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -81,6 +59,7 @@ module.exports = async (req, res) => {
       }
     }
 
+    await ensureBookmarkIndexes();
     const db = await connectToDatabase();
     const collection = db.collection('bookmarks');
     const operations = normalizedBookmarks.map(bookmark => {

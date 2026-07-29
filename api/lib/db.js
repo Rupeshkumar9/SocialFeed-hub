@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
 
 let cachedDb = null;
+let indexesPromise = null;
 
 async function connectToDatabase() {
   if (cachedDb) {
@@ -31,4 +32,18 @@ async function connectToDatabase() {
   return db;
 }
 
-module.exports = { connectToDatabase };
+async function ensureBookmarkIndexes() {
+  if (!indexesPromise) {
+    indexesPromise = connectToDatabase().then(db => db.collection('bookmarks').createIndexes([
+      { key: { identityKey: 1 }, name: 'bookmark_identity_unique', unique: true, partialFilterExpression: { identityKey: { $exists: true } } },
+      { key: { source: 1, firstSavedAt: -1, _id: -1 }, name: 'bookmark_source_feed' },
+      { key: { platform: 1, firstSavedAt: -1, _id: -1 }, name: 'bookmark_platform_feed' }
+    ])).catch(error => {
+      indexesPromise = null;
+      throw error;
+    });
+  }
+  return indexesPromise;
+}
+
+module.exports = { connectToDatabase, ensureBookmarkIndexes };

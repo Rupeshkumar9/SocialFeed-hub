@@ -1,36 +1,24 @@
 const { connectToDatabase } = require('./lib/db');
+const { requireSession } = require('./lib/auth');
 
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (!requireSession(req, res)) return;
 
   try {
     const db = await connectToDatabase();
     // Test a basic ping command
     await db.command({ ping: 1 });
 
-    // Check if the user is authenticated as admin
-    let isAdmin = false;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      if (process.env.ADMIN_PASSWORD && token === process.env.ADMIN_PASSWORD) {
-        isAdmin = true;
-      }
-    }
-    
     res.status(200).json({
       status: 'ok',
       serverless: true,
       database: 'connected',
-      isAdmin: isAdmin,
+      isAdmin: true,
+      profile: {
+        name: process.env.PROFILE_NAME || 'SocialFeed Owner',
+        email: process.env.PROFILE_EMAIL || 'Private account',
+        memberSince: process.env.MEMBER_SINCE || 'Private account'
+      },
       time: new Date()
     });
   } catch (err) {

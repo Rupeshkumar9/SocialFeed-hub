@@ -72,8 +72,22 @@ MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxx.mongodb.net/social
 # Cloudinary Account URL (found on Cloudinary Dashboard)
 CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@cloudname
 
-# Your Admin Password for unlocking edits
+# Password used to sign into your private dashboard
 ADMIN_PASSWORD=my_secure_admin_password
+
+# Long random secret used to sign the HttpOnly login session
+SESSION_SECRET=generate_a_long_random_secret
+
+# Separate token used only by the Chrome extension to insert scanned bookmarks
+EXTENSION_SYNC_TOKEN=generate_a_different_long_random_token
+
+# Optional Settings profile details
+PROFILE_NAME=Your Name
+PROFILE_EMAIL=you@example.com
+MEMBER_SINCE=Jul 2026
+
+# Optional: comma-separated Chrome extension origins for production CORS
+# EXTENSION_ALLOWED_ORIGINS=chrome-extension://your_extension_id
 ```
 
 ### Step 3: Start the Dev Server

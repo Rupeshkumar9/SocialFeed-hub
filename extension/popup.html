@@ -231,7 +231,7 @@
       <div class="logo-icon">🌸</div>
       <div class="title-area">
         <h1>SocialFeed Exporter</h1>
-        <span>Instagram & X Bookmarks Sync</span>
+        <span>Instagram, X & Browser Bookmarks Sync</span>
       </div>
     </div>
     <button class="btn-settings-toggle" id="btn-settings-toggle" title="Connection Settings">⚙️</button>
@@ -245,8 +245,8 @@
       <input type="text" id="input-api-url" placeholder="http://localhost:3000">
     </div>
     <div class="form-group">
-      <label for="input-admin-password">Admin Password</label>
-      <input type="password" id="input-admin-password" placeholder="Enter password/token">
+      <label for="input-extension-token">Extension Sync Token</label>
+      <input type="password" id="input-extension-token" placeholder="Extension sync token">
     </div>
     <button class="btn-save-settings" id="btn-save-settings">Save Settings</button>
   </div>
@@ -264,6 +264,7 @@
 
   <div class="actions">
     <button class="btn-primary" id="btn-scan" disabled>Scan Page Bookmarks</button>
+    <button class="btn-secondary" id="btn-scan-browser">Scan Browser Bookmarks</button>
     <button class="btn-sync" id="btn-sync" style="display: none;">Save to Social Feed</button>
     <button class="btn-secondary" id="btn-download" style="display: none;">Download JSON Package</button>
   </div>
@@ -272,7 +273,7 @@
   <div class="success-msg" id="success-box"></div>
 
   <div class="footer">
-    Make sure you are on X Bookmarks or Instagram Saved page.
+    Scan the active social page or import unique Chrome browser bookmarks.
   </div>
 
   <script src="popup.js"></script>

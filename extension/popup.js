@@ -4,13 +4,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnScan = document.getElementById('btn-scan');
   const btnDownload = document.getElementById('btn-download');
   const btnSync = document.getElementById('btn-sync');
+  const btnScanBrowser = document.getElementById('btn-scan-browser');
   const errorBox = document.getElementById('error-box');
   const successBox = document.getElementById('success-box');
 
   const btnSettingsToggle = document.getElementById('btn-settings-toggle');
   const settingsPanel = document.getElementById('settings-panel');
   const inputApiUrl = document.getElementById('input-api-url');
-  const inputAdminPassword = document.getElementById('input-admin-password');
+  const inputExtensionToken = document.getElementById('input-extension-token');
   const btnSaveSettings = document.getElementById('btn-save-settings');
 
   let activeTab = null;
@@ -21,18 +22,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Storage Helpers
   function getSettings() {
     return new Promise((resolve) => {
-      chrome.storage.local.get(['apiUrl', 'adminPassword'], (res) => {
+      chrome.storage.local.get(['apiUrl', 'extensionSyncToken'], (res) => {
         resolve({
           apiUrl: res.apiUrl || 'http://localhost:3000',
-          adminPassword: res.adminPassword || ''
+          extensionSyncToken: res.extensionSyncToken || ''
         });
       });
     });
   }
 
-  function saveSettings(apiUrl, adminPassword) {
+  function saveSettings(apiUrl, extensionSyncToken) {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ apiUrl, adminPassword }, () => {
+      chrome.storage.local.set({ apiUrl, extensionSyncToken }, () => {
         resolve();
       });
     });
@@ -42,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const settings = await getSettings();
     inputApiUrl.value = settings.apiUrl;
-    inputAdminPassword.value = settings.adminPassword;
+    inputExtensionToken.value = settings.extensionSyncToken;
   } catch (err) {
     console.error('Error loading settings:', err);
   }
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. Save Settings Button
   btnSaveSettings.addEventListener('click', async () => {
     const urlVal = inputApiUrl.value.trim() || 'http://localhost:3000';
-    const passVal = inputAdminPassword.value.trim();
+    const passVal = inputExtensionToken.value.trim();
     
     await saveSettings(urlVal, passVal);
     showSuccess('Settings saved!');
@@ -132,6 +133,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         scrapedData.push({
           id: item.id,
           platform: detectedPlatform,
+          source: detectedPlatform === 'browser' ? 'browser' : 'social',
+          folder: item.folder || '',
           url: item.url,
           authorName: item.authorName,
           authorUsername: item.authorUsername,
@@ -177,7 +180,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 8. Download button click handler
+  // 8. Scan Chrome browser bookmarks
+  if (btnScanBrowser) btnScanBrowser.addEventListener('click', () => {
+    btnScanBrowser.disabled = true;
+    chrome.bookmarks.getTree((tree) => {
+      const items = [];
+      const walk = (nodes, trail = []) => nodes.forEach(node => {
+        const nextTrail = node.title ? trail.concat(node.title) : trail;
+        if (node.url) items.push({ id: 'browser_' + node.id, platform: 'browser', source: 'browser', url: node.url, authorName: new URL(node.url).hostname.replace(/^www\./, ''), authorUsername: 'browser', content: node.title || 'Saved browser bookmark', extensionScrapedAt: new Date(node.dateAdded || Date.now()).toISOString(), hashtags: [], folder: trail.filter(Boolean).join(' / ') });
+        if (node.children) walk(node.children, nextTrail);
+      });
+      walk(tree); scrapedData = items; detectedPlatform = 'browser'; postCountEl.textContent = items.length + ' browser bookmarks ready'; btnSync.style.display = 'block'; btnDownload.style.display = 'block'; showSuccess('Found ' + items.length + ' Chrome bookmarks. Existing links will be skipped.'); btnScanBrowser.disabled = false;
+    });
+  });
+
+  // 9. Download button click handler
   btnDownload.addEventListener('click', () => {
     if (!scrapedData || scrapedData.length === 0) return;
 
@@ -204,8 +221,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     successBox.style.display = 'none';
 
     const currentSettings = await getSettings();
-    if (!currentSettings.adminPassword) {
-      showError('Admin Password is required to sync. Click ⚙️ to configure.');
+    if (!currentSettings.extensionSyncToken) {
+      showError('Extension Sync Token is required to sync. Click ⚙️ to configure.');
       settingsPanel.classList.add('active');
       return;
     }
@@ -219,7 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentSettings.adminPassword}`
+          'X-Extension-Token': currentSettings.extensionSyncToken
         },
         body: JSON.stringify(scrapedData)
       });

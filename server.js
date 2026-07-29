@@ -11,6 +11,11 @@ const apiStatus = require('./api/status');
 const apiLoad = require('./api/load');
 const apiSave = require('./api/save');
 const apiImportScraped = require('./api/import-scraped');
+const apiAuthLogin = require('./api/auth-login');
+const apiAuthLogout = require('./api/auth-logout');
+const apiBookmarkPreview = require('./api/bookmark-preview');
+const apiCounts = require('./api/counts');
+const { setExtensionCors } = require('./api/lib/extension-auth');
 
 // MIME Types Map
 const MIME_TYPES = {
@@ -84,13 +89,12 @@ async function handleServerless(handler, req, res) {
 const server = http.createServer((req, res) => {
   const url = req.url;
   const method = req.method;
-
-  // Add CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const cleanUrl = url.split('?')[0];
 
   if (method === 'OPTIONS') {
+    if (cleanUrl === '/api/import-scraped') {
+      if (!setExtensionCors(req, res)) { res.writeHead(403); res.end(); return; }
+    }
     res.writeHead(200);
     res.end();
     return;
@@ -98,11 +102,17 @@ const server = http.createServer((req, res) => {
 
   console.log(`[${new Date().toLocaleTimeString()}] ${method} ${url}`);
 
-  const cleanUrl = url.split('?')[0];
-
   // Route API requests to Serverless functions
   if (cleanUrl === '/api/status') {
     handleServerless(apiStatus, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/auth/login') {
+    handleServerless(apiAuthLogin, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/auth/logout') {
+    handleServerless(apiAuthLogout, req, res);
     return;
   }
   if (cleanUrl === '/api/load') {
@@ -115,6 +125,15 @@ const server = http.createServer((req, res) => {
   }
   if (cleanUrl === '/api/import-scraped') {
     handleServerless(apiImportScraped, req, res);
+    return;
+  }
+
+  if (cleanUrl === '/api/counts') {
+    handleServerless(apiCounts, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/bookmark-preview') {
+    handleServerless(apiBookmarkPreview, req, res);
     return;
   }
 

@@ -1,6 +1,7 @@
-const { connectToDatabase } = require('./lib/db');
+const { connectToDatabase, ensureBookmarkIndexes } = require('./lib/db');
 const cloudinary = require('cloudinary').v2;
 const { identityFilter, normalizeBookmark } = require('./lib/bookmark-utils');
+const { isExtensionAuthorized, setExtensionCors } = require('./lib/extension-auth');
 
 if (process.env.CLOUDINARY_URL) {
   // Cloudinary reads CLOUDINARY_URL automatically.
@@ -13,21 +14,12 @@ if (process.env.CLOUDINARY_URL) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
+  const corsAllowed = setExtensionCors(req, res);
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    if (!corsAllowed) return res.status(403).json({ error: 'Extension origin not allowed.' });
+    return res.status(200).end();
   }
-
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : '';
-  if (!process.env.ADMIN_PASSWORD || token !== process.env.ADMIN_PASSWORD) {
-    res.status(401).json({ error: 'Unauthorized. Admin access required.' });
-    return;
-  }
+  if (!isExtensionAuthorized(req)) return res.status(401).json({ error: 'Valid extension token required.' });
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -41,6 +33,7 @@ module.exports = async (req, res) => {
       return;
     }
 
+    await ensureBookmarkIndexes();
     const db = await connectToDatabase();
     const collection = db.collection('bookmarks');
     const now = new Date().toISOString();
@@ -67,9 +60,9 @@ module.exports = async (req, res) => {
       }
       seenIdentities.add(identity);
 
-      const existing = await collection.findOne(identityFilter(bookmark), {
-        projection: { _id: 1 }
-      });
+      const existing = await collection.findOne({
+        $or: [{ identityKey: bookmark.identityKey }, identityFilter(bookmark)]
+      }, { projection: { _id: 1 } });
       // Repeated scans are deliberately ignored so notes, tags, folders,
       // thumbnails, and the original first-saved timestamp stay unchanged.
       if (existing) {
@@ -92,12 +85,19 @@ module.exports = async (req, res) => {
         }
       }
 
-      addedCount++;
-      operations.push({ insertOne: { document: bookmark } });
+      operations.push({
+        updateOne: {
+          filter: { identityKey: bookmark.identityKey },
+          update: { $setOnInsert: bookmark },
+          upsert: true
+        }
+      });
     }
 
     if (operations.length > 0) {
-      await collection.bulkWrite(operations, { ordered: false });
+      const result = await collection.bulkWrite(operations, { ordered: false });
+      addedCount = result.upsertedCount || 0;
+      skippedCount += operations.length - addedCount;
     }
 
     res.status(200).json({

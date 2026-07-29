@@ -40,9 +40,9 @@ const DOM = {
   sidebarCollectionList: document.getElementById('sidebar-collection-list'),
   tagsDropdownBtn: document.getElementById('tags-dropdown-btn'),
   tagsDropdownMenu: document.getElementById('tags-dropdown-menu'),
-  
 
-  
+
+
   // Import Modal Elements
   btnImport: document.getElementById('action-import'),
   importModalOverlay: document.getElementById('import-modal-overlay'),
@@ -50,7 +50,7 @@ const DOM = {
   dragDropZone: document.getElementById('drag-drop-zone'),
   importFileInput: document.getElementById('import-file-input'),
   btnSelectFile: document.getElementById('btn-select-file'),
-  
+
   // Add Bookmark Modal Elements
   btnAddBookmark: document.getElementById('btn-add-bookmark'),
   addModalOverlay: document.getElementById('add-modal-overlay'),
@@ -63,21 +63,21 @@ const DOM = {
   addTags: document.getElementById('add-tags'),
   addCategory: document.getElementById('add-category'),
   addCategoryNew: document.getElementById('add-category-new'),
-  
+
   // Sync Actions
   syncBtn: document.getElementById('sync-btn'),
   syncStatusText: document.getElementById('sync-status-text'),
   syncDot: document.getElementById('sync-dot'),
   btnSyncNow: document.getElementById('btn-sync-now'),
   btnExportJson: document.getElementById('action-export-json'),
-  
+
   // Post View & Note Modal Elements
   postModalOverlay: document.getElementById('post-modal-overlay'),
   closePostModal: document.getElementById('close-post-modal'),
   modalPostCardContent: document.getElementById('modal-post-card-content'),
   modalNoteTextarea: document.getElementById('modal-note-textarea'),
   modalNoteCharCount: document.getElementById('modal-note-char-count'),
-  
+
   // Bulk Edit Elements
   bulkEditModalOverlay: document.getElementById('bulk-edit-modal-overlay'),
   closeBulkEditModal: document.getElementById('close-bulk-edit-modal'),
@@ -88,7 +88,7 @@ const DOM = {
   bulkEditCountLabel: document.getElementById('bulk-edit-count-label'),
   btnBulkEditCancel: document.getElementById('btn-bulk-edit-cancel'),
   btnBulkEditTrigger: document.getElementById('btn-bulk-edit'),
-  
+
   // Admin Login Elements
   btnAdminLogin: document.getElementById('btn-admin-login'),
   loginModalOverlay: document.getElementById('login-modal-overlay'),
@@ -96,7 +96,7 @@ const DOM = {
   btnLoginCancel: document.getElementById('btn-login-cancel'),
   loginForm: document.getElementById('login-form'),
   loginPassword: document.getElementById('login-password'),
-  
+
   // Toast container
   toastContainer: document.getElementById('toast-container')
 };
@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Check if the local Node.js helper server is running
  */
 function checkServerConnection() {
+  return privateCheckServerConnection();
   const token = localStorage.getItem('admin_token');
   const headers = {};
   if (token) {
@@ -134,7 +135,7 @@ function checkServerConnection() {
       if (data && data.status === 'ok') {
         AppState.isServerConnected = true;
         updateSyncStatusUI(true);
-        
+
         if (data.isAdmin) {
           AppState.isAdmin = true;
           document.body.classList.remove('visitor-mode');
@@ -182,7 +183,8 @@ function updateSyncStatusUI(connected, label) {
   }
 }
 
-function loadData() {
+function loadData(options = {}) {
+  return privateLoadData(options);
   showToast("Loading bookmarks...");
   if (AppState.isServerConnected) {
     fetch('/api/load')
@@ -218,11 +220,11 @@ function onDataLoadedSuccess() {
   processCollections();
   updateCollectionsFilterDropdown();
   processTags();
-  
+
   // Set layout from localStorage
   const savedLayout = localStorage.getItem('bookmarks_layout') || 'grid';
   changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
-  
+
   applyFiltersAndSearch();
   showToast("Bookmarks loaded successfully!", "success");
 }
@@ -245,21 +247,21 @@ function processCollections() {
 function updateCollectionsFilterDropdown() {
   const filterSelect = document.getElementById('filter-collection');
   if (!filterSelect) return;
-  
+
   const currentVal = AppState.activeCollection || 'all';
-  
+
   filterSelect.innerHTML = `
     <option value="all">All Collections</option>
     <option value="uncategorized">Uncategorized</option>
   `;
-  
+
   Array.from(AppState.collections).sort().forEach(folder => {
     const opt = document.createElement('option');
     opt.value = folder;
     opt.textContent = folder;
     filterSelect.appendChild(opt);
   });
-  
+
   filterSelect.value = currentVal;
 }
 
@@ -332,68 +334,115 @@ function syncFilterSelects() {
   if (collectionSelect) collectionSelect.value = AppState.activeCollection;
 }
 
-function updateSidebarNavigation() {
-  const platformCounts = { all: AppState.bookmarks.length, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0 };
+function getCurrentCountSource() {
+  if (AppState.activeSource === "social") return AppState.activePlatform === "all" ? "social" : AppState.activePlatform;
+  return "browser";
+}
+
+function getLibraryCountGroup(group, sourceKey = getCurrentCountSource()) {
+  const root = AppState.libraryCounts && AppState.libraryCounts[group];
+  if (!root) return null;
+  if (sourceKey === "social" || sourceKey === "browser") return root[sourceKey] || null;
+  return root.platforms && root.platforms[sourceKey] ? root.platforms[sourceKey] : null;
+}
+
+function normalizeCollectionKey(value) {
+  const folder = String(value || "").trim();
+  const lower = folder.toLowerCase();
+  if (!folder || lower === "uncategorized" || lower === "others" || lower === "bookmarks bar") return "uncategorized";
+  if (lower === "tech") return "Tech";
+  if (lower === "art & design") return "Art & Design";
+  if (lower === "food") return "Food";
+  return folder;
+}
+
+function browserCategoryLabel(value) {
+  return normalizeCollectionKey(value) === "uncategorized" ? "General Links" : normalizeCollectionKey(value);
+}
+
+function socialCategoryLabel(value) {
+  return normalizeCollectionKey(value) === "uncategorized" ? "Others" : normalizeCollectionKey(value);
+}
+
+function getLoadedCollectionCounts() {
+  const counts = { all: AppState.bookmarks.length, uncategorized: 0, Tech: 0, "Art & Design": 0, Food: 0 };
   AppState.bookmarks.forEach(bm => {
-    let platform = (bm.platform || 'web').toLowerCase().trim();
-    if (platform === 'twitter') platform = 'x';
-    if (platformCounts[platform] !== undefined) {
-      platformCounts[platform]++;
-    }
+    const key = normalizeCollectionKey(bm.folder);
+    counts[key] = (counts[key] || 0) + 1;
   });
+  return counts;
+}
+
+function getLoadedTagCounts() {
+  const counts = {};
+  AppState.bookmarks.forEach(bm => {
+    if (!Array.isArray(bm.hashtags)) return;
+    bm.hashtags.forEach(tag => {
+      const clean = String(tag || "").trim().toLowerCase();
+      if (clean) counts[clean] = (counts[clean] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
+function updateSidebarNavigation() {
+  const platformCounts = AppState.platformCounts ? { ...AppState.platformCounts } : { all: AppState.bookmarks.length, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0 };
+  if (!AppState.platformCounts) {
+    AppState.bookmarks.forEach(bm => {
+      let platform = (bm.platform || "web").toLowerCase().trim();
+      if (platform === "twitter") platform = "x";
+      if (platformCounts[platform] !== undefined) platformCounts[platform]++;
+    });
+  }
 
   Object.entries(platformCounts).forEach(([platform, count]) => {
     const el = document.getElementById(`count-platform-${platform}`);
     if (el) el.textContent = count;
   });
 
+  const browserCount = AppState.libraryCounts && AppState.libraryCounts.sources ? AppState.libraryCounts.sources.browser : (AppState.activeSource === "browser" ? AppState.bookmarks.length : 0);
+  const browserCountEl = document.getElementById("count-browser-bookmarks");
+  if (browserCountEl) browserCountEl.textContent = browserCount || 0;
+
   if (DOM.sidebarPlatformList) {
-    DOM.sidebarPlatformList.querySelectorAll('.menu-item').forEach(item => {
-      const btn = item.querySelector('[data-platform]');
-      item.classList.toggle('active', btn && btn.dataset.platform === AppState.activePlatform);
+    DOM.sidebarPlatformList.querySelectorAll(".menu-item").forEach(item => {
+      const btn = item.querySelector("[data-platform]");
+      item.classList.toggle("active", AppState.activeSource === "social" && btn && btn.dataset.platform === AppState.activePlatform);
     });
   }
 
-  const counts = { all: AppState.bookmarks.length, uncategorized: 0, 'Tech': 0, 'Art & Design': 0, 'Food': 0 };
-  AppState.bookmarks.forEach(bm => {
-    let folder = bm.folder && bm.folder.trim() ? bm.folder.trim() : 'uncategorized';
-    const lower = folder.toLowerCase();
-    if (lower === 'uncategorized' || lower === 'others') {
-      folder = 'uncategorized';
-    } else if (lower === 'tech') {
-      folder = 'Tech';
-    } else if (lower === 'art & design') {
-      folder = 'Art & Design';
-    } else if (lower === 'food') {
-      folder = 'Food';
-    }
-    counts[folder] = (counts[folder] || 0) + 1;
-  });
+  const collectionSection = DOM.sidebarCollectionList ? DOM.sidebarCollectionList.closest(".sidebar-section") : null;
+  if (collectionSection) collectionSection.hidden = AppState.activeSource !== "social";
+  if (AppState.activeSource !== "social") {
+    const browserItem = document.getElementById("sidebar-browser-item");
+    if (browserItem) browserItem.classList.add("active");
+    syncFilterSelects();
+    return;
+  }
 
+  const counts = getLibraryCountGroup("collections") || getLoadedCollectionCounts();
   const collectionList = DOM.sidebarCollectionList;
   if (collectionList) {
-    collectionList.innerHTML = '';
+    collectionList.innerHTML = "";
     const baseItems = [
-      { value: 'all', label: 'All', icon: 'fa-solid fa-folder-tree' },
-      { value: 'uncategorized', label: 'Others', icon: 'fa-regular fa-folder' },
-      { value: 'Tech', label: 'Tech', icon: 'fa-solid fa-folder' },
-      { value: 'Art & Design', label: 'Art & Design', icon: 'fa-solid fa-folder' },
-      { value: 'Food', label: 'Food', icon: 'fa-solid fa-folder' }
+      { value: "all", label: "All", icon: "fa-solid fa-folder-tree" },
+      { value: "uncategorized", label: "Others", icon: "fa-regular fa-folder" },
+      { value: "Tech", label: "Tech", icon: "fa-solid fa-folder" },
+      { value: "Art & Design", label: "Art & Design", icon: "fa-solid fa-folder" },
+      { value: "Food", label: "Food", icon: "fa-solid fa-folder" }
     ];
-    
-    const baseKeys = ['all', 'uncategorized', 'tech', 'art & design', 'food'];
-    const customItems = Array.from(AppState.collections)
+
+    const baseKeys = ["all", "uncategorized", "tech", "art & design", "food"];
+    const countCollections = Object.keys(counts).filter(folder => folder !== "all");
+    const localCollections = Array.from(AppState.collections || []);
+    const customItems = Array.from(new Set([...countCollections, ...localCollections].map(normalizeCollectionKey)))
       .filter(folder => !baseKeys.includes(folder.toLowerCase()))
       .sort()
-      .map(folder => ({
-        value: folder,
-        label: folder,
-        icon: 'fa-solid fa-folder'
-      }));
+      .map(folder => ({ value: folder, label: folder, icon: "fa-solid fa-folder" }));
 
     [...baseItems, ...customItems].forEach(item => {
-      const li = document.createElement('li');
-      li.className = `menu-item ${AppState.activeCollection === item.value ? 'active' : ''}`;
+      const li = document.createElement("li");
+      li.className = `menu-item ${AppState.activeCollection === item.value ? "active" : ""}`;
       li.innerHTML = `
         <button type="button" data-collection="${escapeHTML(item.value)}">
           <i class="${item.icon}"></i>
@@ -403,79 +452,6 @@ function updateSidebarNavigation() {
       `;
       collectionList.appendChild(li);
     });
-
-    // Append collapsible Tags row
-    const tagsLi = document.createElement('li');
-    tagsLi.className = `menu-item tags-group-row`;
-    const tagCount = AppState.tags.size;
-    tagsLi.innerHTML = `
-      <button type="button" class="tags-group-toggle" aria-expanded="${AppState.isTagsExpanded}" style="width: 100%; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <i class="fa-solid fa-tags"></i>
-          <span>Tags</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="menu-count">${tagCount}</span>
-          <i class="fa-solid fa-chevron-down chevron-icon" style="transition: transform 0.2s; transform: ${AppState.isTagsExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};"></i>
-        </div>
-      </button>
-      <ul class="sidebar-tags-sublist" style="display: ${AppState.isTagsExpanded ? 'block' : 'none'}; list-style: none; margin-top: 8px;">
-      </ul>
-    `;
-    collectionList.appendChild(tagsLi);
-
-    const toggleBtn = tagsLi.querySelector('.tags-group-toggle');
-    toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      AppState.isTagsExpanded = !AppState.isTagsExpanded;
-      updateSidebarNavigation();
-    });
-
-    const sublist = tagsLi.querySelector('.sidebar-tags-sublist');
-    if (sublist) {
-      // 1. All Tags
-      const allLi = document.createElement('li');
-      allLi.className = `menu-item ${AppState.activeTag === 'all' ? 'active' : ''}`;
-      allLi.innerHTML = `
-        <button type="button" data-tag="all" style="padding: 6px 12px; font-size: 0.9rem; display: flex; align-items: center; width: 100%;">
-          <i class="fa-solid fa-hashtag" style="font-size: 0.8rem;"></i>
-          <span>All Tags</span>
-        </button>
-      `;
-      sublist.appendChild(allLi);
-
-      // 2. Sorted Tags
-      const sortedTags = Array.from(AppState.tags).sort();
-      
-      // Auto reset active tag if it no longer exists
-      if (AppState.activeTag !== 'all' && !AppState.tags.has(AppState.activeTag)) {
-        AppState.activeTag = 'all';
-      }
-
-      sortedTags.forEach(tag => {
-        const li = document.createElement('li');
-        li.className = `menu-item ${AppState.activeTag === tag ? 'active' : ''}`;
-        li.innerHTML = `
-          <button type="button" data-tag="${escapeHTML(tag)}" title="${escapeHTML(tag)}" style="padding: 6px 12px; font-size: 0.9rem; display: flex; align-items: center; width: 100%;">
-            <i class="fa-solid fa-hashtag" style="font-size: 0.8rem; flex-shrink: 0;"></i>
-            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; flex: 1;">${escapeHTML(tag)}</span>
-          </button>
-        `;
-        sublist.appendChild(li);
-      });
-
-      // Add click listener to the sublist
-      sublist.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-tag]');
-        if (!btn) return;
-        e.stopPropagation();
-        const tag = btn.dataset.tag;
-        AppState.activeTag = tag;
-        applyFiltersAndSearch();
-        const drawer = document.getElementById('mobile-drawer-overlay');
-        if (drawer) drawer.classList.remove('active');
-      });
-    }
   }
 
   syncFilterSelects();
@@ -485,13 +461,13 @@ function updateSidebarNavigation() {
  */
 function applyFiltersAndSearch() {
   const query = AppState.searchQuery.toLowerCase().trim();
-  
+
   AppState.filteredBookmarks = AppState.bookmarks.filter(bm => {
     // 1. Platform Filter
     if (AppState.activePlatform !== 'all' && bm.platform !== AppState.activePlatform) {
       return false;
     }
-    
+
     // 1.5. Collection Filter
     if (AppState.activeCollection && AppState.activeCollection !== 'all') {
       if (AppState.activeCollection === 'uncategorized') {
@@ -500,13 +476,13 @@ function applyFiltersAndSearch() {
         if ((bm.folder || '').trim() !== AppState.activeCollection) return false;
       }
     }
-    
+
     // 2. Tag Filter
     if (AppState.activeTag !== 'all') {
       const hasTag = bm.hashtags && bm.hashtags.some(t => t.toLowerCase() === AppState.activeTag);
       if (!hasTag) return false;
     }
-    
+
     // 3. Search Bar scanning
     if (query !== '') {
       const matchAuthorName = bm.authorName && bm.authorName.toLowerCase().includes(query);
@@ -514,10 +490,10 @@ function applyFiltersAndSearch() {
       const matchContent = bm.content && bm.content.toLowerCase().includes(query);
       const matchNotes = bm.notes && bm.notes.toLowerCase().includes(query);
       const matchTags = bm.hashtags && bm.hashtags.some(t => t.toLowerCase().includes(query));
-      
+
       return matchAuthorName || matchUsername || matchContent || matchNotes || matchTags;
     }
-    
+
     return true;
   });
 
@@ -544,10 +520,10 @@ function applyFiltersAndSearch() {
 
   // Update Headers
   updateFeedHeaders();
-  
+
   // Update Analytics Dashboard (if open)
   updateStatsAnalytics();
-  
+
   // Render final filtered list
   renderFeedGrid();
 
@@ -565,17 +541,17 @@ function updateFeedHeaders() {
   if (AppState.activePlatform === 'threads') title = 'Threads';
   if (AppState.activePlatform === 'facebook') title = 'Facebook';
   if (AppState.activePlatform === 'reddit') title = 'Reddit';
-  
+
   if (AppState.activeCollection && AppState.activeCollection !== 'all') {
     title += ` in ${AppState.activeCollection === '__uncategorized__' || AppState.activeCollection === 'uncategorized' ? 'Uncategorized' : AppState.activeCollection}`;
   }
-  
+
   if (AppState.activeTag !== 'all') {
     title += ` (#${AppState.activeTag})`;
   }
-  
+
   DOM.feedTitle.textContent = title;
-  
+
   const count = AppState.filteredBookmarks.length;
   DOM.feedSubtitle.textContent = `Showing ${count} bookmark${count === 1 ? '' : 's'} matching search criteria`;
 }
@@ -604,9 +580,9 @@ function buildCardElement(bm) {
   const platformClass = bm.platform === 'instagram' ? 'ig-post instagram-post' : `${bm.platform}-post`;
   card.className = `bookmark-card ${platformClass}`;
   card.setAttribute('data-id', bm.id);
-  
-  const initials = bm.authorName ? bm.authorName.split(' ').map(n=>n[0]).join('').substring(0, 2).toUpperCase() : '?';
-  
+
+  const initials = bm.authorName ? bm.authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+
   // Build tags markup (limit to 3 visible, only real hashtags)
   let tagsMarkup = '';
   const bmHashtags = bm.hashtags || [];
@@ -632,10 +608,7 @@ function buildCardElement(bm) {
     ${notesVal ? `<div class="card-notes-display" style="margin-top: 8px;"><i class="fa-solid fa-note-sticky"></i> ${escapeHTML(notesVal)}</div>` : ''}
   `;
 
-  let folderVal = bm.folder && bm.folder.trim() ? bm.folder.trim() : 'Others';
-  if (folderVal.toLowerCase() === 'uncategorized') {
-    folderVal = 'Others';
-  }
+  let folderVal = bm.source === "browser" ? browserCategoryLabel(bm.folder) : socialCategoryLabel(bm.folder);
   const folderMarkup = `
     <div class="card-folder-area" title="Collection: ${escapeHTML(folderVal)}">
       <i class="fa-solid fa-folder"></i>
@@ -770,12 +743,12 @@ function buildCardElement(bm) {
 
         <div class="card-platform-icon" title="Original Platform: ${bm.platform.toUpperCase()}">
           <i class="${(() => {
-            if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
-            if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
-            if (bm.platform === 'threads') return 'fa-brands fa-threads';
-            if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
-            return 'fa-solid fa-circle-nodes';
-          })()}"></i>
+      if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
+      if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
+      if (bm.platform === 'threads') return 'fa-brands fa-threads';
+      if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
+      return 'fa-solid fa-circle-nodes';
+    })()}"></i>
         </div>
       </div>
     </div>
@@ -783,12 +756,12 @@ function buildCardElement(bm) {
     <div class="card-body">
       <div class="post-quote-icon"><i class="fa-solid fa-quote-left"></i></div>
       ${(() => {
-        const contentVal = cleanPostContent(bm.content, bm.platform) || 'Saved Post details';
-        const words = contentVal.split(/\s+/);
-        const hasMore = words.length > 50;
-        const summaryText = hasMore ? words.slice(0, 50).join(' ') + '...' : contentVal;
-        return `<div class="post-content">${escapeHTML(summaryText)}</div>`;
-      })()}
+      const contentVal = cleanPostContent(bm.content, bm.platform) || 'Saved Post details';
+      const words = contentVal.split(/\s+/);
+      const hasMore = words.length > 50;
+      const summaryText = hasMore ? words.slice(0, 50).join(' ') + '...' : contentVal;
+      return `<div class="post-content">${escapeHTML(summaryText)}</div>`;
+    })()}
       ${mediaMarkup}
       ${notesMarkup}
     </div>
@@ -800,6 +773,7 @@ function buildCardElement(bm) {
 
   // Attach handlers
   const readBtn = card.querySelector('.btn-read-post');
+  if (bm.source === 'browser' && readBtn) readBtn.remove();
   if (readBtn) {
     readBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -820,7 +794,7 @@ function buildCardElement(bm) {
   // Three-dots dropdown bindings
   const menuBtn = card.querySelector('.btn-card-menu');
   const dropdown = card.querySelector('.card-menu-dropdown');
-  
+
   if (menuBtn && dropdown) {
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -863,7 +837,7 @@ function buildCardElement(bm) {
   // Redirect to platform post or select card in selection mode
   card.addEventListener('click', (e) => {
     if (e.target.closest('.card-notes-edit') || e.target.closest('.card-folder-area') || e.target.closest('.card-menu-container') || e.target.closest('.card-checkbox-container')) return;
-    
+
     if (AppState.isSelectionMode) {
       const cb = card.querySelector('.card-checkbox');
       if (cb) {
@@ -890,7 +864,7 @@ function renderInfiniteScrollSentinel() {
 
   const total = AppState.filteredBookmarks.length;
   const showing = Math.min(AppState.visibleCount, total);
-  
+
   if (total === 0) return; // Empty feed, no sentinel needed
 
   const sentinel = document.createElement('div');
@@ -943,7 +917,7 @@ function initInfiniteScrollObserver() {
         const total = AppState.filteredBookmarks.length;
         if (AppState.visibleCount < total) {
           isScrollLoading = true;
-          
+
           // Smooth micro-delay loading effect so the user sees the spinner spin cleanly
           setTimeout(() => {
             AppState.visibleCount += POSTS_PER_PAGE;
@@ -971,53 +945,94 @@ function getGridColumnCount() {
 /**
  * Render paginated bookmarks grid — only the first visibleCount items
  */
-function renderFeedGrid() {
-  DOM.bookmarksGrid.innerHTML = '';
-  
-  if (AppState.filteredBookmarks.length === 0) {
-    DOM.bookmarksGrid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon"><i class="fa-solid fa-folder-open"></i></div>
-        <h3>No bookmarks found</h3>
-        <p>Try clearing your search filters, adjusting tags, or importing a fresh data archive!</p>
+function browserCategorySortKey(label) {
+  return label === "General Links" ? "" : label.toLowerCase();
+}
+
+function renderBrowserGroupedFeed(visibleSlice) {
+  DOM.bookmarksGrid.classList.add("browser-grouped-feed");
+  const groups = new Map();
+  visibleSlice.forEach(bm => {
+    const label = browserCategoryLabel(bm.folder);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(bm);
+  });
+
+  if (groups.size === 0) {
+    groups.set("General Links", []);
+  }
+
+  const ordered = Array.from(groups.entries()).sort(([a], [b]) => browserCategorySortKey(a).localeCompare(browserCategorySortKey(b)));
+  const fragment = document.createDocumentFragment();
+  ordered.forEach(([label, items]) => {
+    const section = document.createElement("section");
+    section.className = "browser-category-section";
+    section.innerHTML = `
+      <div class="browser-category-heading">
+        <div>
+          <h3>${escapeHTML(label)}</h3>
+          <p>${items.length} saved link${items.length === 1 ? "" : "s"}</p>
+        </div>
       </div>
+      <div class="browser-category-grid"></div>
     `;
-    // Clean up existing sentinel if any
-    const existing = document.getElementById('infinite-scroll-sentinel');
+    const grid = section.querySelector(".browser-category-grid");
+    items.forEach(bm => grid.appendChild(buildCardElement(bm)));
+    fragment.appendChild(section);
+  });
+  DOM.bookmarksGrid.appendChild(fragment);
+}
+
+function renderFeedGrid() {
+  DOM.bookmarksGrid.innerHTML = "";
+  DOM.bookmarksGrid.classList.remove("browser-grouped-feed");
+
+  if (AppState.filteredBookmarks.length === 0) {
+    if (AppState.activeSource === "browser") {
+      renderBrowserGroupedFeed([]);
+    } else {
+      DOM.bookmarksGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <h3>No bookmarks found</h3>
+          <p>Try clearing your search filters, adjusting categories, or importing a fresh data archive.</p>
+        </div>
+      `;
+    }
+    const existing = document.getElementById("infinite-scroll-sentinel");
     if (existing) existing.remove();
     return;
   }
-  
-  // Only render up to visibleCount
+
   const visibleSlice = AppState.filteredBookmarks.slice(0, AppState.visibleCount);
-  
-  if (AppState.activeLayout === 'list' || AppState.activeLayout === 'compact') {
+
+  if (AppState.activeSource === "browser") {
+    renderBrowserGroupedFeed(visibleSlice);
+  } else if (AppState.activeLayout === "list" || AppState.activeLayout === "compact") {
     const fragment = document.createDocumentFragment();
     visibleSlice.forEach(bm => {
       fragment.appendChild(buildCardElement(bm));
     });
     DOM.bookmarksGrid.appendChild(fragment);
   } else {
-    // True Pinterest Masonry Layout: Round-Robin Left-to-Right distribution across dynamic flex columns
     const numCols = getGridColumnCount();
     const cols = [];
     for (let i = 0; i < numCols; i++) {
-      const colDiv = document.createElement('div');
-      colDiv.className = 'masonry-col';
+      const colDiv = document.createElement("div");
+      colDiv.className = "masonry-col";
       cols.push(colDiv);
     }
-    
+
     visibleSlice.forEach((bm, index) => {
       const targetCol = cols[index % numCols];
       targetCol.appendChild(buildCardElement(bm));
     });
-    
+
     const fragment = document.createDocumentFragment();
     cols.forEach(col => fragment.appendChild(col));
     DOM.bookmarksGrid.appendChild(fragment);
   }
 
-  // Render Infinite Scroll Sentinel
   renderInfiniteScrollSentinel();
 }
 
@@ -1054,7 +1069,7 @@ function saveBookmarkFolder(id, folder) {
 function changeLayout(layout, showFeedbackToast = true) {
   AppState.activeLayout = layout;
   localStorage.setItem('bookmarks_layout', layout);
-  
+
   const menu = document.getElementById('toolbar-layout-menu');
   if (menu) {
     menu.querySelectorAll('.dropdown-item').forEach(item => {
@@ -1066,7 +1081,7 @@ function changeLayout(layout, showFeedbackToast = true) {
       }
     });
   }
-  
+
   const activeIcon = document.getElementById('layout-active-icon');
   const activeLabel = document.getElementById('layout-active-label');
   if (activeIcon) {
@@ -1080,7 +1095,7 @@ function changeLayout(layout, showFeedbackToast = true) {
   if (activeLabel) {
     activeLabel.textContent = layout.charAt(0).toUpperCase() + layout.slice(1) + ' View';
   }
-  
+
   if (DOM.bookmarksGrid) {
     DOM.bookmarksGrid.classList.remove('list-view', 'compact-view');
     if (layout === 'list') {
@@ -1089,9 +1104,9 @@ function changeLayout(layout, showFeedbackToast = true) {
       DOM.bookmarksGrid.classList.add('compact-view');
     }
   }
-  
+
   renderFeedGrid();
-  
+
   if (showFeedbackToast) {
     showToast(`Switched to ${layout.charAt(0).toUpperCase() + layout.slice(1)} view`, 'info');
   }
@@ -1101,90 +1116,66 @@ function changeLayout(layout, showFeedbackToast = true) {
  * Compute metrics and update dashboard counts in real time
  */
 function updateStatsAnalytics() {
-  const panel = document.getElementById('stats-panel');
-  if (!panel || panel.style.display === 'none') return;
-  
-  const dataList = AppState.filteredBookmarks;
-  const total = dataList.length;
-  
-  // Platform Splits
-  const xCount = dataList.filter(bm => bm.platform === 'x').length;
-  const igCount = dataList.filter(bm => bm.platform === 'instagram').length;
-  const threadsCount = dataList.filter(bm => bm.platform === 'threads').length;
-  const fbCount = dataList.filter(bm => bm.platform === 'facebook').length;
-  
+  const panel = document.getElementById("stats-panel");
+  if (!panel || panel.style.display === "none") return;
+
+  const platformCounts = AppState.platformCounts || {};
+  const total = Number(platformCounts.all) || AppState.filteredBookmarks.length;
+  const xCount = Number(platformCounts.x) || 0;
+  const igCount = Number(platformCounts.instagram) || 0;
+  const threadsCount = Number(platformCounts.threads) || 0;
+  const fbCount = Number(platformCounts.facebook) || 0;
+
   const xPct = total > 0 ? (xCount / total) * 100 : 0;
   const igPct = total > 0 ? (igCount / total) * 100 : 0;
   const threadsPct = total > 0 ? (threadsCount / total) * 100 : 0;
   const fbPct = total > 0 ? (fbCount / total) * 100 : 0;
-  
-  document.getElementById('stat-x-count').textContent = `${xCount} (${Math.round(xPct)}%)`;
-  document.getElementById('stat-ig-count').textContent = `${igCount} (${Math.round(igPct)}%)`;
-  document.getElementById('stat-threads-count').textContent = `${threadsCount} (${Math.round(threadsPct)}%)`;
-  document.getElementById('stat-fb-count').textContent = `${fbCount} (${Math.round(fbPct)}%)`;
-  
-  document.getElementById('stat-x-bar').style.width = `${xPct}%`;
-  document.getElementById('stat-ig-bar').style.width = `${igPct}%`;
-  document.getElementById('stat-threads-bar').style.width = `${threadsPct}%`;
-  document.getElementById('stat-fb-bar').style.width = `${fbPct}%`;
-  
-  // Collections Stats
-  const collectionCounts = {};
-  dataList.forEach(bm => {
-    const f = bm.folder || 'Uncategorized';
-    collectionCounts[f] = (collectionCounts[f] || 0) + 1;
-  });
-  
-  const collectionsList = document.getElementById('stat-collections-list');
-  collectionsList.innerHTML = '';
+
+  document.getElementById("stat-x-count").textContent = `${xCount} (${Math.round(xPct)}%)`;
+  document.getElementById("stat-ig-count").textContent = `${igCount} (${Math.round(igPct)}%)`;
+  document.getElementById("stat-threads-count").textContent = `${threadsCount} (${Math.round(threadsPct)}%)`;
+  document.getElementById("stat-fb-count").textContent = `${fbCount} (${Math.round(fbPct)}%)`;
+
+  document.getElementById("stat-x-bar").style.width = `${xPct}%`;
+  document.getElementById("stat-ig-bar").style.width = `${igPct}%`;
+  document.getElementById("stat-threads-bar").style.width = `${threadsPct}%`;
+  document.getElementById("stat-fb-bar").style.width = `${fbPct}%`;
+
+  const collectionCounts = getLibraryCountGroup("collections", "social") || getLoadedCollectionCounts();
+  const collectionsList = document.getElementById("stat-collections-list");
+  collectionsList.innerHTML = "";
   Object.entries(collectionCounts)
+    .filter(([folder]) => folder !== "all")
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .forEach(([folder, count]) => {
-      const item = document.createElement('div');
-      item.className = 'stats-list-item';
-      item.innerHTML = `
-        <span>${escapeHTML(folder)}</span>
-        <span class="stats-badge">${count}</span>
-      `;
+      const item = document.createElement("div");
+      item.className = "stats-list-item";
+      item.innerHTML = `<span>${escapeHTML(folder === "uncategorized" ? "Others" : folder)}</span><span class="stats-badge">${count}</span>`;
       collectionsList.appendChild(item);
     });
-    
-  if (Object.keys(collectionCounts).length === 0) {
+
+  if (Object.keys(collectionCounts).filter(key => key !== "all" && collectionCounts[key] > 0).length === 0) {
     collectionsList.innerHTML = `<div style="font-size:0.7rem; color:var(--text-muted); padding: 4px 0;">No collections</div>`;
   }
-  
-  // Tags Stats
-  const tagCounts = {};
-  dataList.forEach(bm => {
-    if (bm.hashtags) {
-      bm.hashtags.forEach(t => {
-        tagCounts[t] = (tagCounts[t] || 0) + 1;
-      });
-    }
-  });
-  
-  const tagsList = document.getElementById('stat-tags-list');
-  tagsList.innerHTML = '';
+
+  const tagCounts = getLibraryCountGroup("tags", "social") || getLoadedTagCounts();
+  const tagsList = document.getElementById("stat-tags-list");
+  tagsList.innerHTML = "";
   Object.entries(tagCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .forEach(([tag, count]) => {
-      const item = document.createElement('div');
-      item.className = 'stats-list-item';
-      item.innerHTML = `
-        <span>#${escapeHTML(tag)}</span>
-        <span class="stats-badge">${count}</span>
-      `;
+      const item = document.createElement("div");
+      item.className = "stats-list-item";
+      item.innerHTML = `<span>#${escapeHTML(tag)}</span><span class="stats-badge">${count}</span>`;
       tagsList.appendChild(item);
     });
-    
+
   if (Object.keys(tagCounts).length === 0) {
     tagsList.innerHTML = `<div style="font-size:0.7rem; color:var(--text-muted); padding: 4px 0;">No tags</div>`;
   }
 }
-
-
 
 /**
  * Core Data Sync Manager: Saves the active state back to data/bookmarks.json
@@ -1245,33 +1236,33 @@ function triggerManualDownload() {
 function handleFileImport(file) {
   showToast(`Reading ${file.name}...`);
   const reader = new FileReader();
-  
+
   reader.onload = (event) => {
     const rawContent = event.target.result;
     const parsedItems = BookmarksImporter.parse(file.name, rawContent);
-    
+
     if (parsedItems.length === 0) {
       showToast("No valid supported social bookmarks were found in this file.", "error");
       return;
     }
-    
+
     // Merge into current active state
     const mergeResult = BookmarksImporter.merge(AppState.bookmarks, parsedItems);
     AppState.bookmarks = mergeResult.merged;
-    
+
     // Reprocess system tags and render feed
     processCollections();
     updateCollectionsFilterDropdown();
     processTags();
     renderTagCloud();
     applyFiltersAndSearch();
-    
+
     // Auto sync back to server database
     saveDataToServer();
-    
+
     // Close modal
     DOM.importModalOverlay.classList.remove('active');
-    
+
     const added = mergeResult.addedCount;
     const updated = mergeResult.updatedCount || 0;
     if (added === 0 && updated === 0) {
@@ -1284,7 +1275,7 @@ function handleFileImport(file) {
   reader.onerror = () => {
     showToast("Error reading selected file.", "error");
   };
-  
+
   reader.readAsText(file);
 }
 
@@ -1293,7 +1284,7 @@ function handleFileImport(file) {
  */
 function handleManualBookmarkSubmit(e) {
   e.preventDefault();
-  
+
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
   const tagListInput = DOM.addTags.value.trim();
@@ -1325,10 +1316,10 @@ function handleManualBookmarkSubmit(e) {
       bm.authorUsername = authorName ? authorName.toLowerCase().replace(/\s+/g, '') : bm.authorUsername;
       bm.content = content || bm.content;
       bm.folder = categoryVal;
-      
+
       const newUserTags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
       bm.hashtags = newUserTags;
-      
+
       // Reprocess state and write to server
       processCollections();
       updateCollectionsFilterDropdown();
@@ -1336,13 +1327,13 @@ function handleManualBookmarkSubmit(e) {
       renderTagCloud();
       applyFiltersAndSearch();
       saveDataToServer();
-      
+
       // Close Modal & Reset
       DOM.addModalOverlay.classList.remove('active');
       DOM.addBookmarkForm.reset();
       DOM.addUrl.readOnly = false;
       AppState.editingId = null;
-      
+
       showToast("Bookmark updated successfully!", "success");
     }
     return;
@@ -1387,14 +1378,14 @@ function handleManualBookmarkSubmit(e) {
 
   // Merge (deduplicate)
   const mergeResult = BookmarksImporter.merge(AppState.bookmarks, [newBookmark]);
-  
+
   if (mergeResult.addedCount === 0) {
     showToast("This post is already in your bookmark feed!", "error");
     return;
   }
 
   AppState.bookmarks = mergeResult.merged;
-  
+
   // Reprocess state and write to server
   processCollections();
   updateCollectionsFilterDropdown();
@@ -1406,7 +1397,7 @@ function handleManualBookmarkSubmit(e) {
   // Close Modal
   DOM.addModalOverlay.classList.remove('active');
   DOM.addBookmarkForm.reset();
-  
+
   showToast("Bookmark added to feed successfully!", "success");
 }
 
@@ -1416,36 +1407,36 @@ function handleManualBookmarkSubmit(e) {
 function populateModalCategorySelect(selectedVal = '') {
   if (!DOM.addCategory) return;
   DOM.addCategory.innerHTML = '';
-  
+
   // Default option
   const defaultOpt = document.createElement('option');
   defaultOpt.value = '';
-  defaultOpt.textContent = 'Others';
+  defaultOpt.textContent = AppState.activeSource === "browser" ? "General Links" : "Others";
   DOM.addCategory.appendChild(defaultOpt);
-  
+
   // Hardcoded categories
   const hardcodedCats = ['Tech', 'Art & Design', 'Food'];
-  
+
   // Combine custom collections with hardcoded categories (avoiding duplicates)
   const allCatsSet = new Set(hardcodedCats);
   if (AppState.collections) {
     Array.from(AppState.collections).forEach(c => {
       const lower = c.toLowerCase();
-      if (lower !== 'all' && lower !== 'uncategorized' && lower !== '__uncategorized__' && lower !== 'others') {
+      if (lower !== 'all' && lower !== 'uncategorized' && lower !== '__uncategorized__' && lower !== 'others' && lower !== 'bookmarks bar') {
         allCatsSet.add(c);
       }
     });
   }
-  
+
   const sortedCollections = Array.from(allCatsSet).sort((a, b) => a.localeCompare(b));
-    
+
   sortedCollections.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c;
     opt.textContent = c;
     DOM.addCategory.appendChild(opt);
   });
-  
+
   // Create New option
   const newOpt = document.createElement('option');
   newOpt.value = '__new__';
@@ -1453,11 +1444,11 @@ function populateModalCategorySelect(selectedVal = '') {
   newOpt.style.color = 'var(--accent-blue)';
   newOpt.style.fontWeight = 'bold';
   DOM.addCategory.appendChild(newOpt);
-  
+
   // Set value
   if (selectedVal) {
     const lower = selectedVal.toLowerCase();
-    if (lower === 'uncategorized' || lower === 'others') {
+    if (lower === 'uncategorized' || lower === 'others' || lower === 'bookmarks bar') {
       DOM.addCategory.value = '';
     } else {
       const match = sortedCollections.find(c => c.toLowerCase() === lower);
@@ -1474,7 +1465,7 @@ function populateModalCategorySelect(selectedVal = '') {
   } else {
     DOM.addCategory.value = '';
   }
-  
+
   // Reset and hide new category input
   DOM.addCategoryNew.style.display = 'none';
   DOM.addCategoryNew.value = '';
@@ -1506,16 +1497,16 @@ function formatConciseDate(dateVal) {
 function openPostModal(bmId, focusNote = false) {
   const bm = AppState.bookmarks.find(b => b.id === bmId);
   if (!bm) return;
-  
+
   currentPostModalBookmarkId = bmId;
-  
+
   // Clean content & format concise post date (only if postUploadedAt is present & non-empty)
   const cleanContent = cleanPostContent(bm.content, bm.platform);
   const hasPostUploadedAt = bm.postUploadedAt && String(bm.postUploadedAt).trim() !== '';
   const formattedPostDate = hasPostUploadedAt ? formatConciseDate(bm.postUploadedAt) : null;
-  
+
   // Populate post content
-  const initials = bm.authorName ? bm.authorName.split(' ').map(n=>n[0]).join('').substring(0, 2).toUpperCase() : '?';
+  const initials = bm.authorName ? bm.authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
   const platformIconClass = (() => {
     if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
     if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
@@ -1523,7 +1514,7 @@ function openPostModal(bmId, focusNote = false) {
     if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
     return 'fa-solid fa-circle-nodes';
   })();
-  
+
   DOM.modalPostCardContent.innerHTML = `
     <div class="modal-post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: ${formattedPostDate ? '6px' : '12px'};">
       <div class="modal-post-author" style="display: flex; align-items: center; gap: 8px;">
@@ -1543,24 +1534,24 @@ function openPostModal(bmId, focusNote = false) {
         <span style="font-weight: 500;">${formattedPostDate}</span>
       </div>
     ` : ''}
-    <div class="modal-post-text" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+    <div class="modal-post-text">
       ${escapeHTML(cleanContent)}
     </div>
     ${bm.thumbnail ? `
-      <div class="modal-post-media" style="margin-top: 12px; border-radius: 8px; overflow: hidden; max-height: 200px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color);">
-        <img src="${bm.thumbnail}" style="max-width: 100%; max-height: 200px; object-fit: contain;">
+      <div class="modal-post-media">
+        <img src="${bm.thumbnail}" alt="" loading="lazy">
       </div>
     ` : ''}
   `;
-  
+
   // Populate note textarea
   const noteVal = bm.notes || '';
   DOM.modalNoteTextarea.value = noteVal;
   DOM.modalNoteCharCount.textContent = `${noteVal.length} / 1000`;
-  
+
   // Open modal
   DOM.postModalOverlay.classList.add('active');
-  
+
   if (focusNote) {
     setTimeout(() => DOM.modalNoteTextarea.focus(), 150);
   }
@@ -1592,23 +1583,23 @@ function openBulkEditModal() {
     showToast("No bookmarks selected!", "error");
     return;
   }
-  
+
   // Update label
   DOM.bulkEditCountLabel.textContent = `Editing ${selectedIds.length} selected bookmarks.`;
-  
+
   // Populate categories selector
   DOM.bulkEditCategory.innerHTML = '';
-  
+
   const defaultOpt = document.createElement('option');
   defaultOpt.value = '__no_change__';
   defaultOpt.textContent = 'Keep Original';
   DOM.bulkEditCategory.appendChild(defaultOpt);
-  
+
   const othersOpt = document.createElement('option');
   othersOpt.value = '';
   othersOpt.textContent = 'Others';
   DOM.bulkEditCategory.appendChild(othersOpt);
-  
+
   // Hardcoded categories
   const hardcodedCats = ['Tech', 'Art & Design', 'Food'];
   const allCatsSet = new Set(hardcodedCats);
@@ -1620,7 +1611,7 @@ function openBulkEditModal() {
       }
     });
   }
-  
+
   const sortedCollections = Array.from(allCatsSet).sort((a, b) => a.localeCompare(b));
   sortedCollections.forEach(c => {
     const opt = document.createElement('option');
@@ -1628,20 +1619,20 @@ function openBulkEditModal() {
     opt.textContent = c;
     DOM.bulkEditCategory.appendChild(opt);
   });
-  
+
   const newOpt = document.createElement('option');
   newOpt.value = '__new__';
   newOpt.textContent = '+ Create new category...';
   newOpt.style.color = 'var(--accent-blue)';
   newOpt.style.fontWeight = 'bold';
   DOM.bulkEditCategory.appendChild(newOpt);
-  
+
   // Reset values to Keep Original
   DOM.bulkEditCategory.value = '__no_change__';
   DOM.bulkEditCategoryNew.style.display = 'none';
   DOM.bulkEditCategoryNew.value = '';
   DOM.bulkEditPlatform.value = '__no_change__';
-  
+
   // Show modal
   DOM.bulkEditModalOverlay.classList.add('active');
 }
@@ -1653,7 +1644,7 @@ function handleBulkEditSubmit(e) {
   e.preventDefault();
   const selectedIds = Array.from(AppState.selectedIds);
   if (selectedIds.length === 0) return;
-  
+
   let categoryVal = DOM.bulkEditCategory.value;
   if (categoryVal === '__new__') {
     categoryVal = DOM.bulkEditCategoryNew.value.trim();
@@ -1662,15 +1653,15 @@ function handleBulkEditSubmit(e) {
       return;
     }
   }
-  
+
   const platformVal = DOM.bulkEditPlatform.value;
-  
+
   let changedCount = 0;
-  
+
   AppState.bookmarks.forEach(bm => {
     if (selectedIds.includes(bm.id)) {
       let bookmarkChanged = false;
-      
+
       // 1. Update Category
       if (categoryVal !== '__no_change__') {
         let normalFolder = categoryVal;
@@ -1679,29 +1670,29 @@ function handleBulkEditSubmit(e) {
         }
         bm.folder = normalFolder;
         bookmarkChanged = true;
-        
+
         if (normalFolder && !AppState.collections.has(normalFolder)) {
           AppState.collections.add(normalFolder);
         }
       }
-      
+
       // 2. Update Platform
       if (platformVal !== '__no_change__') {
         bm.platform = platformVal;
         bookmarkChanged = true;
       }
-      
+
       if (bookmarkChanged) changedCount++;
     }
   });
-  
+
   if (changedCount > 0) {
     saveDataToServer();
     showToast(`Successfully updated ${changedCount} bookmarks!`, "success");
-    
+
     DOM.bulkEditModalOverlay.classList.remove('active');
     toggleSelectionMode(false);
-    
+
     updateSidebarNavigation();
     applyFiltersAndSearch();
   } else {
@@ -1714,18 +1705,18 @@ function handleBulkEditSubmit(e) {
  */
 function openEditBookmarkModal(bm) {
   AppState.editingId = bm.id;
-  
+
   // Update header and submit button layout
   const titleEl = DOM.addModalOverlay.querySelector('h3');
   if (titleEl) titleEl.textContent = 'Edit Bookmark';
-  
+
   const submitBtn = DOM.addBookmarkForm.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.textContent = 'Save Changes';
-  
+
   // Prefill values
   DOM.addUrl.value = bm.url;
   DOM.addUrl.readOnly = true;
-  
+
   const addPlatformSelect = document.getElementById('add-platform');
   if (addPlatformSelect) {
     addPlatformSelect.value = bm.platform;
@@ -1733,13 +1724,13 @@ function openEditBookmarkModal(bm) {
 
   DOM.addAuthorName.value = bm.authorName || '';
   DOM.addContent.value = bm.content || '';
-  
+
   const userTags = bm.hashtags || [];
   DOM.addTags.value = userTags.join(', ');
-  
+
   // Prefill category
   populateModalCategorySelect(bm.folder || '');
-  
+
   DOM.addModalOverlay.classList.add('active');
 }
 
@@ -1751,7 +1742,7 @@ function deleteBookmark(id) {
   if (idx !== -1) {
     AppState.pendingDeletedIds.add(id);
     AppState.bookmarks.splice(idx, 1);
-    
+
     // Reprocess metadata, update collections & tags filters, apply filters, save to server
     processCollections();
     updateCollectionsFilterDropdown();
@@ -1778,7 +1769,7 @@ function toggleSelectBookmark(id, select) {
 function updateBulkSelectionUI() {
   const selectedCount = AppState.selectedIds.size;
   document.getElementById('selected-count').textContent = selectedCount;
-  
+
   // Update card visual selected states
   document.querySelectorAll('.bookmark-card').forEach(card => {
     const id = card.getAttribute('data-id');
@@ -1788,7 +1779,7 @@ function updateBulkSelectionUI() {
       card.classList.remove('selected');
     }
   });
-  
+
   // Update buttons disabled status if needed
   const deleteBtn = document.getElementById('btn-bulk-delete');
   if (deleteBtn) {
@@ -1801,11 +1792,11 @@ function updateBulkSelectionUI() {
 function toggleSelectionMode(active) {
   AppState.isSelectionMode = active;
   AppState.selectedIds.clear();
-  
+
   const grid = DOM.bookmarksGrid;
   const bulkBar = document.getElementById('bulk-action-bar');
   const selectModeBtn = document.getElementById('btn-select-mode');
-  
+
   if (active) {
     grid.classList.add('selection-mode-active');
     if (bulkBar) bulkBar.classList.add('active');
@@ -1820,7 +1811,7 @@ function toggleSelectionMode(active) {
       selectModeBtn.classList.remove('active');
       selectModeBtn.querySelector('span').textContent = 'Select Mode';
     }
-    
+
     // Uncheck all checkboxes visually
     document.querySelectorAll('.card-checkbox').forEach(cb => cb.checked = false);
   }
@@ -1830,15 +1821,15 @@ function toggleSelectionMode(active) {
 function bulkDeleteSelected() {
   const count = AppState.selectedIds.size;
   if (count === 0) return;
-  
+
   if (confirm(`Are you sure you want to permanently delete all ${count} selected bookmarks?`)) {
     // Keep an explicit deletion list so server saves never infer deletions from a stale tab.
     AppState.selectedIds.forEach(id => AppState.pendingDeletedIds.add(id));
     AppState.bookmarks = AppState.bookmarks.filter(bm => !AppState.selectedIds.has(bm.id));
-    
+
     // Clear selection and exit selection mode
     toggleSelectionMode(false);
-    
+
     // Reprocess state and write to server
     processCollections();
     updateCollectionsFilterDropdown();
@@ -1846,7 +1837,7 @@ function bulkDeleteSelected() {
     renderTagCloud();
     applyFiltersAndSearch();
     saveDataToServer();
-    
+
     showToast(`Deleted ${count} bookmarks successfully!`, "success");
   }
 }
@@ -1856,13 +1847,13 @@ function bulkSelectAll() {
   AppState.filteredBookmarks.forEach(bm => {
     AppState.selectedIds.add(bm.id);
   });
-  
+
   // Update all visual checkboxes
   document.querySelectorAll('.card-checkbox').forEach(cb => {
     const id = cb.getAttribute('data-id');
     cb.checked = AppState.selectedIds.has(id);
   });
-  
+
   updateBulkSelectionUI();
   showToast(`Selected all ${AppState.filteredBookmarks.length} visible bookmarks`, "info");
 }
@@ -1897,7 +1888,7 @@ function initEventListeners() {
     AppState.searchQuery = e.target.value;
     applyFiltersAndSearch();
   }, 150));
-  
+
   // Platform select in navbar change (hidden/backward compatibility)
   if (DOM.filterPlatform) {
     DOM.filterPlatform.addEventListener('change', (e) => {
@@ -1918,16 +1909,20 @@ function initEventListeners() {
   if (filterCollection) {
     filterCollection.addEventListener('change', (e) => {
       AppState.activeCollection = e.target.value;
-      applyFiltersAndSearch();
+      AppState.nextCursor = null;
+      if (AppState.isServerConnected) loadData();
+      else applyFiltersAndSearch();
     });
   }
-  
+
   // Sidebar platform and category navigation
   if (DOM.sidebarPlatformList) {
     DOM.sidebarPlatformList.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-platform]');
       if (!btn) return;
       AppState.activePlatform = btn.dataset.platform;
+      AppState.activeCollection = "all";
+      AppState.nextCursor = null;
       syncFilterSelects();
       applyFiltersAndSearch();
       const drawer = document.getElementById('mobile-drawer-overlay');
@@ -1940,8 +1935,10 @@ function initEventListeners() {
       const btn = e.target.closest('[data-collection]');
       if (!btn) return;
       AppState.activeCollection = btn.dataset.collection;
+      AppState.nextCursor = null;
       syncFilterSelects();
-      applyFiltersAndSearch();
+      if (AppState.isServerConnected) loadData();
+      else applyFiltersAndSearch();
       const drawer = document.getElementById('mobile-drawer-overlay');
       if (drawer) drawer.classList.remove('active');
     });
@@ -1981,7 +1978,7 @@ function initEventListeners() {
         e.stopPropagation();
         const sortVal = item.dataset.sort;
         AppState.activeSort = sortVal;
-        
+
         sortMenu.querySelectorAll('.dropdown-item').forEach(el => {
           const isSelected = el.dataset.sort === sortVal;
           el.classList.toggle('active', isSelected);
@@ -1990,7 +1987,7 @@ function initEventListeners() {
             icon.style.visibility = isSelected ? 'visible' : 'hidden';
           }
         });
-        
+
         const activeLabelEl = document.getElementById('sort-active-label');
         const sortLabels = {
           'recent-desc': 'Newest First',
@@ -2001,7 +1998,7 @@ function initEventListeners() {
         if (activeLabelEl) {
           activeLabelEl.textContent = sortLabels[sortVal] || 'Newest First';
         }
-        
+
         applyFiltersAndSearch();
         closeAllToolbarDropdowns();
         sortBtn.focus();
@@ -2048,23 +2045,23 @@ function initEventListeners() {
         saveModalNoteAndClose();
         return;
       }
-      
+
       if (DOM.bulkEditModalOverlay && DOM.bulkEditModalOverlay.classList.contains('active')) {
         DOM.bulkEditModalOverlay.classList.remove('active');
         return;
       }
-      
+
       const activeMenu = [sortMenu, layoutMenu, dataMenu].find(m => m && m.classList.contains('active'));
       const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : null;
-      
+
       closeAllToolbarDropdowns();
-      
+
       if (activeBtn) {
         activeBtn.focus();
       }
     }
   });
-  
+
   // Sync Actions listeners
   DOM.syncBtn.addEventListener('click', () => {
     if (AppState.isServerConnected) {
@@ -2128,11 +2125,11 @@ function initEventListeners() {
     e.preventDefault();
     DOM.dragDropZone.classList.add('dragover');
   });
-  
+
   DOM.dragDropZone.addEventListener('dragleave', () => {
     DOM.dragDropZone.classList.remove('dragover');
   });
-  
+
   DOM.dragDropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     DOM.dragDropZone.classList.remove('dragover');
@@ -2169,24 +2166,24 @@ function initEventListeners() {
     resetAddModal();
     DOM.addModalOverlay.classList.add('active');
   });
-  
+
   DOM.closeAddModal.addEventListener('click', () => {
     DOM.addModalOverlay.classList.remove('active');
     resetAddModal();
   });
-  
+
   DOM.btnAddCancel.addEventListener('click', () => {
     DOM.addModalOverlay.classList.remove('active');
     resetAddModal();
   });
-  
+
   DOM.addModalOverlay.addEventListener('click', (e) => {
     if (e.target === DOM.addModalOverlay) {
       DOM.addModalOverlay.classList.remove('active');
       resetAddModal();
     }
   });
-  
+
   // Post View & Notes modal listeners
   if (DOM.closePostModal) {
     DOM.closePostModal.addEventListener('click', saveModalNoteAndClose);
@@ -2209,7 +2206,7 @@ function initEventListeners() {
         DOM.modalNoteCharCount.textContent = `${val.length} / 1000`;
       }
     });
-    
+
     DOM.modalNoteTextarea.addEventListener('blur', () => {
       if (currentPostModalBookmarkId) {
         const val = DOM.modalNoteTextarea.value.trim();
@@ -2222,7 +2219,7 @@ function initEventListeners() {
       }
     });
   }
-  
+
   DOM.addBookmarkForm.addEventListener('submit', handleManualBookmarkSubmit);
 
   // Select Mode toggle button
@@ -2373,14 +2370,14 @@ function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
-  
+
   DOM.toastContainer.appendChild(toast);
-  
+
   // Trigger animation next frame
   requestAnimationFrame(() => {
     toast.classList.add('active');
   });
-  
+
   // Remove toast after duration
   setTimeout(() => {
     toast.classList.remove('active');
@@ -2408,7 +2405,7 @@ function formatDate(isoString) {
  */
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',
@@ -2428,7 +2425,7 @@ function escapeHTML(str) {
 function handleImageError(img, id, platform) {
   const container = img.parentNode;
   if (!container) return;
-  
+
   container.className = 'card-media fallback-media';
   if (platform === 'x') {
     container.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
@@ -2503,7 +2500,7 @@ function handleAdminLoginSubmit(e) {
   if (!password) return;
 
   showToast("Authenticating...");
-  
+
   fetch('/api/status', {
     method: 'GET',
     headers: {
@@ -2539,7 +2536,7 @@ function checkMobileDrawerLayout() {
   const sidebar = document.getElementById('sidebar');
   const sidebarMenu = document.querySelector('.sidebar-menu');
   const drawerBody = document.getElementById('mobile-drawer-body');
-  
+
   if (isMobile) {
     if (sidebarMenu && drawerBody && sidebarMenu.parentNode !== drawerBody) {
       drawerBody.appendChild(sidebarMenu);
@@ -2557,3 +2554,250 @@ function checkMobileDrawerLayout() {
 
 
 
+
+
+/* Private dashboard and Browser Bookmarks controller */
+Object.assign(AppState, { activeSource: "browser", nextCursor: null, hasMore: false, isLoadingMore: false, linkPreview: null });
+
+function showPrivateLogin(message) {
+  document.body.classList.add("auth-pending");
+  document.body.classList.remove("visitor-mode");
+  AppState.isAdmin = false;
+  AppState.isServerConnected = false;
+  const error = document.getElementById("private-login-error");
+  if (error) { error.hidden = !message; error.textContent = message || ""; }
+}
+
+function checkServerConnection() {
+  return fetch("/api/status", { method: "GET", cache: "no-store", credentials: "same-origin" })
+    .then(async res => {
+      if (res.status === 401) { showPrivateLogin(); return { authenticated: false }; }
+      if (!res.ok) throw new Error("Status check failed");
+      const data = await res.json();
+      AppState.isServerConnected = true;
+      AppState.isAdmin = true;
+      document.body.classList.remove("auth-pending", "visitor-mode");
+      updateSyncStatusUI(true);
+      const profile = data.profile || {};
+      const name = document.getElementById("settings-profile-name");
+      const email = document.getElementById("settings-profile-email");
+      const member = document.getElementById("settings-member-since");
+      if (name) name.textContent = profile.name || "SocialFeed Owner";
+      if (email) email.textContent = profile.email || "Private account";
+      if (member) member.textContent = profile.memberSince || "Private account";
+      return { authenticated: true, data };
+    })
+    .catch(error => { showPrivateLogin("Unable to reach your private dashboard."); return { authenticated: false }; });
+}
+
+function loadData(options = {}) {
+  if (!AppState.isServerConnected) return;
+  const append = !!options.append;
+  if (AppState.isLoadingMore) return;
+  AppState.isLoadingMore = true;
+  const params = new URLSearchParams({ source: AppState.activeSource, limit: "40" });
+  if (AppState.activeSource === "social" && AppState.activePlatform !== "all") params.set("platform", AppState.activePlatform);
+  if (AppState.activeCollection && AppState.activeCollection !== "all") params.set("collection", AppState.activeCollection);
+  if (append && AppState.nextCursor) params.set("cursor", AppState.nextCursor);
+  fetch("/api/load?" + params.toString(), { credentials: "same-origin" })
+    .then(async res => {
+      if (res.status === 401) { showPrivateLogin(); throw new Error("Session expired"); }
+      if (!res.ok) throw new Error("Database load failed");
+      return res.json();
+    })
+    .then(data => {
+      const incoming = Array.isArray(data) ? data : (data.bookmarks || []);
+      AppState.bookmarks = append ? AppState.bookmarks.concat(incoming) : incoming;
+      AppState.nextCursor = data.nextCursor || null;
+      AppState.hasMore = !!data.hasMore;
+      AppState.isLoadingMore = false;
+      onDataLoadedSuccess();
+      const more = document.getElementById("load-more-container");
+      if (more) more.hidden = true;
+    })
+    .catch(error => {
+      AppState.isLoadingMore = false;
+      if (AppState.isServerConnected) showToast("Could not load bookmarks.", "error");
+    });
+}
+
+function updateFeedHeaders() {
+  let title = AppState.activeSource === "browser" ? "Browser Bookmarks" : "All Social Bookmarks";
+  if (AppState.activeSource === "social" && AppState.activePlatform !== "all") title = platformLabel(AppState.activePlatform);
+  if (AppState.activeCollection && AppState.activeCollection !== "all") title += " in " + (AppState.activeCollection === "uncategorized" ? "Uncategorized" : AppState.activeCollection);
+  DOM.feedTitle.textContent = title;
+  DOM.feedSubtitle.textContent = "Showing " + AppState.filteredBookmarks.length + " loaded bookmark" + (AppState.filteredBookmarks.length === 1 ? "" : "s");
+  const browserItem = document.getElementById("sidebar-browser-item");
+  if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser");
+}
+
+function openSettings() {
+  document.getElementById("feed-content").hidden = true;
+  document.getElementById("settings-view").hidden = false;
+}
+
+function closeSettings() {
+  document.getElementById("settings-view").hidden = true;
+  document.getElementById("feed-content").hidden = false;
+}
+
+async function previewBrowserLink(url) {
+  if (!url) return null;
+  const status = document.getElementById("add-preview-status");
+  if (status) { status.hidden = false; status.textContent = "Looking up link preview…"; }
+  try {
+    const response = await fetch("/api/bookmark-preview", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Preview unavailable");
+    AppState.linkPreview = data;
+    if (DOM.addContent && !DOM.addContent.value) DOM.addContent.value = data.description || data.title || "";
+    if (DOM.addAuthorName && !DOM.addAuthorName.value) DOM.addAuthorName.value = data.siteName || "";
+    if (status) status.textContent = "Preview found: " + (data.title || data.siteName);
+    return data;
+  } catch (error) {
+    AppState.linkPreview = null;
+    if (status) status.textContent = "Preview unavailable — the link can still be saved.";
+    return null;
+  }
+}
+
+async function saveBrowserBookmark(event) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const url = DOM.addUrl.value.trim();
+  const preview = AppState.linkPreview && AppState.linkPreview.url ? AppState.linkPreview : await previewBrowserLink(url);
+  const canonical = preview && preview.canonicalUrl ? preview.canonicalUrl : url.toLowerCase().replace(/\/$/, "");
+  if (AppState.bookmarks.some(item => item.source === "browser" && (item.canonicalUrl || item.url.toLowerCase().replace(/\/$/, "")) === canonical)) { showToast("This browser bookmark is already saved.", "error"); return; }
+  const tagText = DOM.addTags.value.trim();
+  const category = DOM.addCategory.value === "__new__" ? DOM.addCategoryNew.value.trim() : DOM.addCategory.value.trim();
+  const site = preview && preview.siteName ? preview.siteName : new URL(url).hostname;
+  const bookmark = { id: "browser_" + Date.now(), source: "browser", platform: "browser", url: preview && preview.url ? preview.url : url, canonicalUrl: canonical, authorName: DOM.addAuthorName.value.trim() || site, authorUsername: site.replace(/^www\./, ""), content: DOM.addContent.value.trim() || (preview && preview.title) || "Saved browser bookmark", thumbnail: preview && preview.image ? preview.image : "", notes: (document.getElementById("add-notes") || {}).value || "", hashtags: tagText ? tagText.split(",").map(tag => tag.trim().replace(/^#/, "").toLowerCase()).filter(Boolean) : [], folder: category === "uncategorized" ? "" : category, extensionScrapedAt: new Date().toISOString() };
+  AppState.bookmarks.unshift(bookmark);
+  AppState.linkPreview = null;
+  processCollections(); processTags(); updateCollectionsFilterDropdown(); applyFiltersAndSearch(); saveDataToServer();
+  DOM.addModalOverlay.classList.remove("active"); DOM.addBookmarkForm.reset(); showToast("Browser bookmark saved.", "success");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const loginForm = document.getElementById("private-login-form");
+  const loginPassword = document.getElementById("private-login-password");
+  const loginError = document.getElementById("private-login-error");
+  if (loginForm) loginForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    loginError.hidden = true;
+    const response = await fetch("/api/auth/login", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: loginPassword.value }) });
+    const data = await response.json();
+    if (!response.ok) { loginError.textContent = data.error || "Unable to sign in."; loginError.hidden = false; return; }
+    loginPassword.value = "";
+    const state = await checkServerConnection();
+    if (state.authenticated) { AppState.activeSource = "browser"; AppState.activePlatform = "all"; loadData(); }
+  });
+
+  const browserButton = document.getElementById("btn-browser-bookmarks");
+  if (browserButton) browserButton.addEventListener("click", () => { closeSettings(); AppState.activeSource = "browser"; AppState.activePlatform = "all"; AppState.activeCollection = "all"; AppState.nextCursor = null; loadData(); });
+  if (DOM.sidebarPlatformList) DOM.sidebarPlatformList.addEventListener("click", event => { const button = event.target.closest("[data-platform]"); if (!button) return; closeSettings(); AppState.activeSource = "social"; AppState.activePlatform = button.dataset.platform; AppState.activeCollection = "all"; AppState.nextCursor = null; loadData(); });
+
+  const settingsButton = document.getElementById("btn-settings");
+  if (settingsButton) settingsButton.addEventListener("click", openSettings);
+  const backButton = document.getElementById("btn-back-to-bookmarks");
+  if (backButton) backButton.addEventListener("click", closeSettings);
+  const logout = async () => { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); AppState.bookmarks = []; AppState.nextCursor = null; showPrivateLogin(); };
+  const settingsLogout = document.getElementById("btn-settings-logout");
+  if (settingsLogout) settingsLogout.addEventListener("click", logout);
+
+  const more = document.getElementById("btn-load-more");
+  if (more) more.addEventListener("click", () => loadData({ append: true }));
+
+  const platformSelect = document.getElementById("add-platform");
+  if (platformSelect && !platformSelect.querySelector("option[value=browser]")) { const option = document.createElement("option"); option.value = "browser"; option.textContent = "Browser Bookmark"; platformSelect.appendChild(option); }
+  if (DOM.btnAddBookmark) DOM.btnAddBookmark.addEventListener("click", () => { if (AppState.activeSource === "browser" && platformSelect) { platformSelect.value = "browser"; AppState.linkPreview = null; } });
+  if (DOM.addUrl) DOM.addUrl.addEventListener("blur", () => { if (platformSelect && platformSelect.value === "browser" && DOM.addUrl.value.trim()) previewBrowserLink(DOM.addUrl.value.trim()); });
+  if (DOM.addBookmarkForm) DOM.addBookmarkForm.addEventListener("submit", event => { if (platformSelect && platformSelect.value === "browser") saveBrowserBookmark(event); }, true);
+});
+
+
+async function refreshPlatformCounts() {
+  try {
+    const response = await fetch("/api/counts", { credentials: "same-origin", cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    AppState.libraryCounts = data;
+    AppState.platformCounts = data.platforms || { all: data.all || 0, instagram: data.instagram || 0, x: data.x || 0, threads: data.threads || 0, reddit: data.reddit || 0, facebook: data.facebook || 0 };
+    updateSidebarNavigation();
+    updateStatsAnalytics();
+  } catch (error) {
+    console.warn("Could not refresh platform counts", error);
+  }
+}
+
+function renderInfiniteScrollSentinel() {
+  const existing = document.getElementById("infinite-scroll-sentinel");
+  if (existing) existing.remove();
+  const total = AppState.filteredBookmarks.length;
+  const showing = Math.min(AppState.visibleCount, total);
+  if (!total) return;
+  const sentinel = document.createElement("div");
+  sentinel.id = "infinite-scroll-sentinel";
+  sentinel.className = "infinite-scroll-sentinel";
+  if (showing < total || AppState.isLoadingMore) {
+    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><i class=\"fa-solid fa-circle-notch fa-spin\"></i><span>Loading more bookmarks…</span></div>";
+  } else if (AppState.hasMore) {
+    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><span>More bookmarks load automatically as you scroll</span></div>";
+  } else {
+    sentinel.innerHTML = "<div class=\"infinite-scroll-end\">Showing all loaded bookmarks</div>";
+  }
+  DOM.bookmarksGrid.parentNode.insertBefore(sentinel, DOM.bookmarksGrid.nextSibling);
+  if (showing < total || AppState.hasMore) initInfiniteScrollObserver();
+  else if (AppState.scrollObserver) AppState.scrollObserver.disconnect();
+}
+
+function initInfiniteScrollObserver() {
+  if (AppState.scrollObserver) AppState.scrollObserver.disconnect();
+  const sentinel = document.getElementById("infinite-scroll-sentinel");
+  const scrollContainer = document.getElementById("main-panel");
+  if (!sentinel || !scrollContainer) return;
+  AppState.scrollObserver = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting) || isScrollLoading) return;
+    const total = AppState.filteredBookmarks.length;
+    if (AppState.visibleCount < total) {
+      isScrollLoading = true;
+      setTimeout(() => { AppState.visibleCount += POSTS_PER_PAGE; renderFeedGrid(); isScrollLoading = false; }, 300);
+      return;
+    }
+    if (AppState.hasMore && !AppState.isLoadingMore) loadData({ append: true });
+  }, { root: scrollContainer, rootMargin: "500px 0px" });
+  AppState.scrollObserver.observe(sentinel);
+}
+
+
+function privateCheckServerConnection() {
+  return fetch("/api/status", { method: "GET", cache: "no-store", credentials: "same-origin" }).then(async response => {
+    if (response.status === 401) { showPrivateLogin(); return { authenticated: false }; }
+    if (!response.ok) throw new Error("Status check failed");
+    const data = await response.json();
+    AppState.isServerConnected = true; AppState.isAdmin = true; AppState.activeSource = "browser"; AppState.activePlatform = "all";
+    document.body.classList.remove("auth-pending", "visitor-mode"); updateSyncStatusUI(true); refreshPlatformCounts();
+    return { authenticated: true, data };
+  }).catch(() => { showPrivateLogin("Unable to reach your private dashboard."); return { authenticated: false }; });
+}
+
+function privateLoadData(options = {}) {
+  if (!AppState.isServerConnected) return;
+  const append = !!options.append;
+  if (AppState.isLoadingMore) return;
+  AppState.isLoadingMore = true; renderInfiniteScrollSentinel();
+  const params = new URLSearchParams({ source: AppState.activeSource || "browser", limit: "40" });
+  if (AppState.activeSource === "social" && AppState.activePlatform !== "all") params.set("platform", AppState.activePlatform);
+  if (AppState.activeCollection && AppState.activeCollection !== "all") params.set("collection", AppState.activeCollection);
+  if (append && AppState.nextCursor) params.set("cursor", AppState.nextCursor);
+  fetch("/api/load?" + params.toString(), { credentials: "same-origin" }).then(async response => {
+    if (response.status === 401) { showPrivateLogin(); throw new Error("Session expired"); }
+    if (!response.ok) throw new Error("Bookmark load failed"); return response.json();
+  }).then(data => {
+    const incoming = data.bookmarks || [];
+    AppState.bookmarks = append ? AppState.bookmarks.concat(incoming) : incoming;
+    AppState.nextCursor = data.nextCursor || null; AppState.hasMore = !!data.hasMore; AppState.isLoadingMore = false;
+    onDataLoadedSuccess();
+    const more = document.getElementById("load-more-container"); if (more) more.hidden = true;
+  }).catch(() => { AppState.isLoadingMore = false; renderInfiniteScrollSentinel(); });
+}
