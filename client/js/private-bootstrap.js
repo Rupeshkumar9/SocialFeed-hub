@@ -15,7 +15,7 @@
 
     const [countsResponse, bookmarksResponse] = await Promise.all([
       fetch('/api/counts', { credentials: 'same-origin', cache: 'no-store' }),
-      fetch('/api/load?source=browser&limit=40', { credentials: 'same-origin', cache: 'no-store' })
+      fetch('/api/load?' + (() => { const params = new URLSearchParams({ source: AppState.activeSource || 'browser', limit: '40' }); if (AppState.activeSource === 'social' && AppState.activePlatform !== 'all') params.set('platform', AppState.activePlatform); if (AppState.activeSource === 'social' && AppState.activeCollection && AppState.activeCollection !== 'all') params.set('collection', AppState.activeCollection); return params.toString(); })(), { credentials: 'same-origin', cache: 'no-store' })
     ]);
 
     if (countsResponse.ok) {

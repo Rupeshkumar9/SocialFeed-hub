@@ -25,7 +25,9 @@ const AppState = {
   isSelectionMode: false,
   selectedIds: new Set(),
   pendingDeletedIds: new Set(),
-  isTagsExpanded: false
+  isTagsExpanded: false,
+  analyticsOpenPlatform: "instagram",
+  isSettingsOpen: false
 };
 
 // DOM Cache
@@ -63,6 +65,15 @@ const DOM = {
   addTags: document.getElementById('add-tags'),
   addCategory: document.getElementById('add-category'),
   addCategoryNew: document.getElementById('add-category-new'),
+  addThumbnail: document.getElementById('add-thumbnail'),
+  btnToggleImageField: document.getElementById('btn-toggle-image-field'),
+  addImageField: document.getElementById('add-image-field'),
+  addImagePreview: document.getElementById('add-image-preview'),
+  addImageDropzone: document.getElementById('add-image-dropzone'),
+  addImageFile: document.getElementById('add-image-file'),
+  addImageSourceControls: document.getElementById('add-image-source-controls'),
+  addTagsGroup: document.getElementById('add-tags-group'),
+  btnEditCategoryName: document.getElementById('btn-edit-category-name'),
 
   // Sync Actions
   syncBtn: document.getElementById('sync-btn'),
@@ -226,7 +237,7 @@ function onDataLoadedSuccess() {
   changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
 
   applyFiltersAndSearch();
-  showToast("Bookmarks loaded successfully!", "success");
+  console.info("Bookmarks loaded successfully.");
 }
 
 /**
@@ -252,7 +263,7 @@ function updateCollectionsFilterDropdown() {
 
   filterSelect.innerHTML = `
     <option value="all">All Collections</option>
-    <option value="uncategorized">Uncategorized</option>
+    <option value="uncategorized">Others</option>
   `;
 
   Array.from(AppState.collections).sort().forEach(folder => {
@@ -315,6 +326,15 @@ function getBookmarkDateMs(bm, fields) {
   return 0;
 }
 
+function defaultAuthorNameForPlatform(platform) {
+  return platform === 'x' ? 'X User' :
+    platform === 'instagram' ? 'Instagram Creator' :
+    platform === 'threads' ? 'Threads Creator' :
+    platform === 'reddit' ? 'Reddit User' :
+    platform === 'browser' ? 'Saved Link' :
+    'Facebook User';
+}
+
 function platformLabel(platform) {
   const labels = {
     all: 'All Bookmarks',
@@ -350,9 +370,6 @@ function normalizeCollectionKey(value) {
   const folder = String(value || "").trim();
   const lower = folder.toLowerCase();
   if (!folder || lower === "uncategorized" || lower === "others" || lower === "bookmarks bar") return "uncategorized";
-  if (lower === "tech") return "Tech";
-  if (lower === "art & design") return "Art & Design";
-  if (lower === "food") return "Food";
   return folder;
 }
 
@@ -365,12 +382,72 @@ function socialCategoryLabel(value) {
 }
 
 function getLoadedCollectionCounts() {
-  const counts = { all: AppState.bookmarks.length, uncategorized: 0, Tech: 0, "Art & Design": 0, Food: 0 };
+  const counts = { all: AppState.bookmarks.length, uncategorized: 0 };
   AppState.bookmarks.forEach(bm => {
     const key = normalizeCollectionKey(bm.folder);
     counts[key] = (counts[key] || 0) + 1;
   });
   return counts;
+}
+
+function getCategoryDefaultLabel(source = AppState.activeSource) {
+  return source === "browser" ? "General Links" : "Others";
+}
+
+function getCategoryContextFromPlatform(platformValue) {
+  const platform = String(platformValue || "").trim();
+  if (platform === "browser") return { source: "browser", platform: "browser" };
+  if (platform && platform !== "all") return { source: "social", platform };
+  return { source: AppState.activeSource === "browser" ? "browser" : "social", platform: AppState.activePlatform || "all" };
+}
+
+function getCategoryCountsForContext(context = {}) {
+  const source = context.source || AppState.activeSource || "social";
+  const platform = context.platform || AppState.activePlatform || "all";
+  const root = AppState.libraryCounts && AppState.libraryCounts.collections;
+  if (root) {
+    if (source === "browser") return root.browser || { all: 0, uncategorized: 0 };
+    if (platform && platform !== "all" && root.platforms && root.platforms[platform]) return root.platforms[platform];
+    return root.social || { all: 0, uncategorized: 0 };
+  }
+
+  const counts = { all: 0, uncategorized: 0 };
+  AppState.bookmarks.forEach(bm => {
+    const bmSource = bm.source === "browser" || bm.platform === "browser" ? "browser" : "social";
+    if (source === "browser" && bmSource !== "browser") return;
+    if (source === "social" && bmSource === "browser") return;
+    if (source === "social" && platform && platform !== "all" && bm.platform !== platform) return;
+    const key = normalizeCollectionKey(bm.folder);
+    counts[key] = (counts[key] || 0) + 1;
+    counts.all += 1;
+  });
+  return counts;
+}
+
+function sortedCategoryItemsFromCounts(counts = {}, source = AppState.activeSource) {
+  const defaultLabel = getCategoryDefaultLabel(source);
+  return Object.entries(counts)
+    .filter(([key, count]) => key !== "all" && (normalizeCollectionKey(key) === "uncategorized" || Number(count) > 0))
+    .map(([key, count]) => {
+      const normalized = normalizeCollectionKey(key);
+      return normalized === "uncategorized"
+        ? { value: "uncategorized", label: defaultLabel, count: count || 0, icon: "fa-regular fa-folder" }
+        : { value: normalized, label: normalized, count: count || 0, icon: "fa-solid fa-folder" };
+    })
+    .filter((item, index, list) => list.findIndex(candidate => candidate.value.toLowerCase() === item.value.toLowerCase()) === index)
+    .sort((a, b) => (b.count - a.count) || a.label.localeCompare(b.label));
+}
+
+function platformIconMarkup(platform, className = "") {
+  const extra = className ? " " + className : "";
+  if (platform === "x") {
+    return "<svg class=\"platform-inline-icon" + extra + "\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z\"/></svg>";
+  }
+  if (platform === "threads") {
+    return "<svg class=\"platform-inline-icon" + extra + "\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z\"/></svg>";
+  }
+  const classes = { instagram: "fa-brands fa-instagram", facebook: "fa-brands fa-facebook", reddit: "fa-brands fa-reddit-alien", browser: "fa-solid fa-bookmark" };
+  return "<i class=\"" + (classes[platform] || "fa-solid fa-circle-nodes") + extra + "\"></i>";
 }
 
 function getLoadedTagCounts() {
@@ -396,7 +473,7 @@ function updateSidebarNavigation() {
   }
 
   Object.entries(platformCounts).forEach(([platform, count]) => {
-    const el = document.getElementById(`count-platform-${platform}`);
+    const el = document.getElementById("count-platform-" + platform);
     if (el) el.textContent = count;
   });
 
@@ -404,18 +481,48 @@ function updateSidebarNavigation() {
   const browserCountEl = document.getElementById("count-browser-bookmarks");
   if (browserCountEl) browserCountEl.textContent = browserCount || 0;
 
+  const browserItem = document.getElementById("sidebar-browser-item");
+  if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser" && !AppState.isSettingsOpen);
+
+  const settingsButton = document.getElementById("btn-settings");
+  if (settingsButton) settingsButton.classList.toggle("active", !!AppState.isSettingsOpen);
+
   if (DOM.sidebarPlatformList) {
     DOM.sidebarPlatformList.querySelectorAll(".menu-item").forEach(item => {
       const btn = item.querySelector("[data-platform]");
-      item.classList.toggle("active", AppState.activeSource === "social" && btn && btn.dataset.platform === AppState.activePlatform);
+      item.classList.toggle("active", !AppState.isSettingsOpen && AppState.activeSource === "social" && btn && btn.dataset.platform === AppState.activePlatform);
     });
   }
 
   const collectionSection = DOM.sidebarCollectionList ? DOM.sidebarCollectionList.closest(".sidebar-section") : null;
-  if (collectionSection) collectionSection.hidden = AppState.activeSource !== "social";
+  if (collectionSection) collectionSection.hidden = false;
   if (AppState.activeSource !== "social") {
-    const browserItem = document.getElementById("sidebar-browser-item");
-    if (browserItem) browserItem.classList.add("active");
+    const collectionList = DOM.sidebarCollectionList;
+    if (collectionList) {
+      const browserCollections = getLibraryCountGroup("collections", "browser") || { all: browserCount || 0, uncategorized: 0 };
+      collectionList.innerHTML = "";
+      [
+        { value: "all", label: "All", count: browserCollections.all || browserCount || 0, icon: "fa-solid fa-folder-tree" },
+        { value: "uncategorized", label: "Others", count: browserCollections.uncategorized || 0, icon: "fa-regular fa-folder" }
+      ].forEach(item => {
+        const li = document.createElement("li");
+        li.className = "menu-item sidebar-category-disabled";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.collection = item.value;
+        button.disabled = true;
+        const icon = document.createElement("i");
+        icon.className = item.icon;
+        const label = document.createElement("span");
+        label.textContent = item.label;
+        const count = document.createElement("span");
+        count.className = "menu-count";
+        count.textContent = item.count || 0;
+        button.append(icon, label, count);
+        li.appendChild(button);
+        collectionList.appendChild(li);
+      });
+    }
     syncFilterSelects();
     return;
   }
@@ -424,32 +531,27 @@ function updateSidebarNavigation() {
   const collectionList = DOM.sidebarCollectionList;
   if (collectionList) {
     collectionList.innerHTML = "";
-    const baseItems = [
-      { value: "all", label: "All", icon: "fa-solid fa-folder-tree" },
-      { value: "uncategorized", label: "Others", icon: "fa-regular fa-folder" },
-      { value: "Tech", label: "Tech", icon: "fa-solid fa-folder" },
-      { value: "Art & Design", label: "Art & Design", icon: "fa-solid fa-folder" },
-      { value: "Food", label: "Food", icon: "fa-solid fa-folder" }
-    ];
+    const allItem = { value: "all", label: "All", count: counts.all || 0, icon: "fa-solid fa-folder-tree" };
+    const categoryItems = sortedCategoryItemsFromCounts(counts, "social");
+    if (!categoryItems.some(item => item.value === "uncategorized")) {
+      categoryItems.unshift({ value: "uncategorized", label: "Others", count: 0, icon: "fa-regular fa-folder" });
+    }
 
-    const baseKeys = ["all", "uncategorized", "tech", "art & design", "food"];
-    const countCollections = Object.keys(counts).filter(folder => folder !== "all");
-    const localCollections = Array.from(AppState.collections || []);
-    const customItems = Array.from(new Set([...countCollections, ...localCollections].map(normalizeCollectionKey)))
-      .filter(folder => !baseKeys.includes(folder.toLowerCase()))
-      .sort()
-      .map(folder => ({ value: folder, label: folder, icon: "fa-solid fa-folder" }));
-
-    [...baseItems, ...customItems].forEach(item => {
+    [allItem, ...categoryItems].forEach(item => {
       const li = document.createElement("li");
-      li.className = `menu-item ${AppState.activeCollection === item.value ? "active" : ""}`;
-      li.innerHTML = `
-        <button type="button" data-collection="${escapeHTML(item.value)}">
-          <i class="${item.icon}"></i>
-          <span>${escapeHTML(item.label)}</span>
-          <span class="menu-count">${counts[item.value] || 0}</span>
-        </button>
-      `;
+      li.className = "menu-item" + (AppState.activeCollection === item.value ? " active" : "");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.collection = item.value;
+      const icon = document.createElement("i");
+      icon.className = item.icon;
+      const label = document.createElement("span");
+      label.textContent = item.label;
+      const count = document.createElement("span");
+      count.className = "menu-count";
+      count.textContent = item.count || 0;
+      button.append(icon, label, count);
+      li.appendChild(button);
       collectionList.appendChild(li);
     });
   }
@@ -469,7 +571,7 @@ function applyFiltersAndSearch() {
     }
 
     // 1.5. Collection Filter
-    if (AppState.activeCollection && AppState.activeCollection !== 'all') {
+    if (AppState.activeSource === 'social' && AppState.activeCollection && AppState.activeCollection !== 'all') {
       if (AppState.activeCollection === 'uncategorized') {
         if (bm.folder && bm.folder.trim()) return false;
       } else {
@@ -543,7 +645,7 @@ function updateFeedHeaders() {
   if (AppState.activePlatform === 'reddit') title = 'Reddit';
 
   if (AppState.activeCollection && AppState.activeCollection !== 'all') {
-    title += ` in ${AppState.activeCollection === '__uncategorized__' || AppState.activeCollection === 'uncategorized' ? 'Uncategorized' : AppState.activeCollection}`;
+    title += ` in ${AppState.activeCollection === '__uncategorized__' || AppState.activeCollection === 'uncategorized' ? 'Others' : AppState.activeCollection}`;
   }
 
   if (AppState.activeTag !== 'all') {
@@ -609,16 +711,39 @@ function buildCardElement(bm) {
   `;
 
   let folderVal = bm.source === "browser" ? browserCategoryLabel(bm.folder) : socialCategoryLabel(bm.folder);
-  const folderMarkup = `
-    <div class="card-folder-area" title="Collection: ${escapeHTML(folderVal)}">
-      <i class="fa-solid fa-folder"></i>
-      <span class="folder-name">${escapeHTML(folderVal)}</span>
-    </div>
-  `;
+  const folderMarkup = bm.source === "browser" ? "" : "\n    <div class=\"card-category-container\">" +
+    "\n      <button type=\"button\" class=\"btn-card-category\" title=\"Show category\" aria-expanded=\"false\">" +
+    "\n        <i class=\"fa-solid fa-folder\"></i>" +
+    "\n      </button>" +
+    "\n      <div class=\"card-category-popover\" role=\"status\">" +
+    "\n        <span>Category</span>" +
+    "\n        <strong>" + escapeHTML(folderVal) + "</strong>" +
+    "\n      </div>" +
+    "\n    </div>";
+
 
   // Build visual card-media
   let mediaMarkup = '';
-  if (bm.platform === 'instagram') {
+  const isBrowserBookmark = bm.source === 'browser' || bm.platform === 'browser';
+  if (isBrowserBookmark) {
+    if (bm.thumbnail) {
+      mediaMarkup = `
+        <div class="card-media browser-card-media">
+          <img src="${escapeHTML(bm.thumbnail)}" alt="Saved Link Preview" loading="lazy" onerror="handleImageError(this, '${bm.id}', 'browser')">
+        </div>
+      `;
+    } else {
+      mediaMarkup = `
+        <div class="card-media fallback-media browser-fallback">
+          <div class="fallback-gradient">
+            ${platformIconMarkup("browser", "fallback-inline-icon")}
+            <span class="fallback-title">Saved Link</span>
+            <span class="fallback-subtitle">Click to Open</span>
+          </div>
+        </div>
+      `;
+    }
+  } else if (bm.platform === 'instagram') {
     if (bm.thumbnail) {
       mediaMarkup = `
         <div class="card-media">
@@ -649,7 +774,7 @@ function buildCardElement(bm) {
       mediaMarkup = `
         <div class="card-media fallback-media" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-color: rgba(255,255,255,0.05);">
           <div class="fallback-gradient" style="color: #f8fafc;">
-            <i class="fa-brands fa-x-twitter fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
+            ${platformIconMarkup("x", "fallback-inline-icon")}
             <span class="fallback-title" style="color: #f8fafc;">X Post</span>
             <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
           </div>
@@ -667,7 +792,7 @@ function buildCardElement(bm) {
       mediaMarkup = `
         <div class="card-media fallback-media" style="background: linear-gradient(135deg, #262626 0%, #000000 100%); border-color: rgba(255,255,255,0.05);">
           <div class="fallback-gradient" style="color: #f8fafc;">
-            <i class="fa-brands fa-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
+            ${platformIconMarkup("threads", "fallback-inline-icon")}
             <span class="fallback-title" style="color: #f8fafc;">Threads Post</span>
             <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
           </div>
@@ -728,7 +853,7 @@ function buildCardElement(bm) {
           <span class="author-username">@${escapeHTML(bm.authorUsername || 'user')}</span>
         </div>
       </div>
-      <div class="card-header-actions" style="display: flex; align-items: center; gap: 8px;">
+      <div class="card-header-actions">
         ${folderMarkup}
         
         <div class="card-menu-container">
@@ -741,14 +866,8 @@ function buildCardElement(bm) {
           </div>
         </div>
 
-        <div class="card-platform-icon" title="Original Platform: ${bm.platform.toUpperCase()}">
-          <i class="${(() => {
-      if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
-      if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
-      if (bm.platform === 'threads') return 'fa-brands fa-threads';
-      if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
-      return 'fa-solid fa-circle-nodes';
-    })()}"></i>
+        <div class="card-platform-icon" title="Original Platform: ${(bm.platform || "web").toUpperCase()}">
+          ${platformIconMarkup(bm.platform)}
         </div>
       </div>
     </div>
@@ -790,6 +909,22 @@ function buildCardElement(bm) {
   }
 
 
+
+  // Category icon popover binding
+  const categoryBtn = card.querySelector('.btn-card-category');
+  const categoryPopover = card.querySelector('.card-category-popover');
+  if (categoryBtn && categoryPopover) {
+    categoryBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.card-category-popover.active').forEach(el => {
+        if (el !== categoryPopover) el.classList.remove('active');
+      });
+      document.querySelectorAll('.card-menu-dropdown.active').forEach(el => el.classList.remove('active'));
+      const willOpen = !categoryPopover.classList.contains('active');
+      categoryPopover.classList.toggle('active', willOpen);
+      categoryBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+  }
 
   // Three-dots dropdown bindings
   const menuBtn = card.querySelector('.btn-card-menu');
@@ -836,7 +971,7 @@ function buildCardElement(bm) {
 
   // Redirect to platform post or select card in selection mode
   card.addEventListener('click', (e) => {
-    if (e.target.closest('.card-notes-edit') || e.target.closest('.card-folder-area') || e.target.closest('.card-menu-container') || e.target.closest('.card-checkbox-container')) return;
+    if (e.target.closest('.card-notes-edit') || e.target.closest('.card-folder-area') || e.target.closest('.card-category-container') || e.target.closest('.card-menu-container') || e.target.closest('.card-checkbox-container')) return;
 
     if (AppState.isSelectionMode) {
       const cb = card.querySelector('.card-checkbox');
@@ -958,7 +1093,7 @@ function renderBrowserGroupedFeed(visibleSlice) {
     groups.get(label).push(bm);
   });
 
-  if (groups.size === 0) {
+  if (!groups.has("General Links")) {
     groups.set("General Links", []);
   }
 
@@ -1115,108 +1250,302 @@ function changeLayout(layout, showFeedbackToast = true) {
 /**
  * Compute metrics and update dashboard counts in real time
  */
+function categoryRowsMarkup(counts = {}, source = "social") {
+  const items = sortedCategoryItemsFromCounts(counts, source).filter(item => item.count > 0);
+  if (items.length === 0) return '<div class="stats-empty-line">No categories yet</div>';
+  const total = Number(counts.all) || items.reduce((sum, item) => sum + Number(item.count || 0), 0) || 1;
+  return items.map(item => {
+    const pct = Math.round((Number(item.count || 0) / total) * 100);
+    return '<div class="stats-category-row">' +
+      '<div class="metric-info"><span>' + escapeHTML(item.label) + '</span><span>' + item.count + '</span></div>' +
+      '<div class="metric-bar-container tiny"><div class="metric-bar" style="width:' + pct + '%;"></div></div>' +
+    '</div>';
+  }).join('');
+}
+
 function updateStatsAnalytics() {
   const panel = document.getElementById("stats-panel");
   if (!panel || panel.style.display === "none") return;
 
+  const platformContainer = document.getElementById("stat-platform-splits");
+  const browserContainer = document.getElementById("stat-browser-splits");
+  if (!platformContainer || !browserContainer) return;
+
   const platformCounts = AppState.platformCounts || {};
-  const total = Number(platformCounts.all) || AppState.filteredBookmarks.length;
-  const xCount = Number(platformCounts.x) || 0;
-  const igCount = Number(platformCounts.instagram) || 0;
-  const threadsCount = Number(platformCounts.threads) || 0;
-  const fbCount = Number(platformCounts.facebook) || 0;
+  const socialTotal = Number(platformCounts.all) || 0;
+  const platformRows = [
+    { key: "instagram", label: "Instagram", count: Number(platformCounts.instagram) || 0, barClass: "ig-bar" },
+    { key: "x", label: "X / Twitter", count: Number(platformCounts.x) || 0, barClass: "x-bar" },
+    { key: "threads", label: "Threads", count: Number(platformCounts.threads) || 0, barClass: "threads-bar" },
+    { key: "reddit", label: "Reddit", count: Number(platformCounts.reddit) || 0, barClass: "reddit-bar" },
+    { key: "facebook", label: "Facebook", count: Number(platformCounts.facebook) || 0, barClass: "fb-bar" }
+  ];
 
-  const xPct = total > 0 ? (xCount / total) * 100 : 0;
-  const igPct = total > 0 ? (igCount / total) * 100 : 0;
-  const threadsPct = total > 0 ? (threadsCount / total) * 100 : 0;
-  const fbPct = total > 0 ? (fbCount / total) * 100 : 0;
+  platformContainer.innerHTML = platformRows.map(row => {
+    const pct = socialTotal > 0 ? Math.round((row.count / socialTotal) * 100) : 0;
+    const isOpen = AppState.analyticsOpenPlatform === row.key;
+    const collectionCounts = getLibraryCountGroup("collections", row.key) || { all: row.count, uncategorized: 0 };
+    return '<div class="stats-platform-block' + (isOpen ? ' open' : '') + '">' +
+      '<button type="button" class="stats-metric-row stats-metric-button" data-analytics-platform="' + row.key + '">' +
+        '<div class="metric-info"><span>' + escapeHTML(row.label) + '</span><span>' + row.count + ' (' + pct + '%)</span></div>' +
+        '<div class="metric-bar-container"><div class="metric-bar ' + row.barClass + '" style="width:' + pct + '%;"></div></div>' +
+      '</button>' +
+      '<div class="stats-category-breakdown"' + (isOpen ? '' : ' hidden') + '>' + categoryRowsMarkup(collectionCounts, "social") + '</div>' +
+    '</div>';
+  }).join('');
 
-  document.getElementById("stat-x-count").textContent = `${xCount} (${Math.round(xPct)}%)`;
-  document.getElementById("stat-ig-count").textContent = `${igCount} (${Math.round(igPct)}%)`;
-  document.getElementById("stat-threads-count").textContent = `${threadsCount} (${Math.round(threadsPct)}%)`;
-  document.getElementById("stat-fb-count").textContent = `${fbCount} (${Math.round(fbPct)}%)`;
-
-  document.getElementById("stat-x-bar").style.width = `${xPct}%`;
-  document.getElementById("stat-ig-bar").style.width = `${igPct}%`;
-  document.getElementById("stat-threads-bar").style.width = `${threadsPct}%`;
-  document.getElementById("stat-fb-bar").style.width = `${fbPct}%`;
-
-  const collectionCounts = getLibraryCountGroup("collections", "social") || getLoadedCollectionCounts();
-  const collectionsList = document.getElementById("stat-collections-list");
-  collectionsList.innerHTML = "";
-  Object.entries(collectionCounts)
-    .filter(([folder]) => folder !== "all")
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .forEach(([folder, count]) => {
-      const item = document.createElement("div");
-      item.className = "stats-list-item";
-      item.innerHTML = `<span>${escapeHTML(folder === "uncategorized" ? "Others" : folder)}</span><span class="stats-badge">${count}</span>`;
-      collectionsList.appendChild(item);
+  platformContainer.querySelectorAll('[data-analytics-platform]').forEach(button => {
+    button.addEventListener('click', () => {
+      const next = button.dataset.analyticsPlatform;
+      AppState.analyticsOpenPlatform = AppState.analyticsOpenPlatform === next ? '' : next;
+      updateStatsAnalytics();
     });
+  });
 
-  if (Object.keys(collectionCounts).filter(key => key !== "all" && collectionCounts[key] > 0).length === 0) {
-    collectionsList.innerHTML = `<div style="font-size:0.7rem; color:var(--text-muted); padding: 4px 0;">No collections</div>`;
+  const sources = AppState.libraryCounts && AppState.libraryCounts.sources ? AppState.libraryCounts.sources : {};
+  const browserTotal = Number(sources.browser) || 0;
+  const grandTotal = (Number(sources.social) || socialTotal) + browserTotal;
+  const browserPct = grandTotal > 0 ? Math.round((browserTotal / grandTotal) * 100) : 0;
+  const browserCollections = getCategoryCountsForContext({ source: "browser", platform: "browser" });
+  browserContainer.innerHTML = '<div class="stats-platform-block open">' +
+    '<div class="stats-metric-row">' +
+      '<div class="metric-info"><span>Saved Links</span><span>' + browserTotal + ' (' + browserPct + '%)</span></div>' +
+      '<div class="metric-bar-container"><div class="metric-bar browser-bar" style="width:' + browserPct + '%;"></div></div>' +
+    '</div>' +
+    '<div class="stats-category-breakdown">' + categoryRowsMarkup(browserCollections, "browser") + '</div>' +
+  '</div>';
+}
+
+
+function setManualImageFromFile(file) {
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('image/')) {
+    showToast('Please choose an image file.', 'error');
+    return;
   }
+  const reader = new FileReader();
+  reader.onload = event => {
+    if (DOM.addThumbnail) DOM.addThumbnail.value = String(event.target.result || '');
+    updateManualImagePreview();
+    showToast('Image ready. It will upload to Cloudinary on save.', 'success');
+  };
+  reader.onerror = () => showToast('Could not read image file.', 'error');
+  reader.readAsDataURL(file);
+}
 
-  const tagCounts = getLibraryCountGroup("tags", "social") || getLoadedTagCounts();
-  const tagsList = document.getElementById("stat-tags-list");
-  tagsList.innerHTML = "";
-  Object.entries(tagCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .forEach(([tag, count]) => {
-      const item = document.createElement("div");
-      item.className = "stats-list-item";
-      item.innerHTML = `<span>#${escapeHTML(tag)}</span><span class="stats-badge">${count}</span>`;
-      tagsList.appendChild(item);
-    });
+function setManualImageSourceControlsVisible(visible) {
+  if (DOM.addImageSourceControls) DOM.addImageSourceControls.hidden = !visible;
+}
 
-  if (Object.keys(tagCounts).length === 0) {
-    tagsList.innerHTML = `<div style="font-size:0.7rem; color:var(--text-muted); padding: 4px 0;">No tags</div>`;
+function clearManualImageValue() {
+  if (DOM.addThumbnail) DOM.addThumbnail.value = '';
+  if (DOM.addImageFile) DOM.addImageFile.value = '';
+  updateManualImagePreview();
+}
+
+function updateManualImagePreview() {
+  if (!DOM.addImagePreview || !DOM.addThumbnail) return;
+  const value = DOM.addThumbnail.value.trim();
+  if (!value) {
+    DOM.addImagePreview.hidden = true;
+    DOM.addImagePreview.innerHTML = '';
+    setManualImageSourceControlsVisible(true);
+    return;
   }
+  setManualImageSourceControlsVisible(false);
+  DOM.addImagePreview.hidden = false;
+  DOM.addImagePreview.innerHTML = '<button type="button" class="manual-image-remove" title="Remove image" aria-label="Remove image"><i class="fa-solid fa-xmark"></i></button><img src="' + escapeHTML(value) + '" alt="Image preview" loading="lazy">';
+}
+
+function setManualImageFieldVisible(visible) {
+  if (!DOM.addImageField) return;
+  DOM.addImageField.hidden = !visible;
+  if (DOM.btnToggleImageField) {
+    const label = DOM.btnToggleImageField.querySelector('span');
+    if (label) label.textContent = visible ? 'Hide Image Field' : 'Add / Change Image';
+  }
+  if (visible) updateManualImagePreview();
+}
+
+function updateCategoryEditButtonVisibility() {
+  if (!DOM.btnEditCategoryName || !DOM.addCategory) return;
+  const value = DOM.addCategory.value;
+  DOM.btnEditCategoryName.hidden = !value || value === '__new__';
+}
+
+function renameSelectedModalCategory() {
+  if (!DOM.addCategory) return;
+  const currentValue = DOM.addCategory.value;
+  if (!currentValue || currentValue === '__new__') return;
+  const currentLabel = DOM.addCategory.options[DOM.addCategory.selectedIndex] ? DOM.addCategory.options[DOM.addCategory.selectedIndex].textContent : currentValue;
+  const nextName = window.prompt('Rename this category for this bookmark:', currentLabel);
+  if (nextName === null) return;
+  const cleaned = nextName.trim();
+  if (!cleaned) {
+    showToast('Category name cannot be empty.', 'error');
+    return;
+  }
+  const normalized = normalizeCollectionKey(cleaned);
+  if (normalized === 'uncategorized') {
+    DOM.addCategory.value = '';
+    updateCategoryEditButtonVisibility();
+    return;
+  }
+  let option = Array.from(DOM.addCategory.options).find(opt => opt.value.toLowerCase() === normalized.toLowerCase());
+  if (!option) {
+    option = document.createElement('option');
+    option.value = normalized;
+    option.textContent = normalized;
+    const newOption = Array.from(DOM.addCategory.options).find(opt => opt.value === '__new__');
+    DOM.addCategory.insertBefore(option, newOption || null);
+  } else {
+    option.textContent = normalized;
+  }
+  DOM.addCategory.value = option.value;
+  if (DOM.addCategoryNew) {
+    DOM.addCategoryNew.style.display = 'none';
+    DOM.addCategoryNew.value = '';
+  }
+  updateCategoryEditButtonVisibility();
+  showToast('Category name updated for this save.', 'info');
+}
+
+function updateManualModalPlatformUI(platformValue = '') {
+  const isBrowser = platformValue === 'browser';
+  if (DOM.addTagsGroup) DOM.addTagsGroup.hidden = isBrowser;
+  if (isBrowser && DOM.addTags) DOM.addTags.value = '';
+}
+
+function setRouteHash(hash) {
+  if (!hash) return;
+  const url = new URL(window.location.href);
+  url.hash = hash;
+  window.history.replaceState(null, '', url.toString());
+}
+
+function appUrlForRoute(hash) {
+  const url = new URL(window.location.href);
+  url.hash = hash;
+  return url.toString();
+}
+
+function showSidebarContextMenu(event, hash) {
+  event.preventDefault();
+  document.querySelectorAll('.sidebar-context-menu').forEach(menu => menu.remove());
+  const menu = document.createElement('div');
+  menu.className = 'sidebar-context-menu';
+  menu.style.left = event.clientX + 'px';
+  menu.style.top = event.clientY + 'px';
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.innerHTML = '<i class="fa-regular fa-window-restore"></i><span>Open in new tab</span>';
+  item.addEventListener('click', () => {
+    window.open(appUrlForRoute(hash), '_blank', 'noopener');
+    menu.remove();
+  });
+  menu.appendChild(item);
+  document.body.appendChild(menu);
+  const closeMenu = () => menu.remove();
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu, { once: true });
+    document.addEventListener('keydown', closeMenu, { once: true });
+    window.addEventListener('scroll', closeMenu, { once: true, capture: true });
+  }, 0);
+}
+
+function initSidebarNewTabContextMenu() {
+  document.querySelectorAll('[data-sidebar-route]').forEach(button => {
+    button.addEventListener('contextmenu', event => showSidebarContextMenu(event, button.dataset.sidebarRoute));
+  });
+}
+
+function applyRouteFromHash(options = {}) {
+  const hash = decodeURIComponent(window.location.hash || '');
+  let matched = false;
+  if (hash === '#settings') {
+    AppState.activeSource = 'browser';
+    AppState.activePlatform = 'all';
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    matched = true;
+    openSettings();
+  } else if (hash === '#bookmarks') {
+    AppState.activeSource = 'browser';
+    AppState.activePlatform = 'all';
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    matched = true;
+    closeSettings();
+  } else if (hash.startsWith('#platform=')) {
+    const platform = hash.slice('#platform='.length) || 'all';
+    AppState.activeSource = 'social';
+    AppState.activePlatform = platform;
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    matched = true;
+    closeSettings();
+  }
+  if (matched) {
+    syncFilterSelects();
+    updateSidebarNavigation();
+    if (options.load && AppState.isServerConnected) loadData();
+  }
+  return matched;
+}
+function refreshLocalMetadataAndCounts() {
+  processCollections();
+  updateCollectionsFilterDropdown();
+  processTags();
+  renderTagCloud();
+  applyFiltersAndSearch();
+  refreshPlatformCounts();
 }
 
 /**
  * Core Data Sync Manager: Saves the active state back to data/bookmarks.json
  */
 function saveDataToServer() {
-  if (AppState.isServerConnected) {
-    DOM.syncBtn.classList.add('saving');
-    DOM.syncStatusText.textContent = 'Syncing...';
-
-    const token = localStorage.getItem('admin_token');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    fetch('/api/save', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        bookmarks: AppState.bookmarks,
-        deletedIds: Array.from(AppState.pendingDeletedIds)
-      })
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Server rejected save operation');
-        return res.json();
-      })
-      .then(() => {
-        AppState.pendingDeletedIds.clear();
-        showToast('Synchronized successfully with server!', 'success');
-        updateSyncStatusUI(true);
-      })
-      .catch(err => {
-        console.error('Save failure:', err);
-        showToast('Server sync failed. Data is cached in memory.', 'error');
-        updateSyncStatusUI(false);
-      });
-  } else {
+  if (!AppState.isServerConnected) {
     showToast('App is offline. Reconnect to save changes to the server.', 'error');
+    return Promise.resolve(false);
   }
+
+  DOM.syncBtn.classList.add('saving');
+  DOM.syncStatusText.textContent = 'Syncing...';
+
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  return fetch('/api/save', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      bookmarks: AppState.bookmarks,
+      deletedIds: Array.from(AppState.pendingDeletedIds)
+    })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('Server rejected save operation');
+      return res.json();
+    })
+    .then(() => {
+      AppState.pendingDeletedIds.clear();
+      showToast('Synchronized successfully with server!', 'success');
+      updateSyncStatusUI(true);
+      refreshPlatformCounts();
+      return true;
+    })
+    .catch(err => {
+      console.error('Save failure:', err);
+      showToast('Server sync failed. Data is cached in memory.', 'error');
+      updateSyncStatusUI(false);
+      return false;
+    });
 }
 
 /**
+ * Trigger manual backup download/**
  * Trigger manual backup download of bookmarks.json (Option A Fallback)
  */
 function triggerManualDownload() {
@@ -1288,6 +1617,7 @@ function handleManualBookmarkSubmit(e) {
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
   const tagListInput = DOM.addTags.value.trim();
+  const imageUrl = DOM.addThumbnail ? DOM.addThumbnail.value.trim() : '';
 
   let categoryVal = '';
   if (DOM.addCategory.value === '__new__') {
@@ -1312,20 +1642,18 @@ function handleManualBookmarkSubmit(e) {
     if (idx !== -1) {
       const bm = AppState.bookmarks[idx];
       bm.platform = platform;
-      bm.authorName = authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : platform === 'reddit' ? 'Reddit User' : 'Facebook User');
+      bm.authorName = authorName || (defaultAuthorNameForPlatform(platform));
       bm.authorUsername = authorName ? authorName.toLowerCase().replace(/\s+/g, '') : bm.authorUsername;
       bm.content = content || bm.content;
       bm.folder = categoryVal;
+      bm.source = platform === 'browser' ? 'browser' : (bm.source === 'browser' && platform !== 'browser' ? 'social' : bm.source);
+      bm.thumbnail = imageUrl;
 
       const newUserTags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
-      bm.hashtags = newUserTags;
+      bm.hashtags = platform === 'browser' ? [] : newUserTags;
 
       // Reprocess state and write to server
-      processCollections();
-      updateCollectionsFilterDropdown();
-      processTags();
-      renderTagCloud();
-      applyFiltersAndSearch();
+      refreshLocalMetadataAndCounts();
       saveDataToServer();
 
       // Close Modal & Reset
@@ -1342,7 +1670,7 @@ function handleManualBookmarkSubmit(e) {
   const url = DOM.addUrl.value.trim();
 
   // Parse hashtags
-  const hashtags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
+  const hashtags = platform === 'browser' ? [] : (tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : []);
 
   // Extract unique code or ID for deduplication keys
   let id = '';
@@ -1367,13 +1695,14 @@ function handleManualBookmarkSubmit(e) {
     id: id,
     platform: platform,
     url: url,
-    authorName: authorName || (platform === 'x' ? 'X User' : platform === 'instagram' ? 'Instagram Creator' : platform === 'threads' ? 'Threads Creator' : platform === 'reddit' ? 'Reddit User' : 'Facebook User'),
+    authorName: authorName || (defaultAuthorNameForPlatform(platform)),
     authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : 'username',
     content: content || `Saved ${platform.toUpperCase()} Post (click to load embed)`,
     timestamp: new Date().toISOString(),
     hashtags: hashtags,
     folder: categoryVal,
-    notes: ''
+    notes: '',
+    thumbnail: imageUrl
   };
 
   // Merge (deduplicate)
@@ -1387,11 +1716,7 @@ function handleManualBookmarkSubmit(e) {
   AppState.bookmarks = mergeResult.merged;
 
   // Reprocess state and write to server
-  processCollections();
-  updateCollectionsFilterDropdown();
-  processTags();
-  renderTagCloud();
-  applyFiltersAndSearch();
+  refreshLocalMetadataAndCounts();
   saveDataToServer();
 
   // Close Modal
@@ -1404,31 +1729,22 @@ function handleManualBookmarkSubmit(e) {
 /**
  * Populate the Category select dropdown in the Add/Edit bookmark modal
  */
-function populateModalCategorySelect(selectedVal = '') {
+function populateModalCategorySelect(selectedVal = '', context = null) {
   if (!DOM.addCategory) return;
+  const platformSelect = document.getElementById('add-platform');
+  const resolvedContext = context || getCategoryContextFromPlatform(platformSelect ? platformSelect.value : '');
+  const counts = getCategoryCountsForContext(resolvedContext);
+  const defaultLabel = getCategoryDefaultLabel(resolvedContext.source);
   DOM.addCategory.innerHTML = '';
 
-  // Default option
   const defaultOpt = document.createElement('option');
   defaultOpt.value = '';
-  defaultOpt.textContent = AppState.activeSource === "browser" ? "General Links" : "Others";
+  defaultOpt.textContent = defaultLabel;
   DOM.addCategory.appendChild(defaultOpt);
 
-  // Hardcoded categories
-  const hardcodedCats = ['Tech', 'Art & Design', 'Food'];
-
-  // Combine custom collections with hardcoded categories (avoiding duplicates)
-  const allCatsSet = new Set(hardcodedCats);
-  if (AppState.collections) {
-    Array.from(AppState.collections).forEach(c => {
-      const lower = c.toLowerCase();
-      if (lower !== 'all' && lower !== 'uncategorized' && lower !== '__uncategorized__' && lower !== 'others' && lower !== 'bookmarks bar') {
-        allCatsSet.add(c);
-      }
-    });
-  }
-
-  const sortedCollections = Array.from(allCatsSet).sort((a, b) => a.localeCompare(b));
+  const sortedCollections = sortedCategoryItemsFromCounts(counts, resolvedContext.source)
+    .filter(item => item.value !== 'uncategorized')
+    .map(item => item.value);
 
   sortedCollections.forEach(c => {
     const opt = document.createElement('option');
@@ -1437,7 +1753,6 @@ function populateModalCategorySelect(selectedVal = '') {
     DOM.addCategory.appendChild(opt);
   });
 
-  // Create New option
   const newOpt = document.createElement('option');
   newOpt.value = '__new__';
   newOpt.textContent = '+ Create new category...';
@@ -1445,30 +1760,29 @@ function populateModalCategorySelect(selectedVal = '') {
   newOpt.style.fontWeight = 'bold';
   DOM.addCategory.appendChild(newOpt);
 
-  // Set value
   if (selectedVal) {
-    const lower = selectedVal.toLowerCase();
-    if (lower === 'uncategorized' || lower === 'others' || lower === 'bookmarks bar') {
+    const normalized = normalizeCollectionKey(selectedVal);
+    if (normalized === 'uncategorized') {
       DOM.addCategory.value = '';
     } else {
-      const match = sortedCollections.find(c => c.toLowerCase() === lower);
+      const match = sortedCollections.find(c => c.toLowerCase() === normalized.toLowerCase());
       if (match) {
         DOM.addCategory.value = match;
       } else {
         const opt = document.createElement('option');
-        opt.value = selectedVal;
-        opt.textContent = selectedVal;
+        opt.value = normalized;
+        opt.textContent = normalized;
         DOM.addCategory.insertBefore(opt, newOpt);
-        DOM.addCategory.value = selectedVal;
+        DOM.addCategory.value = normalized;
       }
     }
   } else {
     DOM.addCategory.value = '';
   }
 
-  // Reset and hide new category input
   DOM.addCategoryNew.style.display = 'none';
   DOM.addCategoryNew.value = '';
+  updateCategoryEditButtonVisibility();
 }
 
 let currentPostModalBookmarkId = null;
@@ -1507,13 +1821,7 @@ function openPostModal(bmId, focusNote = false) {
 
   // Populate post content
   const initials = bm.authorName ? bm.authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
-  const platformIconClass = (() => {
-    if (bm.platform === 'x') return 'fa-brands fa-x-twitter';
-    if (bm.platform === 'instagram') return 'fa-brands fa-instagram';
-    if (bm.platform === 'threads') return 'fa-brands fa-threads';
-    if (bm.platform === 'facebook') return 'fa-brands fa-facebook';
-    return 'fa-solid fa-circle-nodes';
-  })();
+  const platformIcon = platformIconMarkup(bm.platform);
 
   DOM.modalPostCardContent.innerHTML = `
     <div class="modal-post-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: ${formattedPostDate ? '6px' : '12px'};">
@@ -1525,7 +1833,7 @@ function openPostModal(bmId, focusNote = false) {
         </div>
       </div>
       <div class="modal-post-platform" style="color: ${bm.platform === 'instagram' ? '#e1306c' : bm.platform === 'x' ? '#000000' : 'var(--accent-blue)'}; font-size: 1.2rem;">
-        <i class="${platformIconClass}"></i>
+        ${platformIcon}
       </div>
     </div>
     ${formattedPostDate ? `
@@ -1600,19 +1908,16 @@ function openBulkEditModal() {
   othersOpt.textContent = 'Others';
   DOM.bulkEditCategory.appendChild(othersOpt);
 
-  // Hardcoded categories
-  const hardcodedCats = ['Tech', 'Art & Design', 'Food'];
-  const allCatsSet = new Set(hardcodedCats);
-  if (AppState.collections) {
-    Array.from(AppState.collections).forEach(c => {
-      const lower = c.toLowerCase();
-      if (lower !== 'all' && lower !== 'uncategorized' && lower !== '__uncategorized__' && lower !== 'others') {
-        allCatsSet.add(c);
-      }
-    });
-  }
+  const selectedBookmarks = selectedIds.map(id => AppState.bookmarks.find(bm => bm.id === id)).filter(Boolean);
+  const sameBrowser = selectedBookmarks.length > 0 && selectedBookmarks.every(bm => bm.source === 'browser' || bm.platform === 'browser');
+  const firstPlatform = selectedBookmarks[0] && selectedBookmarks[0].platform;
+  const samePlatform = selectedBookmarks.length > 0 && selectedBookmarks.every(bm => bm.platform === firstPlatform);
+  const categoryContext = sameBrowser ? { source: 'browser', platform: 'browser' } : { source: 'social', platform: samePlatform ? firstPlatform : 'all' };
+  othersOpt.textContent = getCategoryDefaultLabel(categoryContext.source);
 
-  const sortedCollections = Array.from(allCatsSet).sort((a, b) => a.localeCompare(b));
+  const sortedCollections = sortedCategoryItemsFromCounts(getCategoryCountsForContext(categoryContext), categoryContext.source)
+    .filter(item => item.value !== 'uncategorized')
+    .map(item => item.value);
   sortedCollections.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c;
@@ -1693,8 +1998,7 @@ function handleBulkEditSubmit(e) {
     DOM.bulkEditModalOverlay.classList.remove('active');
     toggleSelectionMode(false);
 
-    updateSidebarNavigation();
-    applyFiltersAndSearch();
+    refreshLocalMetadataAndCounts();
   } else {
     DOM.bulkEditModalOverlay.classList.remove('active');
   }
@@ -1719,17 +2023,20 @@ function openEditBookmarkModal(bm) {
 
   const addPlatformSelect = document.getElementById('add-platform');
   if (addPlatformSelect) {
-    addPlatformSelect.value = bm.platform;
+    addPlatformSelect.value = bm.source === 'browser' ? 'browser' : bm.platform;
+    updateManualModalPlatformUI(addPlatformSelect.value);
   }
 
   DOM.addAuthorName.value = bm.authorName || '';
   DOM.addContent.value = bm.content || '';
+  if (DOM.addThumbnail) DOM.addThumbnail.value = bm.thumbnail || '';
+  setManualImageFieldVisible(!!bm.thumbnail);
 
   const userTags = bm.hashtags || [];
   DOM.addTags.value = userTags.join(', ');
 
   // Prefill category
-  populateModalCategorySelect(bm.folder || '');
+  populateModalCategorySelect(bm.folder || '', getCategoryContextFromPlatform(bm.source === 'browser' ? 'browser' : bm.platform));
 
   DOM.addModalOverlay.classList.add('active');
 }
@@ -1744,11 +2051,7 @@ function deleteBookmark(id) {
     AppState.bookmarks.splice(idx, 1);
 
     // Reprocess metadata, update collections & tags filters, apply filters, save to server
-    processCollections();
-    updateCollectionsFilterDropdown();
-    processTags();
-    renderTagCloud();
-    applyFiltersAndSearch();
+    refreshLocalMetadataAndCounts();
     saveDataToServer();
     showToast("Bookmark deleted successfully!", "success");
   }
@@ -1831,11 +2134,7 @@ function bulkDeleteSelected() {
     toggleSelectionMode(false);
 
     // Reprocess state and write to server
-    processCollections();
-    updateCollectionsFilterDropdown();
-    processTags();
-    renderTagCloud();
-    applyFiltersAndSearch();
+    refreshLocalMetadataAndCounts();
     saveDataToServer();
 
     showToast(`Deleted ${count} bookmarks successfully!`, "success");
@@ -1920,6 +2219,9 @@ function initEventListeners() {
     DOM.sidebarPlatformList.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-platform]');
       if (!btn) return;
+      closeSettings();
+      AppState.activeSource = 'social';
+      setRouteHash(btn.dataset.sidebarRoute || ('#platform=' + btn.dataset.platform));
       AppState.activePlatform = btn.dataset.platform;
       AppState.activeCollection = "all";
       AppState.nextCursor = null;
@@ -1933,7 +2235,7 @@ function initEventListeners() {
   if (DOM.sidebarCollectionList) {
     DOM.sidebarCollectionList.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-collection]');
-      if (!btn) return;
+      if (!btn || btn.disabled || AppState.activeSource !== 'social') return;
       AppState.activeCollection = btn.dataset.collection;
       AppState.nextCursor = null;
       syncFilterSelects();
@@ -2034,6 +2336,9 @@ function initEventListeners() {
   document.addEventListener('click', () => {
     closeAllToolbarDropdowns();
     document.querySelectorAll('.card-menu-dropdown.active').forEach(el => {
+      el.classList.remove('active');
+    });
+    document.querySelectorAll('.card-category-popover.active').forEach(el => {
       el.classList.remove('active');
     });
   });
@@ -2147,7 +2452,9 @@ function initEventListeners() {
     if (submitBtn) submitBtn.textContent = 'Add to Feed';
     DOM.addUrl.readOnly = false;
     DOM.addBookmarkForm.reset();
-    populateModalCategorySelect('');
+    if (DOM.addThumbnail) DOM.addThumbnail.value = '';
+    setManualImageFieldVisible(false);
+    populateModalCategorySelect('', getCategoryContextFromPlatform(''));
   };
 
   if (DOM.addCategory) {
@@ -2159,11 +2466,55 @@ function initEventListeners() {
         DOM.addCategoryNew.style.display = 'none';
         DOM.addCategoryNew.value = '';
       }
+      updateCategoryEditButtonVisibility();
+    });
+  }
+
+
+  const addPlatformSelect = document.getElementById('add-platform');
+  if (addPlatformSelect) {
+    addPlatformSelect.addEventListener('change', () => {
+      populateModalCategorySelect('', getCategoryContextFromPlatform(addPlatformSelect.value));
+      updateManualModalPlatformUI(addPlatformSelect.value);
+      if (addPlatformSelect.value === 'browser' && DOM.addUrl && DOM.addUrl.value.trim()) previewBrowserLink(DOM.addUrl.value.trim());
+    });
+  }
+
+  if (DOM.btnToggleImageField) {
+    DOM.btnToggleImageField.addEventListener('click', () => {
+      setManualImageFieldVisible(DOM.addImageField ? DOM.addImageField.hidden : true);
+      if (!DOM.addImageField.hidden && DOM.addThumbnail) DOM.addThumbnail.focus();
+    });
+  }
+  if (DOM.addThumbnail) DOM.addThumbnail.addEventListener('input', updateManualImagePreview);
+  if (DOM.addImagePreview) DOM.addImagePreview.addEventListener('click', event => { if (event.target.closest('.manual-image-remove')) clearManualImageValue(); });
+  if (DOM.btnEditCategoryName) DOM.btnEditCategoryName.addEventListener('click', renameSelectedModalCategory);
+  if (DOM.addImageDropzone && DOM.addImageFile) {
+    DOM.addImageDropzone.addEventListener('click', () => DOM.addImageFile.click());
+    DOM.addImageDropzone.addEventListener('dragover', event => { event.preventDefault(); DOM.addImageDropzone.classList.add('dragover'); });
+    DOM.addImageDropzone.addEventListener('dragleave', () => DOM.addImageDropzone.classList.remove('dragover'));
+    DOM.addImageDropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      DOM.addImageDropzone.classList.remove('dragover');
+      const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+      setManualImageFromFile(file);
+    });
+    DOM.addImageFile.addEventListener('change', event => {
+      const file = event.target.files ? event.target.files[0] : null;
+      setManualImageFromFile(file);
+      event.target.value = '';
     });
   }
 
   DOM.btnAddBookmark.addEventListener('click', () => {
     resetAddModal();
+    const addPlatformSelect = document.getElementById('add-platform');
+    if (addPlatformSelect) {
+      const nextPlatform = AppState.activeSource === 'browser' ? 'browser' : (AppState.activePlatform !== 'all' ? AppState.activePlatform : '');
+      addPlatformSelect.value = nextPlatform;
+      populateModalCategorySelect('', getCategoryContextFromPlatform(nextPlatform));
+      updateManualModalPlatformUI(nextPlatform);
+    }
     DOM.addModalOverlay.classList.add('active');
   });
 
@@ -2576,6 +2927,7 @@ function checkServerConnection() {
       const data = await res.json();
       AppState.isServerConnected = true;
       AppState.isAdmin = true;
+      applyRouteFromHash({ load: false });
       document.body.classList.remove("auth-pending", "visitor-mode");
       updateSyncStatusUI(true);
       const profile = data.profile || {};
@@ -2597,7 +2949,7 @@ function loadData(options = {}) {
   AppState.isLoadingMore = true;
   const params = new URLSearchParams({ source: AppState.activeSource, limit: "40" });
   if (AppState.activeSource === "social" && AppState.activePlatform !== "all") params.set("platform", AppState.activePlatform);
-  if (AppState.activeCollection && AppState.activeCollection !== "all") params.set("collection", AppState.activeCollection);
+  if (AppState.activeSource === "social" && AppState.activeCollection && AppState.activeCollection !== "all") params.set("collection", AppState.activeCollection);
   if (append && AppState.nextCursor) params.set("cursor", AppState.nextCursor);
   fetch("/api/load?" + params.toString(), { credentials: "same-origin" })
     .then(async res => {
@@ -2624,7 +2976,7 @@ function loadData(options = {}) {
 function updateFeedHeaders() {
   let title = AppState.activeSource === "browser" ? "Browser Bookmarks" : "All Social Bookmarks";
   if (AppState.activeSource === "social" && AppState.activePlatform !== "all") title = platformLabel(AppState.activePlatform);
-  if (AppState.activeCollection && AppState.activeCollection !== "all") title += " in " + (AppState.activeCollection === "uncategorized" ? "Uncategorized" : AppState.activeCollection);
+  if (AppState.activeCollection && AppState.activeCollection !== "all") title += " in " + (AppState.activeCollection === "uncategorized" ? "Others" : AppState.activeCollection);
   DOM.feedTitle.textContent = title;
   DOM.feedSubtitle.textContent = "Showing " + AppState.filteredBookmarks.length + " loaded bookmark" + (AppState.filteredBookmarks.length === 1 ? "" : "s");
   const browserItem = document.getElementById("sidebar-browser-item");
@@ -2632,13 +2984,17 @@ function updateFeedHeaders() {
 }
 
 function openSettings() {
+  AppState.isSettingsOpen = true;
   document.getElementById("feed-content").hidden = true;
   document.getElementById("settings-view").hidden = false;
+  updateSidebarNavigation();
 }
 
 function closeSettings() {
+  AppState.isSettingsOpen = false;
   document.getElementById("settings-view").hidden = true;
   document.getElementById("feed-content").hidden = false;
+  updateSidebarNavigation();
 }
 
 async function previewBrowserLink(url) {
@@ -2668,13 +3024,14 @@ async function saveBrowserBookmark(event) {
   const preview = AppState.linkPreview && AppState.linkPreview.url ? AppState.linkPreview : await previewBrowserLink(url);
   const canonical = preview && preview.canonicalUrl ? preview.canonicalUrl : url.toLowerCase().replace(/\/$/, "");
   if (AppState.bookmarks.some(item => item.source === "browser" && (item.canonicalUrl || item.url.toLowerCase().replace(/\/$/, "")) === canonical)) { showToast("This browser bookmark is already saved.", "error"); return; }
-  const tagText = DOM.addTags.value.trim();
+  const tagText = '';
+  const imageUrl = DOM.addThumbnail ? DOM.addThumbnail.value.trim() : '';
   const category = DOM.addCategory.value === "__new__" ? DOM.addCategoryNew.value.trim() : DOM.addCategory.value.trim();
   const site = preview && preview.siteName ? preview.siteName : new URL(url).hostname;
-  const bookmark = { id: "browser_" + Date.now(), source: "browser", platform: "browser", url: preview && preview.url ? preview.url : url, canonicalUrl: canonical, authorName: DOM.addAuthorName.value.trim() || site, authorUsername: site.replace(/^www\./, ""), content: DOM.addContent.value.trim() || (preview && preview.title) || "Saved browser bookmark", thumbnail: preview && preview.image ? preview.image : "", notes: (document.getElementById("add-notes") || {}).value || "", hashtags: tagText ? tagText.split(",").map(tag => tag.trim().replace(/^#/, "").toLowerCase()).filter(Boolean) : [], folder: category === "uncategorized" ? "" : category, extensionScrapedAt: new Date().toISOString() };
+  const bookmark = { id: "browser_" + Date.now(), source: "browser", platform: "browser", url: preview && preview.url ? preview.url : url, canonicalUrl: canonical, authorName: DOM.addAuthorName.value.trim() || site, authorUsername: site.replace(/^www\./, ""), content: DOM.addContent.value.trim() || (preview && preview.title) || "Saved browser bookmark", thumbnail: imageUrl || (preview && preview.image ? preview.image : ""), notes: (document.getElementById("add-notes") || {}).value || "", hashtags: [], folder: category === "uncategorized" ? "" : category, extensionScrapedAt: new Date().toISOString() };
   AppState.bookmarks.unshift(bookmark);
   AppState.linkPreview = null;
-  processCollections(); processTags(); updateCollectionsFilterDropdown(); applyFiltersAndSearch(); saveDataToServer();
+  refreshLocalMetadataAndCounts(); saveDataToServer();
   DOM.addModalOverlay.classList.remove("active"); DOM.addBookmarkForm.reset(); showToast("Browser bookmark saved.", "success");
 }
 
@@ -2690,17 +3047,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!response.ok) { loginError.textContent = data.error || "Unable to sign in."; loginError.hidden = false; return; }
     loginPassword.value = "";
     const state = await checkServerConnection();
-    if (state.authenticated) { AppState.activeSource = "browser"; AppState.activePlatform = "all"; loadData(); }
+    if (state.authenticated) { AppState.activeSource = "browser"; AppState.activePlatform = "all"; applyRouteFromHash({ load: false }); loadData(); }
   });
 
   const browserButton = document.getElementById("btn-browser-bookmarks");
-  if (browserButton) browserButton.addEventListener("click", () => { closeSettings(); AppState.activeSource = "browser"; AppState.activePlatform = "all"; AppState.activeCollection = "all"; AppState.nextCursor = null; loadData(); });
-  if (DOM.sidebarPlatformList) DOM.sidebarPlatformList.addEventListener("click", event => { const button = event.target.closest("[data-platform]"); if (!button) return; closeSettings(); AppState.activeSource = "social"; AppState.activePlatform = button.dataset.platform; AppState.activeCollection = "all"; AppState.nextCursor = null; loadData(); });
+  if (browserButton) browserButton.addEventListener("click", () => { closeSettings(); AppState.activeSource = "browser"; AppState.activePlatform = "all"; AppState.activeCollection = "all"; AppState.nextCursor = null; setRouteHash("#bookmarks"); updateSidebarNavigation(); loadData(); });
+  if (DOM.sidebarPlatformList) DOM.sidebarPlatformList.addEventListener("click", event => { const button = event.target.closest("[data-platform]"); if (!button) return; closeSettings(); AppState.activeSource = "social"; AppState.activePlatform = button.dataset.platform; AppState.activeCollection = "all"; AppState.nextCursor = null; setRouteHash(button.dataset.sidebarRoute || ("#platform=" + button.dataset.platform)); updateSidebarNavigation(); loadData(); });
 
   const settingsButton = document.getElementById("btn-settings");
-  if (settingsButton) settingsButton.addEventListener("click", openSettings);
+  if (settingsButton) settingsButton.addEventListener("click", () => { setRouteHash("#settings"); openSettings(); });
   const backButton = document.getElementById("btn-back-to-bookmarks");
-  if (backButton) backButton.addEventListener("click", closeSettings);
+  if (backButton) backButton.addEventListener("click", () => { setRouteHash("#bookmarks"); closeSettings(); });
   const logout = async () => { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); AppState.bookmarks = []; AppState.nextCursor = null; showPrivateLogin(); };
   const settingsLogout = document.getElementById("btn-settings-logout");
   if (settingsLogout) settingsLogout.addEventListener("click", logout);
@@ -2710,9 +3067,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const platformSelect = document.getElementById("add-platform");
   if (platformSelect && !platformSelect.querySelector("option[value=browser]")) { const option = document.createElement("option"); option.value = "browser"; option.textContent = "Browser Bookmark"; platformSelect.appendChild(option); }
-  if (DOM.btnAddBookmark) DOM.btnAddBookmark.addEventListener("click", () => { if (AppState.activeSource === "browser" && platformSelect) { platformSelect.value = "browser"; AppState.linkPreview = null; } });
+  initSidebarNewTabContextMenu();
+  window.addEventListener('hashchange', () => applyRouteFromHash({ load: true }));
+  if (DOM.btnAddBookmark) DOM.btnAddBookmark.addEventListener("click", () => { if (AppState.activeSource === "browser" && platformSelect) { platformSelect.value = "browser"; AppState.linkPreview = null; populateModalCategorySelect('', getCategoryContextFromPlatform('browser')); updateManualModalPlatformUI("browser"); } });
   if (DOM.addUrl) DOM.addUrl.addEventListener("blur", () => { if (platformSelect && platformSelect.value === "browser" && DOM.addUrl.value.trim()) previewBrowserLink(DOM.addUrl.value.trim()); });
-  if (DOM.addBookmarkForm) DOM.addBookmarkForm.addEventListener("submit", event => { if (platformSelect && platformSelect.value === "browser") saveBrowserBookmark(event); }, true);
+  if (DOM.addBookmarkForm) DOM.addBookmarkForm.addEventListener("submit", event => { if (platformSelect && platformSelect.value === "browser" && !AppState.editingId) saveBrowserBookmark(event); }, true);
 });
 
 
@@ -2776,6 +3135,7 @@ function privateCheckServerConnection() {
     if (!response.ok) throw new Error("Status check failed");
     const data = await response.json();
     AppState.isServerConnected = true; AppState.isAdmin = true; AppState.activeSource = "browser"; AppState.activePlatform = "all";
+    applyRouteFromHash({ load: false });
     document.body.classList.remove("auth-pending", "visitor-mode"); updateSyncStatusUI(true); refreshPlatformCounts();
     return { authenticated: true, data };
   }).catch(() => { showPrivateLogin("Unable to reach your private dashboard."); return { authenticated: false }; });
@@ -2788,7 +3148,7 @@ function privateLoadData(options = {}) {
   AppState.isLoadingMore = true; renderInfiniteScrollSentinel();
   const params = new URLSearchParams({ source: AppState.activeSource || "browser", limit: "40" });
   if (AppState.activeSource === "social" && AppState.activePlatform !== "all") params.set("platform", AppState.activePlatform);
-  if (AppState.activeCollection && AppState.activeCollection !== "all") params.set("collection", AppState.activeCollection);
+  if (AppState.activeSource === "social" && AppState.activeCollection && AppState.activeCollection !== "all") params.set("collection", AppState.activeCollection);
   if (append && AppState.nextCursor) params.set("cursor", AppState.nextCursor);
   fetch("/api/load?" + params.toString(), { credentials: "same-origin" }).then(async response => {
     if (response.status === 401) { showPrivateLogin(); throw new Error("Session expired"); }

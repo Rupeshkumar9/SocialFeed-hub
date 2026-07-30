@@ -12,9 +12,6 @@ function normalizeFolder(value) {
   const folder = String(value || "").trim();
   const lower = folder.toLowerCase();
   if (!folder || lower === "uncategorized" || lower === "others" || lower === "bookmarks bar") return "uncategorized";
-  if (lower === "tech") return "Tech";
-  if (lower === "art & design") return "Art & Design";
-  if (lower === "food") return "Food";
   return folder;
 }
 
@@ -29,7 +26,7 @@ async function countCollections(collection, filter = {}) {
     { $group: { _id: "$key", count: { $sum: 1 } } }
   ]).toArray();
 
-  const counts = { all: 0, uncategorized: 0, Tech: 0, "Art & Design": 0, Food: 0 };
+  const counts = { all: 0, uncategorized: 0 };
   rows.forEach(row => {
     const key = normalizeFolder(row._id);
     counts[key] = (counts[key] || 0) + row.count;
