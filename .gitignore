@@ -9,6 +9,8 @@ node_modules/
 # Vercel CLI cache directory
 .vercel/
 
+Tasks/
+
 # Log files
 npm-debug.log*
 yarn-debug.log*
