@@ -1,7 +1,7 @@
 const dns = require('dns').promises;
 const net = require('net');
-const { requireSession } = require('./lib/auth');
-const { canonicalUrl, detectPlatform } = require('./lib/bookmark-utils');
+const { requireSession } = require('./_lib/auth');
+const { canonicalUrl, detectPlatform } = require('./_lib/bookmark-utils');
 
 const MAX_HTML_BYTES = 1024 * 1024;
 

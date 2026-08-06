@@ -1,5 +1,5 @@
-const { connectToDatabase } = require('./lib/db');
-const { requireSession } = require('./lib/auth');
+const { connectToDatabase } = require('./_lib/db');
+const { requireSession } = require('./_lib/auth');
 
 module.exports = async (req, res) => {
   if (!requireSession(req, res)) return;

@@ -13,7 +13,7 @@ const apiAuthLogin = require('./api/auth-login');
 const apiAuthLogout = require('./api/auth-logout');
 const apiBookmarkPreview = require('./api/bookmark-preview');
 const apiCounts = require('./api/counts');
-const { setExtensionCors } = require('./api/lib/extension-auth');
+const { setExtensionCors } = require('./api/_lib/extension-auth');
 
 // Try importing nested route handlers if present
 let apiAuthSession, apiDatabaseStatus;
