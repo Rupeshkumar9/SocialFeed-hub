@@ -8,8 +8,8 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "mongodb": "^6.5.0",
     "cloudinary": "^2.1.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.6.1",
+    "mongodb": "^6.5.0"
   }
 }
