@@ -9,6 +9,8 @@ node_modules/
 # Vercel CLI cache directory
 .vercel/
 
+# Vite Build files
+dist/
 
 # Log files
 npm-debug.log*
