@@ -11,6 +11,37 @@ const openPostModal = (...args) => actions.openPostModal(...args);
 const platformIconMarkup = (...args) => actions.platformIconMarkup(...args);
 const socialCategoryLabel = (...args) => actions.socialCategoryLabel(...args);
 const toggleSelectBookmark = (...args) => actions.toggleSelectBookmark(...args);
+const browserFaviconRequests = new Map();
+
+function requestBrowserFavicon(bookmark) {
+  const key = bookmark.canonicalUrl || bookmark.url;
+  if (!key) return Promise.resolve('');
+  if (!browserFaviconRequests.has(key)) {
+    browserFaviconRequests.set(key, fetch('/api/bookmark-preview', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: bookmark.url }),
+    }).then(async response => {
+      const data = await response.json();
+      return response.ok && data.favicon ? data.favicon : '';
+    }).catch(() => ''));
+  }
+  return browserFaviconRequests.get(key);
+}
+
+function getBrowserFaviconUrl(bookmark) {
+  for (const candidate of [bookmark.favicon, '/favicon.ico']) {
+    if (!candidate) continue;
+    try {
+      const url = new URL(candidate, bookmark.url);
+      if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) return url.toString();
+    } catch {
+      // Keep the letter avatar when the bookmark URL cannot produce a safe icon URL.
+    }
+  }
+  return '';
+}
 
 function buildCardElement(bm) {
   const card = document.createElement('div');
@@ -178,14 +209,19 @@ function buildCardElement(bm) {
     </div>
   `;
 
+  const browserFaviconUrl = isBrowserBookmark ? getBrowserFaviconUrl(bm) : '';
+  const authorAvatarMarkup = browserFaviconUrl
+    ? `<div class="author-avatar browser-site-logo"><img data-favicon-src="${escapeHTML(browserFaviconUrl)}" alt=""><span class="author-avatar-fallback">${initials}</span></div>`
+    : `<div class="author-avatar">${initials}</div>`;
+
   card.innerHTML = `
     <div class="card-header">
       ${checkboxMarkup}
       <div class="card-author-info">
-        <div class="author-avatar">${initials}</div>
+        ${authorAvatarMarkup}
         <div class="author-names">
           <span class="author-name">${escapeHTML(bm.authorName || 'Social Post')}</span>
-          <span class="author-username">@${escapeHTML(bm.authorUsername || 'user')}</span>
+          ${isBrowserBookmark ? '' : `<span class="author-username">@${escapeHTML(bm.authorUsername || 'user')}</span>`}
         </div>
       </div>
       <div class="card-header-actions">
@@ -229,6 +265,24 @@ function buildCardElement(bm) {
     const fallbackPlatform = image.dataset.imageFallback;
     image.addEventListener('error', () => handleImageError(image, bm.id, fallbackPlatform), { once: true });
   });
+
+  const faviconImage = card.querySelector('img[data-favicon-src]');
+  if (faviconImage) {
+    const avatar = faviconImage.closest('.browser-site-logo');
+    faviconImage.addEventListener('error', async () => {
+      if (!bm.favicon) {
+        const extractedFavicon = await requestBrowserFavicon(bm);
+        if (extractedFavicon && extractedFavicon !== faviconImage.src) {
+          bm.favicon = extractedFavicon;
+          faviconImage.addEventListener('error', () => avatar?.classList.add('favicon-failed'), { once: true });
+          faviconImage.src = extractedFavicon;
+          return;
+        }
+      }
+      avatar?.classList.add('favicon-failed');
+    }, { once: true });
+    faviconImage.src = faviconImage.dataset.faviconSrc;
+  }
 
   // Attach handlers
   const readBtn = card.querySelector('.btn-read-post');

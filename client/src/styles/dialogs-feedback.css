@@ -252,4 +252,7 @@
   scrollbar-color: #f43f5e #fff5f7;
   scrollbar-width: auto;
 }
+#add-tags-group[hidden] {
+  display: none !important;
+}
 

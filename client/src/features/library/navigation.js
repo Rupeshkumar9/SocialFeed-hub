@@ -232,11 +232,11 @@ function updateSidebarNavigation() {
   if (AppState.activeSource !== "social") {
     const collectionList = DOM.sidebarCollectionList;
     if (collectionList) {
-      const browserCollections = getLibraryCountGroup("collections", "browser") || { all: browserCount || 0, uncategorized: 0 };
+      const socialCollections = getLibraryCountGroup("collections", "social") || { all: platformCounts.all || 0, uncategorized: 0 };
       collectionList.innerHTML = "";
       [
-        { value: "all", label: "All", count: browserCollections.all || browserCount || 0, icon: "fa-solid fa-folder-tree" },
-        { value: "uncategorized", label: "Others", count: browserCollections.uncategorized || 0, icon: "fa-regular fa-folder" }
+        { value: "all", label: "All", count: socialCollections.all || 0, icon: "fa-solid fa-folder-tree" },
+        { value: "uncategorized", label: "Others", count: socialCollections.uncategorized || 0, icon: "fa-regular fa-folder" }
       ].forEach(item => {
         const li = document.createElement("li");
         li.className = "menu-item sidebar-category-disabled";

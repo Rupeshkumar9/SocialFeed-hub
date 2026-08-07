@@ -160,6 +160,7 @@ function normalizeBookmark(item = {}, options = {}) {
     hashtags: normalizeHashtags(item.hashtags, cleanedContent),
     notes: item.notes || '',
     thumbnail: item.thumbnail || item.imageUrl || "",
+    favicon: item.favicon || '',
     folder: normalizeFolderValue(item.folder)
   };
 }

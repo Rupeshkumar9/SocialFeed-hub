@@ -514,7 +514,7 @@ async function saveBrowserBookmark(event) {
   const imageUrl = DOM.addThumbnail ? DOM.addThumbnail.value.trim() : '';
   const category = DOM.addCategory.value === "__new__" ? DOM.addCategoryNew.value.trim() : DOM.addCategory.value.trim();
   const site = preview && preview.siteName ? preview.siteName : new URL(url).hostname;
-  const bookmark = { id: "browser_" + Date.now(), source: "browser", platform: "browser", url: preview && preview.url ? preview.url : url, canonicalUrl: canonical, authorName: DOM.addAuthorName.value.trim() || site, authorUsername: site.replace(/^www\./, ""), content: DOM.addContent.value.trim() || (preview && preview.title) || "Saved browser bookmark", thumbnail: imageUrl || (preview && preview.image ? preview.image : ""), notes: (document.getElementById("add-notes") || {}).value || "", hashtags: [], folder: category === "uncategorized" ? "" : category, extensionScrapedAt: new Date().toISOString() };
+  const bookmark = { id: "browser_" + Date.now(), source: "browser", platform: "browser", url: preview && preview.url ? preview.url : url, canonicalUrl: canonical, authorName: DOM.addAuthorName.value.trim() || site, authorUsername: site.replace(/^www\./, ""), content: DOM.addContent.value.trim() || (preview && preview.title) || "Saved browser bookmark", thumbnail: imageUrl || (preview && preview.image ? preview.image : ""), favicon: preview && preview.favicon ? preview.favicon : "", notes: (document.getElementById("add-notes") || {}).value || "", hashtags: [], folder: category === "uncategorized" ? "" : category, extensionScrapedAt: new Date().toISOString() };
   AppState.bookmarks.unshift(bookmark);
   AppState.linkPreview = null;
   refreshLocalMetadataAndCounts(); saveDataToServer();

@@ -49,6 +49,44 @@ function getTitle(html) {
   return match ? decodeEntities(match[1].replace(/\s+/g, ' ').trim()) : '';
 }
 
+function getTagAttribute(tag, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = tag.match(new RegExp(`\\b${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+  return match ? decodeEntities((match[1] || match[2] || match[3] || '').trim()) : '';
+}
+
+function getFaviconHref(html) {
+  const candidates = [];
+  for (const tag of html.match(/<link\b[^>]*>/gi) || []) {
+    const rel = getTagAttribute(tag, 'rel').toLowerCase();
+    const href = getTagAttribute(tag, 'href');
+    if (!href || !rel.split(/\s+/).some(token => token === 'icon' || token.endsWith('-icon'))) continue;
+    const sizes = getTagAttribute(tag, 'sizes');
+    const type = getTagAttribute(tag, 'type').toLowerCase();
+    const largestSize = Math.max(0, ...(sizes.match(/\d+/g) || []).map(Number));
+    const score = (type.includes('svg') ? 400 : 0) + (rel.includes('apple-touch-icon') ? 300 : 100) + largestSize;
+    candidates.push({ href, score });
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0] ? candidates[0].href : '';
+}
+
+async function getFaviconUrl(html, pageUrl) {
+  const declaredHref = getFaviconHref(html);
+  for (const candidate of [declaredHref, '/favicon.ico']) {
+    if (!candidate) continue;
+    try {
+      const resolved = new URL(candidate, pageUrl);
+      if (!['http:', 'https:'].includes(resolved.protocol) || resolved.username || resolved.password) continue;
+      if (resolved.hostname !== pageUrl.hostname) await validatePublicUrl(resolved.toString());
+      return resolved.toString();
+    } catch {
+      // Try the conventional same-origin favicon next.
+    }
+  }
+  return '';
+}
+
 module.exports = async (req, res) => {
   if (!requireSession(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
@@ -71,7 +109,8 @@ module.exports = async (req, res) => {
     const description = getMeta(html, ['og:description', 'twitter:description', 'description']);
     const image = getMeta(html, ['og:image', 'twitter:image']);
     const siteName = getMeta(html, ['og:site_name']) || url.hostname;
-    return res.status(200).json({ url: url.toString(), canonicalUrl: canonicalUrl(url.toString()), platform: detectPlatform(url.toString()), title, description, image, siteName });
+    const favicon = await getFaviconUrl(html, url);
+    return res.status(200).json({ url: url.toString(), canonicalUrl: canonicalUrl(url.toString()), platform: detectPlatform(url.toString()), title, description, image, favicon, siteName });
   } catch (error) {
     return res.status(400).json({ error: error.message || 'Unable to preview that link.' });
   }

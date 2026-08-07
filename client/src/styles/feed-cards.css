@@ -93,6 +93,36 @@
   flex-shrink: 0;
 }
 
+.author-avatar.browser-site-logo {
+  overflow: hidden;
+  padding: 4px;
+  background: #fff;
+}
+
+.browser-site-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.browser-site-logo .author-avatar-fallback {
+  display: none;
+}
+
+.browser-site-logo.favicon-failed {
+  padding: 0;
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.05), rgba(244, 63, 94, 0.15));
+}
+
+.browser-site-logo.favicon-failed img {
+  display: none;
+}
+
+.browser-site-logo.favicon-failed .author-avatar-fallback {
+  display: inline;
+}
+
 .author-names {
   display: flex;
   flex-direction: column;
@@ -433,4 +463,3 @@ body.dark-mode .modal-post-card {
   color: var(--text-muted);
   font-weight: 500;
 }
-
