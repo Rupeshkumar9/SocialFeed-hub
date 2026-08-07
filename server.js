@@ -9,16 +9,14 @@ const apiStatus = require('./api/status');
 const apiLoad = require('./api/load');
 const apiSave = require('./api/save');
 const apiImportScraped = require('./api/import-scraped');
-const apiAuthLogin = require('./api/auth-login');
-const apiAuthLogout = require('./api/auth-logout');
+const apiAuthLogin = require('./api/auth/login');
+const apiAuthLogout = require('./api/auth/logout');
 const apiBookmarkPreview = require('./api/bookmark-preview');
 const apiCounts = require('./api/counts');
 const { setExtensionCors } = require('./api/_lib/extension-auth');
 
-// Try importing nested route handlers if present
-let apiAuthSession, apiDatabaseStatus;
-try { apiAuthSession = require('./api/auth/session'); } catch (e) {}
-try { apiDatabaseStatus = require('./api/database/status'); } catch (e) {}
+const apiAuthSession = require('./api/auth/session');
+const apiDatabaseStatus = require('./api/database/status');
 
 // Simple wrapper to run Vercel serverless functions in local HTTP server
 async function handleServerless(handler, req, res) {
@@ -93,15 +91,11 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (cleanUrl === '/api/database/status') {
-    handleServerless(apiDatabaseStatus || apiStatus, req, res);
+    handleServerless(apiDatabaseStatus, req, res);
     return;
   }
   if (cleanUrl === '/api/auth/session') {
-    if (apiAuthSession) {
-      handleServerless(apiAuthSession, req, res);
-    } else {
-      handleServerless(apiStatus, req, res);
-    }
+    handleServerless(apiAuthSession, req, res);
     return;
   }
   if (cleanUrl === '/api/auth/login' || cleanUrl === '/api/auth-login') {

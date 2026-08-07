@@ -1,0 +1,240 @@
+import { AppState, DOM, POSTS_PER_PAGE } from '../../app/state.js';
+import { actions, registerActions } from '../../app/actions.js';
+
+const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
+const browserCategoryLabel = (...args) => actions.browserCategoryLabel(...args);
+const buildCardElement = (...args) => actions.buildCardElement(...args);
+const escapeHTML = (...args) => actions.escapeHTML(...args);
+const loadData = (...args) => actions.loadData(...args);
+const processCollections = (...args) => actions.processCollections(...args);
+const processTags = (...args) => actions.processTags(...args);
+const showToast = (...args) => actions.showToast(...args);
+const updateCollectionsFilterDropdown = (...args) => actions.updateCollectionsFilterDropdown(...args);
+
+let isScrollLoading = false;
+
+function onDataLoadedSuccess() {
+  processCollections();
+  updateCollectionsFilterDropdown();
+  processTags();
+
+  // Set layout from localStorage
+  const savedLayout = localStorage.getItem('bookmarks_layout') || 'grid';
+  changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
+
+  applyFiltersAndSearch();
+  console.info("Bookmarks loaded successfully.");
+}
+
+/**
+ * Process collections/folders from current bookmarks
+ */
+
+function getGridColumnCount() {
+  const w = window.innerWidth;
+  if (w <= 768) return 2;
+  if (w <= 1100) return 3;
+  return 4;
+}
+
+/**
+ * Render paginated bookmarks grid — only the first visibleCount items
+ */
+function browserCategorySortKey(label) {
+  return label === "General Links" ? "" : label.toLowerCase();
+}
+
+function renderBrowserGroupedFeed(visibleSlice) {
+  DOM.bookmarksGrid.classList.add("browser-grouped-feed");
+  const groups = new Map();
+  visibleSlice.forEach(bm => {
+    const label = browserCategoryLabel(bm.folder);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(bm);
+  });
+
+  if (!groups.has("General Links")) {
+    groups.set("General Links", []);
+  }
+
+  const ordered = Array.from(groups.entries()).sort(([a], [b]) => browserCategorySortKey(a).localeCompare(browserCategorySortKey(b)));
+  const fragment = document.createDocumentFragment();
+  ordered.forEach(([label, items]) => {
+    const section = document.createElement("section");
+    section.className = "browser-category-section";
+    section.innerHTML = `
+      <div class="browser-category-heading">
+        <div>
+          <h3>${escapeHTML(label)}</h3>
+          <p>${items.length} saved link${items.length === 1 ? "" : "s"}</p>
+        </div>
+      </div>
+      <div class="browser-category-grid"></div>
+    `;
+    const grid = section.querySelector(".browser-category-grid");
+    items.forEach(bm => grid.appendChild(buildCardElement(bm)));
+    fragment.appendChild(section);
+  });
+  DOM.bookmarksGrid.appendChild(fragment);
+}
+
+function renderFeedGrid() {
+  DOM.bookmarksGrid.innerHTML = "";
+  DOM.bookmarksGrid.classList.remove("browser-grouped-feed");
+
+  if (AppState.filteredBookmarks.length === 0) {
+    if (AppState.databaseConnected === false) {
+      DOM.bookmarksGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fa-solid fa-database"></i></div>
+          <h3>Bookmarks are unavailable</h3>
+          <p>The dashboard is open, but the database connection must recover before bookmarks can be displayed.</p>
+        </div>
+      `;
+      const existing = document.getElementById("infinite-scroll-sentinel");
+      if (existing) existing.remove();
+      return;
+    }
+    if (AppState.activeSource === "browser") {
+      renderBrowserGroupedFeed([]);
+    } else {
+      DOM.bookmarksGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <h3>No bookmarks found</h3>
+          <p>Try clearing your search filters, adjusting categories, or importing a fresh data archive.</p>
+        </div>
+      `;
+    }
+    const existing = document.getElementById("infinite-scroll-sentinel");
+    if (existing) existing.remove();
+    return;
+  }
+
+  const visibleSlice = AppState.filteredBookmarks.slice(0, AppState.visibleCount);
+
+  if (AppState.activeSource === "browser") {
+    renderBrowserGroupedFeed(visibleSlice);
+  } else if (AppState.activeLayout === "list" || AppState.activeLayout === "compact") {
+    const fragment = document.createDocumentFragment();
+    visibleSlice.forEach(bm => {
+      fragment.appendChild(buildCardElement(bm));
+    });
+    DOM.bookmarksGrid.appendChild(fragment);
+  } else {
+    const numCols = getGridColumnCount();
+    const cols = [];
+    for (let i = 0; i < numCols; i++) {
+      const colDiv = document.createElement("div");
+      colDiv.className = "masonry-col";
+      cols.push(colDiv);
+    }
+
+    visibleSlice.forEach((bm, index) => {
+      const targetCol = cols[index % numCols];
+      targetCol.appendChild(buildCardElement(bm));
+    });
+
+    const fragment = document.createDocumentFragment();
+    cols.forEach(col => fragment.appendChild(col));
+    DOM.bookmarksGrid.appendChild(fragment);
+  }
+
+  renderInfiniteScrollSentinel();
+}
+
+/**
+ * Open Slide Drawer Details View
+ */
+
+function changeLayout(layout, showFeedbackToast = true) {
+  AppState.activeLayout = layout;
+  localStorage.setItem('bookmarks_layout', layout);
+
+  const menu = document.getElementById('toolbar-layout-menu');
+  if (menu) {
+    menu.querySelectorAll('.dropdown-item').forEach(item => {
+      const isMatch = item.getAttribute('data-layout') === layout;
+      item.classList.toggle('active', isMatch);
+      const checkIcon = item.querySelector('.check-icon');
+      if (checkIcon) {
+        checkIcon.style.visibility = isMatch ? 'visible' : 'hidden';
+      }
+    });
+  }
+
+  const activeIcon = document.getElementById('layout-active-icon');
+  const activeLabel = document.getElementById('layout-active-label');
+  if (activeIcon) {
+    activeIcon.className = (() => {
+      if (layout === 'grid') return 'fa-solid fa-grip';
+      if (layout === 'list') return 'fa-solid fa-list';
+      if (layout === 'compact') return 'fa-solid fa-bars';
+      return 'fa-solid fa-grip';
+    })();
+  }
+  if (activeLabel) {
+    activeLabel.textContent = layout.charAt(0).toUpperCase() + layout.slice(1) + ' View';
+  }
+
+  if (DOM.bookmarksGrid) {
+    DOM.bookmarksGrid.classList.remove('list-view', 'compact-view');
+    if (layout === 'list') {
+      DOM.bookmarksGrid.classList.add('list-view');
+    } else if (layout === 'compact') {
+      DOM.bookmarksGrid.classList.add('compact-view');
+    }
+  }
+
+  renderFeedGrid();
+
+  if (showFeedbackToast) {
+    showToast(`Switched to ${layout.charAt(0).toUpperCase() + layout.slice(1)} view`, 'info');
+  }
+}
+
+/**
+ * Compute metrics and update dashboard counts in real time
+ */
+
+function renderInfiniteScrollSentinel() {
+  const existing = document.getElementById("infinite-scroll-sentinel");
+  if (existing) existing.remove();
+  const total = AppState.filteredBookmarks.length;
+  const showing = Math.min(AppState.visibleCount, total);
+  if (!total) return;
+  const sentinel = document.createElement("div");
+  sentinel.id = "infinite-scroll-sentinel";
+  sentinel.className = "infinite-scroll-sentinel";
+  if (showing < total || AppState.isLoadingMore) {
+    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><i class=\"fa-solid fa-circle-notch fa-spin\"></i><span>Loading more bookmarks…</span></div>";
+  } else if (AppState.hasMore) {
+    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><span>More bookmarks load automatically as you scroll</span></div>";
+  } else {
+    sentinel.innerHTML = "<div class=\"infinite-scroll-end\">Showing all loaded bookmarks</div>";
+  }
+  DOM.bookmarksGrid.parentNode.insertBefore(sentinel, DOM.bookmarksGrid.nextSibling);
+  if (showing < total || AppState.hasMore) initInfiniteScrollObserver();
+  else if (AppState.scrollObserver) AppState.scrollObserver.disconnect();
+}
+
+function initInfiniteScrollObserver() {
+  if (AppState.scrollObserver) AppState.scrollObserver.disconnect();
+  const sentinel = document.getElementById("infinite-scroll-sentinel");
+  const scrollContainer = document.getElementById("main-panel");
+  if (!sentinel || !scrollContainer) return;
+  AppState.scrollObserver = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting) || isScrollLoading) return;
+    const total = AppState.filteredBookmarks.length;
+    if (AppState.visibleCount < total) {
+      isScrollLoading = true;
+      setTimeout(() => { AppState.visibleCount += POSTS_PER_PAGE; renderFeedGrid(); isScrollLoading = false; }, 300);
+      return;
+    }
+    if (AppState.hasMore && !AppState.isLoadingMore) loadData({ append: true });
+  }, { root: scrollContainer, rootMargin: "500px 0px" });
+  AppState.scrollObserver.observe(sentinel);
+}
+
+registerActions('feed-view', { onDataLoadedSuccess, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver });
+export { onDataLoadedSuccess, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver };

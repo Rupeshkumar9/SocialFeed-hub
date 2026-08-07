@@ -1,0 +1,255 @@
+/* Details Drawer Centered Split Screen Modal Panel */
+#details-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(45, 18, 28, 0.4);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#details-drawer-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+#details-drawer {
+  width: 90%;
+  max-width: 1020px;
+  height: 85vh;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(32px);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  z-index: 101;
+}
+/* Modal Styling (Generic) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(45, 18, 28, 0.35);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-box {
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 580px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  transform: scale(0.9);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-box {
+  transform: scale(1);
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+/* Import Area Drag and Drop */
+.drag-drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: rgba(244, 63, 94, 0.01);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.drag-drop-zone:hover, .drag-drop-zone.dragover {
+  border-color: var(--accent-blue);
+  background-color: rgba(244, 63, 94, 0.03);
+}
+
+.drag-drop-icon {
+  font-size: 2.5rem;
+  color: var(--text-muted);
+}
+
+.drag-drop-zone:hover .drag-drop-icon {
+  color: var(--accent-blue);
+}
+
+.drag-drop-zone p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.drag-drop-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.import-instructions {
+  margin-top: 24px;
+  background-color: rgba(244, 63, 94, 0.01);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.import-instructions h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.import-instructions ul {
+  list-style-type: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.import-instructions li {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  position: relative;
+  padding-left: 12px;
+}
+
+.import-instructions li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--accent-blue);
+  font-weight: bold;
+}
+
+/* Toast Notifications */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(244, 63, 94, 0.15);
+  color: var(--text-primary);
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-success {
+  border-color: var(--accent-green);
+  background-color: rgba(240, 253, 244, 0.95);
+}
+
+.toast-success::before {
+  content: "✓";
+  color: var(--accent-green);
+  font-weight: bold;
+}
+
+.toast-error {
+  border-color: #ef4444;
+  background-color: rgba(254, 242, 242, 0.95);
+}
+
+.toast-error::before {
+  content: "✕";
+  color: #ef4444;
+  font-weight: bold;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fff5f7; /* Very pale pink background */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f43f5e; /* Medium rose/magenta */
+  border-radius: 6px;
+  border: 2px solid #fff5f7; /* Creates a gap to make it look nicer */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e11d48; /* Darker version on hover */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #be123c; /* Even darker active color */
+}
+
+/* Firefox scrollbar-color fallback */
+* {
+  scrollbar-color: #f43f5e #fff5f7;
+  scrollbar-width: auto;
+}
+

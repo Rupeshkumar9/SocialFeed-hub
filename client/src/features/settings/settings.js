@@ -1,0 +1,21 @@
+import { AppState, DOM, POSTS_PER_PAGE } from '../../app/state.js';
+import { actions, registerActions } from '../../app/actions.js';
+
+const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
+
+function openSettings() {
+  AppState.isSettingsOpen = true;
+  document.getElementById("feed-content").hidden = true;
+  document.getElementById("settings-view").hidden = false;
+  updateSidebarNavigation();
+}
+
+function closeSettings() {
+  AppState.isSettingsOpen = false;
+  document.getElementById("settings-view").hidden = true;
+  document.getElementById("feed-content").hidden = false;
+  updateSidebarNavigation();
+}
+
+registerActions('settings', { openSettings, closeSettings });
+export { openSettings, closeSettings };

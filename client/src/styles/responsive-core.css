@@ -1,0 +1,175 @@
+/* Mobile & Responsive Adjustments */
+@media (max-width: 1100px) {
+  .bookmarks-grid {
+    gap: 12px;
+  }
+  .masonry-col {
+    gap: 12px;
+  }
+  
+  .main-header {
+    flex-wrap: nowrap;
+    padding: 12px 20px;
+    height: 74px;
+    gap: 12px;
+  }
+  
+  .header-right {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .bookmarks-grid {
+    gap: 12px;
+  }
+  .masonry-col {
+    gap: 12px;
+  }
+  
+  .btn-text {
+    display: none;
+  }
+  
+   #btn-sync-now {
+    height: 38px;
+    width: 38px;
+    padding: 0;
+    min-width: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .main-header {
+    height: 64px;
+    padding: 0 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left {
+    gap: 4px;
+  }
+
+  .logo-text span {
+    display: none !important;
+  }
+
+  .logo-text h1 {
+    font-size: 1.05rem;
+  }
+
+  .search-bar-container {
+    min-width: 100px;
+    max-width: 220px;
+  }
+
+  .search-input {
+    padding: 10px 10px 10px 34px;
+    font-size: 0.8rem;
+    height: 38px;
+  }
+
+  .search-icon {
+    left: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .feed-section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .action-toolbar {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 550px) {
+  .bookmarks-grid {
+    gap: 10px;
+  }
+  .masonry-col {
+    gap: 10px;
+  }
+  
+  .main-header {
+    padding: 0 10px;
+  }
+  
+  .feed-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Shrink bookmark card internals to look gorgeous on 2-column mobile grid */
+  .bookmarks-grid:not(.list-view) .bookmark-card {
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-header {
+    padding: 8px 10px 6px 10px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 0.6rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-names {
+    gap: 0;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .author-username {
+    display: none !important;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-folder-area {
+    display: none !important;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-platform-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .btn-card-menu {
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-body {
+    padding: 0 10px 8px 10px;
+    gap: 6px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .post-content {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-media {
+    height: 110px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-icon {
+    font-size: 1.3rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-title {
+    font-size: 0.72rem;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .fallback-subtitle {
+    display: none;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-footer {
+    padding: 6px 10px 10px 10px;
+  }
+  .bookmarks-grid:not(.list-view) .bookmark-card .card-tag {
+    font-size: 0.65rem;
+    padding: 2px 5px;
+  }
+}
+

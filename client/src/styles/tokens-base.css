@@ -1,0 +1,58 @@
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+/* Variables */
+:root {
+  --bg-color: #fff6f8;              /* Soft vibrant light blush */
+  --bg-sidebar: #ffffff;            /* Pure white sidebar for high-end contrast */
+  --surface-color: rgba(255, 255, 255, 0.6); /* Translucent glassmorphic card surface */
+  --surface-hover: rgba(255, 255, 255, 0.95);
+  --border-color: rgba(244, 63, 94, 0.08);    /* Soft pink rose borders */
+  --border-focus: rgba(244, 63, 94, 0.4);     /* Hot pink active border outline */
+  
+  --text-primary: #2d121c;          /* Deep berry charcoal for premium text reading */
+  --text-secondary: #5c3f49;        /* Soft warm chocolate/berry grey */
+  --text-muted: #9f7e8a;            /* Muted rose grey */
+  
+  --accent-blue: #f43f5e;           /* Beautiful Vibrant Hot Pink */
+  --accent-green: #10b981;
+  --accent-purple: #a855f7;
+  
+  --platform-x: #0f172a;
+  --platform-x-bg: #f3f4f6;
+  --platform-ig: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  --platform-ig-solid: #dc2743;
+  --platform-threads: #000000;
+  --platform-threads-bg: #f3f4f6;
+  --platform-fb: #1877f2;
+  --platform-fb-bg: #e7f3ff;
+  
+  --shadow-sm: 0 4px 16px rgba(244, 63, 94, 0.03);
+  --shadow-md: 0 12px 36px rgba(244, 63, 94, 0.07);
+  --shadow-lg: 0 20px 60px rgba(244, 63, 94, 0.12);
+  
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --sidebar-width: 290px;
+  --drawer-width: 520px;
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-slide: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Base resets */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: #fff6f8; /* Soft light blush */
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  position: relative;
+  background-image: linear-gradient(135deg, #ffffff 0%, #fff6f8 100%);
+}
+

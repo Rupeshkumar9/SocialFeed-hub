@@ -1,0 +1,299 @@
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: inline-flex;
+  }
+
+  /* Force select mode, add link, and import buttons to show inside mobile drawer dropdown even in visitor mode */
+  body.visitor-mode #mobile-drawer-body #btn-select-mode,
+  body.visitor-mode #mobile-drawer-body #btn-add-bookmark,
+  body.visitor-mode #mobile-drawer-body #action-import {
+    display: flex !important;
+  }
+}
+
+/* Sidebar dashboard refinements */
+.menu-item button {
+  min-height: 38px;
+}
+
+.menu-item button span:nth-child(2) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-count {
+  margin-left: auto;
+  min-width: 28px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background-color: rgba(244, 63, 94, 0.06);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.menu-item.active .menu-count {
+  background-color: #ffffff;
+  color: var(--accent-blue);
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.sidebar-action {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: rgba(244, 63, 94, 0.025);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.sidebar-action:hover {
+  background-color: #ffffff;
+  color: var(--accent-blue);
+  border-color: rgba(244, 63, 94, 0.18);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-filter-source {
+  display: none;
+}
+
+.sync-status-btn.offline {
+  border-color: rgba(239, 68, 68, 0.25);
+  background-color: rgba(239, 68, 68, 0.04);
+  color: #dc2626;
+}
+
+.btn-primary.saving,
+.sync-status-btn.saving {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.bookmark-card.reddit-post .card-platform-icon {
+  background-color: #fff1eb;
+  border: 1px solid rgba(255, 69, 0, 0.14);
+  color: #ff4500;
+}
+
+.reddit-fallback {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+}
+
+@media (max-width: 768px) {
+  #sidebar {
+    display: none;
+  }
+
+  #main-panel {
+    width: 100%;
+  }
+
+  #mobile-drawer-body .nav-filter-source {
+    display: flex;
+  }
+}
+
+/* Desktop Sidebar and Header layout */
+@media (min-width: 769px) {
+  .main-header {
+    height: 74px;
+    padding-left: 24px;
+  }
+}
+
+/* Action Toolbar styling */
+.action-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  height: 40px;
+  width: 40px;
+  max-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 11px;
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-sizing: border-box;
+  transition: max-width 0.18s cubic-bezier(0.25, 0.8, 0.25, 1),
+              background-color 0.18s ease,
+              border-color 0.18s ease,
+              color 0.18s ease,
+              padding 0.18s ease,
+              box-shadow 0.18s ease;
+}
+
+.toolbar-btn i {
+  font-size: 1rem;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.toolbar-btn .btn-label {
+  opacity: 0;
+  margin-left: 0;
+  transition: opacity 0.15s ease, margin-left 0.15s ease;
+  display: inline-block;
+  pointer-events: none;
+}
+
+/* Active buttons styling (Select Mode and layout switcher) */
+.toolbar-btn.active {
+  background-color: rgba(244, 63, 94, 0.08);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px var(--accent-blue);
+  color: var(--accent-blue);
+  font-weight: 700;
+}
+
+/* Hover/focus expansion on desktop */
+@media (hover: hover) and (pointer: fine) {
+  .toolbar-btn:hover,
+  .toolbar-btn:focus,
+  .toolbar-btn:focus-within {
+    max-width: 180px;
+    padding: 0 14px;
+    background-color: rgba(244, 63, 94, 0.04);
+    color: var(--accent-blue);
+    border-color: rgba(244, 63, 94, 0.15);
+  }
+  
+  .toolbar-btn:hover .btn-label,
+  .toolbar-btn:focus .btn-label,
+  .toolbar-btn:focus-within .btn-label {
+    opacity: 1;
+    margin-left: 8px;
+  }
+  
+  .toolbar-btn.active:hover {
+    background-color: rgba(244, 63, 94, 0.12);
+  }
+}
+
+/* Prefers Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn {
+    transition: none !important;
+  }
+  .toolbar-btn .btn-label {
+    transition: none !important;
+  }
+}
+
+/* Sort Dropdown styling */
+.toolbar-dropdown {
+  position: relative;
+}
+
+.toolbar-dropdown .dropdown-menu {
+  top: calc(100% + 6px);
+  min-width: 180px;
+}
+
+.toolbar-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.toolbar-dropdown .dropdown-item.active {
+  background-color: rgba(244, 63, 94, 0.08);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.toolbar-dropdown .dropdown-item .check-icon {
+  font-size: 0.8rem;
+  width: 12px;
+  text-align: center;
+  color: var(--accent-blue);
+}
+
+/* Sidebar Tags Collapsible sublist styles */
+.sidebar-tags-sublist {
+  max-height: 250px;
+  overflow-y: auto;
+  margin-left: 4px;
+  border-left: 1px dashed var(--border-color);
+  padding-left: 8px !important;
+}
+
+.sidebar-tags-sublist .menu-item button {
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+/* Rotate chevron icon in tags row */
+.tags-group-toggle .chevron-icon {
+  margin-left: auto;
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+.tags-group-toggle[aria-expanded="true"] .chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* Ensure mobile sidebar menu scrolls cleanly */
+@media (max-width: 768px) {
+  .mobile-drawer .sidebar-menu {
+    padding: 0;
+    overflow-y: visible;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .mobile-drawer .drawer-body {
+    overflow-y: auto;
+    max-height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+

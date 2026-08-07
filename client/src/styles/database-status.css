@@ -1,0 +1,44 @@
+.database-status-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 12px 28px 0;
+  padding: 12px 16px;
+  border: 1px solid rgba(225, 29, 72, .25);
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #881337;
+  box-shadow: var(--shadow-sm);
+}
+
+.database-status-banner[hidden] {
+  display: none;
+}
+
+.database-status-banner div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.database-status-banner span {
+  color: var(--text-secondary);
+  font-size: .82rem;
+}
+
+.database-status-banner .btn-secondary {
+  flex-shrink: 0;
+  background: #fff;
+}
+
+@media (max-width: 680px) {
+  .database-status-banner {
+    align-items: stretch;
+    flex-direction: column;
+    margin: 10px 14px 0;
+  }
+}
