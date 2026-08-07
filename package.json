@@ -7,7 +7,7 @@
     "dev": "concurrently -k -n api,web \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "node server.js",
     "dev:web": "vite",
-    "build": "vite build && node -e \"require('fs').cpSync('client/js','dist/js',{recursive:true})\"",
+    "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js"
   },

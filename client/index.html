@@ -7,7 +7,7 @@
   <title>SocialFeed Hub | Dashboard </title>
   <meta name="description"
     content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
-  <link rel="stylesheet" href="css/styles.css?v=20260730-4">
+
 
   <!-- FontAwesome Icons for modern dashboard elements -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -559,10 +559,14 @@
   <!-- Social Widgets Embed Scripts (will be control loaded on demand by embeds.js) -->
   <!-- We do NOT pre-load the scripts synchronously to prevent visual lag; scripts are dynamically fetched -->
 
-  <!-- Application scripts -->
-  <script src="js/importer.js"></script>
-  <script src="js/app.js?v=20260730-4"></script>
-  <script src="js/private-bootstrap.js?v=20260730-4"></script>
+  <!-- Application ES Module Entry -->
+  <script src="./temp/js/importer.js"></script>
+  <script src="./temp/js/app.js"></script>
+  <script src="./temp/js/private-bootstrap.js"></script>
+
+  <link rel="stylesheet" href="./temp/css/styles.css"></script>
+
+
 </body>
 
 </html>
