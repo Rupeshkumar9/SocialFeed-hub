@@ -102,9 +102,22 @@ function initAuthEvents() {
   const loginForm = document.getElementById('private-login-form');
   const loginPassword = document.getElementById('private-login-password');
   const loginError = document.getElementById('private-login-error');
+  const loginSubmit = document.getElementById('private-login-submit');
+
+  const setLoginSubmitting = (submitting) => {
+    if (!loginSubmit) return;
+    loginSubmit.disabled = submitting;
+    loginSubmit.setAttribute('aria-busy', String(submitting));
+    loginSubmit.innerHTML = submitting
+      ? '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Signing in...</span>'
+      : '<span>Sign in</span>';
+  };
+
   if (loginForm) loginForm.addEventListener('submit', async event => {
     event.preventDefault();
+    if (loginSubmit?.disabled) return;
     loginError.hidden = true;
+    setLoginSubmitting(true);
     try {
       await socialFeedApi.login(loginPassword.value);
       loginPassword.value = '';
@@ -119,6 +132,8 @@ function initAuthEvents() {
     } catch (error) {
       loginError.textContent = error?.message || 'Unable to sign in.';
       loginError.hidden = false;
+    } finally {
+      setLoginSubmitting(false);
     }
   });
 

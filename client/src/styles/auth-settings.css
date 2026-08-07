@@ -73,6 +73,19 @@ body.auth-pending .login-gate {
   font-size: .85rem;
 }
 
+.login-submit {
+  min-width: 124px;
+}
+
+.login-submit:disabled,
+.login-submit:disabled:hover,
+.login-submit:disabled:active {
+  cursor: wait;
+  opacity: .82;
+  transform: none;
+  box-shadow: 0 4px 16px rgba(244, 63, 94, .16);
+}
+
 .settings-view {
   overflow-y: auto;
   flex: 1;

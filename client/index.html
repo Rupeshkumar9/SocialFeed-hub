@@ -21,7 +21,9 @@
       <label for="private-login-password">Password</label>
       <input id="private-login-password" type="password" autocomplete="current-password" required placeholder="Enter your password">
       <p id="private-login-error" class="login-error" hidden></p>
-      <button class="btn-primary" type="submit">Sign in</button>
+      <button id="private-login-submit" class="btn-primary login-submit" type="submit" aria-busy="false">
+        <span>Sign in</span>
+      </button>
     </form>
   </div>
 
