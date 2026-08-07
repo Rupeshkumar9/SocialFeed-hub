@@ -276,7 +276,7 @@ function openPostModal(bmId, focusNote = false) {
     </div>
     ${formattedPostDate ? `
       <div class="modal-post-date" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color);">
-        <i class="fa-regular fa-calendar-days" style="color: var(--accent-rose, #e11d48); font-size: 0.8rem;"></i>
+        <i class="app-icon icon-calendar-days" style="color: var(--accent-rose, #e11d48); font-size: 0.8rem;"></i>
         <span style="font-weight: 500;">${formattedPostDate}</span>
       </div>
     ` : ''}

@@ -42,7 +42,7 @@ function updateManualImagePreview() {
   }
   setManualImageSourceControlsVisible(false);
   DOM.addImagePreview.hidden = false;
-  DOM.addImagePreview.innerHTML = '<button type="button" class="manual-image-remove" title="Remove image" aria-label="Remove image"><i class="fa-solid fa-xmark"></i></button><img src="' + escapeHTML(value) + '" alt="Image preview" loading="lazy">';
+  DOM.addImagePreview.innerHTML = '<button type="button" class="manual-image-remove" title="Remove image" aria-label="Remove image"><i class="app-icon icon-xmark"></i></button><img src="' + escapeHTML(value) + '" alt="Image preview" loading="lazy">';
 }
 
 function setManualImageFieldVisible(visible) {

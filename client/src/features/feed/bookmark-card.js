@@ -67,19 +67,19 @@ function buildCardElement(bm) {
   const notesMarkup = `
     <div class="card-actions-row">
       <button type="button" class="btn-card-action btn-read-post" data-id="${bm.id}">
-        Read full post <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; margin-left: 2px;"></i>
+        Read full post <i class="app-icon icon-chevron-down" style="font-size: 0.7rem; margin-left: 2px;"></i>
       </button>
       <button type="button" class="btn-card-action btn-add-note" data-id="${bm.id}">
-        <i class="fa-solid fa-file-pen" style="font-size: 0.85rem; margin-right: 2px;"></i> ${notesVal ? 'Edit Note' : 'Add Note'}
+        <i class="app-icon icon-file-pen" style="font-size: 0.85rem; margin-right: 2px;"></i> ${notesVal ? 'Edit Note' : 'Add Note'}
       </button>
     </div>
-    ${notesVal ? `<div class="card-notes-display" style="margin-top: 8px;"><i class="fa-solid fa-note-sticky"></i> ${escapeHTML(notesVal)}</div>` : ''}
+    ${notesVal ? `<div class="card-notes-display" style="margin-top: 8px;"><i class="app-icon icon-note-sticky"></i> ${escapeHTML(notesVal)}</div>` : ''}
   `;
 
   let folderVal = bm.source === "browser" ? browserCategoryLabel(bm.folder) : socialCategoryLabel(bm.folder);
   const folderMarkup = bm.source === "browser" ? "" : "\n    <div class=\"card-category-container\">" +
     "\n      <button type=\"button\" class=\"btn-card-category\" title=\"Show category\" aria-expanded=\"false\">" +
-    "\n        <i class=\"fa-solid fa-folder\"></i>" +
+    "\n        <i class=\"app-icon icon-folder\"></i>" +
     "\n      </button>" +
     "\n      <div class=\"card-category-popover\" role=\"status\">" +
     "\n        <span>Category</span>" +
@@ -122,7 +122,7 @@ function buildCardElement(bm) {
       mediaMarkup = `
         <div class="card-media fallback-media" style="background: ${bgGradient};">
           <div class="fallback-gradient">
-            <i class="fa-brands fa-instagram fallback-icon"></i>
+            <i class="app-icon icon-instagram fallback-icon"></i>
             <span class="fallback-title">${isReel ? 'Instagram Reel' : 'Instagram Post'}</span>
             <span class="fallback-subtitle">Click to View</span>
           </div>
@@ -176,7 +176,7 @@ function buildCardElement(bm) {
       mediaMarkup = `
         <div class="card-media fallback-media reddit-fallback">
           <div class="fallback-gradient" style="color: #ff4500;">
-            <i class="fa-brands fa-reddit-alien fallback-icon" style="background: none; -webkit-text-fill-color: #ff4500; color: #ff4500; font-size: 1.4rem; opacity: 0.9;"></i>
+            <i class="app-icon icon-reddit-alien fallback-icon" style="background: none; -webkit-text-fill-color: #ff4500; color: #ff4500; font-size: 1.4rem; opacity: 0.9;"></i>
             <span class="fallback-title" style="color: var(--text-primary);">Reddit Post</span>
             <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
           </div>
@@ -194,7 +194,7 @@ function buildCardElement(bm) {
       mediaMarkup = `
         <div class="card-media fallback-media" style="background: linear-gradient(135deg, #e7f3ff 0%, #cbd5e1 100%);">
           <div class="fallback-gradient" style="color: var(--platform-fb);">
-            <i class="fa-brands fa-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
+            <i class="app-icon icon-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
             <span class="fallback-title" style="color: var(--text-primary);">Facebook Post</span>
             <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
           </div>
@@ -229,11 +229,11 @@ function buildCardElement(bm) {
         
         <div class="card-menu-container">
           <button class="btn-card-menu" title="Actions">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
+            <i class="app-icon icon-ellipsis-vertical"></i>
           </button>
           <div class="card-menu-dropdown">
-            <button class="menu-item-edit"><i class="fa-solid fa-pen"></i> Edit</button>
-            <button class="menu-item-delete"><i class="fa-solid fa-trash"></i> Delete</button>
+            <button class="menu-item-edit"><i class="app-icon icon-pen"></i> Edit</button>
+            <button class="menu-item-delete"><i class="app-icon icon-trash"></i> Delete</button>
           </div>
         </div>
 
@@ -244,7 +244,7 @@ function buildCardElement(bm) {
     </div>
     
     <div class="card-body">
-      <div class="post-quote-icon"><i class="fa-solid fa-quote-left"></i></div>
+      <div class="post-quote-icon"><i class="app-icon icon-quote-left"></i></div>
       ${(() => {
       const contentVal = cleanPostContent(bm.content, bm.platform) || 'Saved Post details';
       const words = contentVal.split(/\s+/);
@@ -395,7 +395,7 @@ function handleImageError(img, id, platform) {
     container.style.borderColor = 'rgba(255,255,255,0.05)';
     container.innerHTML = `
       <div class="fallback-gradient" style="color: #f8fafc;">
-        <i class="fa-brands fa-x-twitter fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
+        <i class="app-icon icon-x-twitter fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
         <span class="fallback-title" style="color: #f8fafc;">X Post</span>
         <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
       </div>
@@ -405,7 +405,7 @@ function handleImageError(img, id, platform) {
     container.style.borderColor = 'rgba(255,255,255,0.05)';
     container.innerHTML = `
       <div class="fallback-gradient" style="color: #f8fafc;">
-        <i class="fa-brands fa-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
+        <i class="app-icon icon-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
         <span class="fallback-title" style="color: #f8fafc;">Threads Post</span>
         <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
       </div>
@@ -414,7 +414,7 @@ function handleImageError(img, id, platform) {
     container.style.background = 'linear-gradient(135deg, #e7f3ff 0%, #cbd5e1 100%)';
     container.innerHTML = `
       <div class="fallback-gradient" style="color: var(--platform-fb);">
-        <i class="fa-brands fa-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
+        <i class="app-icon icon-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
         <span class="fallback-title" style="color: var(--text-primary);">Facebook Post</span>
         <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
       </div>
@@ -425,7 +425,7 @@ function handleImageError(img, id, platform) {
     }
     container.innerHTML = `
       <div class="fallback-gradient">
-        <i class="fa-brands fa-instagram fallback-icon"></i>
+        <i class="app-icon icon-instagram fallback-icon"></i>
         <span class="fallback-title">Instagram Post</span>
         <span class="fallback-subtitle">Click to View</span>
       </div>

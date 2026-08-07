@@ -1,4 +1,5 @@
 import './styles/main.css';
+import './ui/icons.js';
 
 import './utils/format.js';
 import './ui/feedback.js';

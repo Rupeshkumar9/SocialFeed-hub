@@ -1,0 +1,26 @@
+.app-icon {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-style: normal;
+  line-height: 1;
+  vertical-align: -0.125em;
+}
+
+.app-icon-svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+  overflow: visible;
+}
+
+.icon-spin {
+  animation: app-icon-spin 0.9s linear infinite;
+}
+
+@keyframes app-icon-spin {
+  to { transform: rotate(360deg); }
+}

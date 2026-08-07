@@ -9,8 +9,6 @@
     content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     
-  <!-- FontAwesome Icons for modern dashboard elements -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body class="auth-pending">
@@ -34,7 +32,7 @@
     <header class="main-header">
       <div class="header-left">
         <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Navigation Menu">
-          <i class="fa-solid fa-bars"></i>
+          <i class="app-icon icon-bars"></i>
         </button>
         <a href="/" class="logo-link">
           <div class="header-logo">
@@ -51,7 +49,7 @@
 
       <!-- search bar -->
       <div class="search-bar-container">
-        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <i class="app-icon icon-magnifying-glass search-icon"></i>
         <input type="text" id="search-input" class="search-input" placeholder="Search author, content, tags, notes...">
       </div>
 
@@ -64,7 +62,7 @@
 
         <!-- sync -->
         <button class="btn-primary" id="btn-sync-now" title="Force sync from server">
-          <i class="fa-solid fa-rotate"></i> <span class="btn-text">Sync</span>
+          <i class="app-icon icon-rotate"></i> <span class="btn-text">Sync</span>
         </button>
 
         <!-- Hidden elements for backward compatibility and JS selectors -->
@@ -101,7 +99,7 @@
           <section class="sidebar-section">
             <div class="menu-section-title">Your Library</div>
             <ul class="menu-list">
-              <li class="menu-item active" id="sidebar-browser-item"><button type="button" id="btn-browser-bookmarks" data-sidebar-route="#bookmarks"><i class="fa-solid fa-bookmark"></i><span>Browser Bookmarks</span><span class="menu-count" id="count-browser-bookmarks">0</span></button></li>
+              <li class="menu-item active" id="sidebar-browser-item"><button type="button" id="btn-browser-bookmarks" data-sidebar-route="#bookmarks"><i class="app-icon icon-bookmark"></i><span>Browser Bookmarks</span><span class="menu-count" id="count-browser-bookmarks">0</span></button></li>
             </ul>
           </section>
 
@@ -109,20 +107,20 @@
             <div class="menu-section-title">Platform</div>
             <ul class="menu-list" id="sidebar-platform-list">
               <li class="menu-item active"><button type="button" data-platform="all" data-sidebar-route="#platform=all"><i
-                    class="fa-solid fa-layer-group"></i><span>All Platforms</span><span class="menu-count"
+                    class="app-icon icon-layer-group"></i><span>All Platforms</span><span class="menu-count"
                     id="count-platform-all">0</span></button></li>
               <li class="menu-item"><button type="button" data-platform="instagram" data-sidebar-route="#platform=instagram"><i
-                    class="fa-brands fa-instagram"></i><span>Instagram</span><span class="menu-count"
+                    class="app-icon icon-instagram"></i><span>Instagram</span><span class="menu-count"
                     id="count-platform-instagram">0</span></button></li>
               <li class="menu-item"><button type="button" data-platform="x" data-sidebar-route="#platform=x"><svg class="platform-inline-icon sidebar-platform-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z"/></svg><span> X / Twitter </span><span class="menu-count"
                     id="count-platform-x">0</span></button></li>
               <li class="menu-item"><button type="button" data-platform="threads" data-sidebar-route="#platform=threads"><svg class="platform-inline-icon sidebar-platform-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z"/></svg><span>Threads</span><span class="menu-count"
                     id="count-platform-threads">0</span></button></li>
               <li class="menu-item"><button type="button" data-platform="reddit" data-sidebar-route="#platform=reddit"><i
-                    class="fa-brands fa-reddit-alien"></i><span>Reddit</span><span class="menu-count"
+                    class="app-icon icon-reddit-alien"></i><span>Reddit</span><span class="menu-count"
                     id="count-platform-reddit">0</span></button></li>
               <li class="menu-item"><button type="button" data-platform="facebook" data-sidebar-route="#platform=facebook"><i
-                    class="fa-brands fa-facebook"></i><span>Facebook</span><span class="menu-count"
+                    class="app-icon icon-facebook"></i><span>Facebook</span><span class="menu-count"
                     id="count-platform-facebook">0</span></button></li>
             </ul>
           </section>
@@ -131,10 +129,10 @@
             <div class="menu-section-title">Categories</div>
             <ul class="menu-list" id="sidebar-collection-list">
               <li class="menu-item active"><button type="button" data-collection="all"><i
-                    class="fa-solid fa-folder-tree"></i><span>All</span><span class="menu-count"
+                    class="app-icon icon-folder-tree"></i><span>All</span><span class="menu-count"
                     id="count-collection-all">0</span></button></li>
               <li class="menu-item"><button type="button" data-collection="uncategorized"><i
-                    class="fa-regular fa-folder"></i><span>Others</span><span class="menu-count"
+                    class="app-icon icon-folder"></i><span>Others</span><span class="menu-count"
                     id="count-collection-uncategorized">0</span></button></li>
             </ul>
           </section>
@@ -143,7 +141,7 @@
             <ul class="menu-list">
               <li class="menu-item" id="sidebar-analytics-item">
                 <button type="button" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
-                  <i class="fa-solid fa-chart-line"></i>
+                  <i class="app-icon icon-chart-line"></i>
                   <span>Analytics</span>
                 </button>
               </li>
@@ -155,14 +153,14 @@
             <div class="sidebar-actions" style="display: flex; flex-direction: column; gap: 8px;">
               <button type="button" class="sidebar-action" id="action-import"
                 title="Import Archive">
-                <i class="fa-solid fa-file-import"></i><span>Import Archive</span>
+                <i class="app-icon icon-file-import"></i><span>Import Archive</span>
               </button>
               <button type="button" class="sidebar-action" id="action-export-json"
                 title="Export Bookmarks as JSON">
-                <i class="fa-solid fa-download"></i><span>Export JSON</span>
+                <i class="app-icon icon-download"></i><span>Export JSON</span>
               </button>
               <button type="button" class="sidebar-action" id="btn-settings" title="Profile Settings" data-sidebar-route="#settings">
-                <i class="fa-solid fa-gear"></i><span>Settings</span>
+                <i class="app-icon icon-gear"></i><span>Settings</span>
               </button>
             </div>
           </section>
@@ -171,14 +169,14 @@
 
       <main id="main-panel">
         <section id="settings-view" class="settings-view" hidden>
-          <div class="settings-heading"><button type="button" class="back-link" id="btn-back-to-bookmarks"><i class="fa-solid fa-arrow-left"></i> Back to Bookmarks</button><h2>Profile Settings</h2><p>Manage your private SocialFeed Hub account.</p></div>
+          <div class="settings-heading"><button type="button" class="back-link" id="btn-back-to-bookmarks"><i class="app-icon icon-arrow-left"></i> Back to Bookmarks</button><h2>Profile Settings</h2><p>Manage your private SocialFeed Hub account.</p></div>
           <div class="settings-layout">
             <div class="settings-main-column">
-              <article class="settings-card"><h3><i class="fa-regular fa-user"></i> Personal Information</h3><p>Your account details</p><div class="settings-details"><div><span>Profile name</span><strong id="settings-profile-name">SocialFeed Owner</strong></div><div><span>Email address</span><strong id="settings-profile-email">Private account</strong></div><div><span>Account access</span><strong>Private dashboard</strong></div><div><span>Member since</span><strong id="settings-member-since">—</strong></div></div></article>
-              <article class="settings-card"><h3><i class="fa-solid fa-plug"></i> Integrations</h3><p>Bookmark sources connected to your private library.</p><div class="integration-row"><span>Instagram & X scanner extension</span><span class="status-pill">Ready</span></div><div class="integration-row"><span>Chrome Browser Bookmarks scanner</span><span class="status-pill">Ready</span></div></article>
-              <article class="settings-card"><h3><i class="fa-regular fa-credit-card"></i> Manage Your Subscription</h3><p class="coming-soon">Coming soon</p></article>
+              <article class="settings-card"><h3><i class="app-icon icon-user"></i> Personal Information</h3><p>Your account details</p><div class="settings-details"><div><span>Profile name</span><strong id="settings-profile-name">SocialFeed Owner</strong></div><div><span>Email address</span><strong id="settings-profile-email">Private account</strong></div><div><span>Account access</span><strong>Private dashboard</strong></div><div><span>Member since</span><strong id="settings-member-since">—</strong></div></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-plug"></i> Integrations</h3><p>Bookmark sources connected to your private library.</p><div class="integration-row"><span>Instagram & X scanner extension</span><span class="status-pill">Ready</span></div><div class="integration-row"><span>Chrome Browser Bookmarks scanner</span><span class="status-pill">Ready</span></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-credit-card"></i> Manage Your Subscription</h3><p class="coming-soon">Coming soon</p></article>
             </div>
-            <aside class="settings-aside"><article class="settings-card"><h3>Account Security</h3><p>Your dashboard and bookmarks are only available after signing in.</p><span class="status-pill">Protected</span></article><button type="button" id="btn-settings-logout" class="settings-logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button></aside>
+            <aside class="settings-aside"><article class="settings-card"><h3>Account Security</h3><p>Your dashboard and bookmarks are only available after signing in.</p><span class="status-pill">Protected</span></article><button type="button" id="btn-settings-logout" class="settings-logout"><i class="app-icon icon-right-from-bracket"></i> Logout</button></aside>
           </div>
         </section>
 
@@ -193,13 +191,13 @@
               <!-- Select mode -->
               <button class="toolbar-btn" id="btn-select-mode" aria-label="Select Mode" title="Select Mode"
                 type="button">
-                <i class="fa-solid fa-square-check"></i>
+                <i class="app-icon icon-square-check"></i>
                 <span class="btn-label">Select Mode</span>
               </button>
 
               <!-- Add link -->
               <button class="toolbar-btn" id="btn-add-bookmark" aria-label="Add Link" title="Add Link" type="button">
-                <i class="fa-solid fa-plus"></i>
+                <i class="app-icon icon-plus"></i>
                 <span class="btn-label">Add Link</span>
               </button>
 
@@ -209,23 +207,23 @@
               <div class="toolbar-dropdown" id="toolbar-sort-dropdown" style="position: relative;">
                 <button class="toolbar-btn dropdown-toggle" id="toolbar-sort-btn" aria-label="Filter & Sort"
                   title="Filter & Sort" aria-expanded="false" type="button">
-                  <i class="fa-solid fa-arrow-down-wide-short"></i>
+                  <i class="app-icon icon-arrow-down-wide-short"></i>
                   <span class="btn-label" id="sort-active-label">Newest First</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-right" id="toolbar-sort-menu">
                   <button class="dropdown-item active" data-sort="recent-desc" type="button">
-                    <i class="fa-solid fa-check check-icon"></i> <span class="btn-text">Newest First</span>
+                    <i class="app-icon icon-check check-icon"></i> <span class="btn-text">Newest First</span>
                   </button>
                   <button class="dropdown-item" data-sort="recent-asc" type="button">
-                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Oldest First</span>
                   </button>
                   <button class="dropdown-item" data-sort="author-asc" type="button">
-                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Author A–Z</span>
                   </button>
                   <button class="dropdown-item" data-sort="author-desc" type="button">
-                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Author Z–A</span>
                   </button>
                 </div>
@@ -235,19 +233,19 @@
               <div class="toolbar-dropdown" id="toolbar-layout-dropdown" style="position: relative;">
                 <button class="toolbar-btn dropdown-toggle" id="toolbar-layout-btn" aria-label="Layout View"
                   title="Layout View" aria-expanded="false" type="button">
-                  <i class="fa-solid fa-grip" id="layout-active-icon"></i>
+                  <i class="app-icon icon-grip" id="layout-active-icon"></i>
                   <span class="btn-label" id="layout-active-label">Grid View</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-right" id="toolbar-layout-menu">
                   <button class="dropdown-item active" data-layout="grid" type="button">
-                    <i class="fa-solid fa-check check-icon"></i> <span class="btn-text">Grid View</span>
+                    <i class="app-icon icon-check check-icon"></i> <span class="btn-text">Grid View</span>
                   </button>
                   <button class="dropdown-item" data-layout="list" type="button">
-                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">List
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">List
                       View</span>
                   </button>
                   <button class="dropdown-item" data-layout="compact" type="button">
-                    <i class="fa-solid fa-check check-icon" style="visibility: hidden;"></i> <span
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Compact View</span>
                   </button>
                 </div>
@@ -259,11 +257,11 @@
           <div class="stats-panel" id="stats-panel" style="display: none;">
             <div class="stats-grid stats-grid-refined" id="stats-grid">
               <div class="stats-card stats-card-wide">
-                <h3><i class="fa-solid fa-circle-nodes"></i> Platform Splits</h3>
+                <h3><i class="app-icon icon-circle-nodes"></i> Platform Splits</h3>
                 <div class="stats-list" id="stat-platform-splits"></div>
               </div>
               <div class="stats-card stats-card-wide">
-                <h3><i class="fa-solid fa-bookmark"></i> Browser Bookmarks</h3>
+                <h3><i class="app-icon icon-bookmark"></i> Browser Bookmarks</h3>
                 <div class="stats-list" id="stat-browser-splits"></div>
               </div>
             </div>
@@ -287,7 +285,7 @@
         <div class="modal-body">
           <div class="drag-drop-zone" id="drag-drop-zone">
             <div class="drag-drop-icon">
-              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <i class="app-icon icon-cloud-arrow-up"></i>
             </div>
             <p>Drag and drop your exported archive file here</p>
             <p class="drag-drop-sub">Supports Twitter bookmark HTML/JSON or Instagram saved_posts.json</p>
@@ -347,7 +345,7 @@
                   <!-- Filled dynamically -->
                 </select>
                 <button type="button" id="btn-edit-category-name" class="btn-inline-edit-category" title="Edit selected category" hidden>
-                  <i class="fa-solid fa-pen"></i>
+                  <i class="app-icon icon-pen"></i>
                 </button>
               </div>
               <input type="text" id="add-category-new" class="search-input"
@@ -364,7 +362,7 @@
 
             <div style="display: flex; flex-direction: column; gap: 8px;" id="add-image-controls">
               <button type="button" class="btn-secondary add-image-toggle" id="btn-toggle-image-field">
-                <i class="fa-regular fa-image"></i><span>Add / Change Image</span>
+                <i class="app-icon icon-image"></i><span>Add / Change Image</span>
               </button>
               <div id="add-image-field" class="manual-image-field" hidden>
                 <div id="add-image-source-controls" class="manual-image-source-controls">
@@ -372,7 +370,7 @@
                   <input type="text" id="add-thumbnail" class="search-input" style="padding-left: 14px;" placeholder="Paste an image URL or leave blank">
                   <div class="manual-image-or"><span>or</span></div>
                   <button type="button" id="add-image-dropzone" class="manual-image-dropzone">
-                    <i class="fa-regular fa-image"></i>
+                    <i class="app-icon icon-image"></i>
                     <span>Drop image here or click to choose</span>
                     <small>PNG, JPG, WebP, or GIF</small>
                   </button>
@@ -442,7 +440,7 @@
       <div class="mobile-drawer" id="mobile-drawer">
         <div class="drawer-header">
           <div class="drawer-logo">
-            <i class="fa-solid fa-feather-pointed"></i> SocialFeed Hub
+            <i class="app-icon icon-feather-pointed"></i> SocialFeed Hub
           </div>
           <button class="close-btn" id="close-mobile-drawer">&times;</button>
         </div>
@@ -458,17 +456,17 @@
     <!-- Bulk Action Bar -->
     <div id="bulk-action-bar" class="bulk-action-bar">
       <div class="bulk-action-content">
-        <div class="bulk-info"><i class="fa-solid fa-square-check"></i> <span id="selected-count">0</span> items
+        <div class="bulk-info"><i class="app-icon icon-square-check"></i> <span id="selected-count">0</span> items
           selected</div>
         <div class="bulk-buttons">
           <button class="btn-secondary" id="btn-bulk-select-all">Select All</button>
           <button class="btn-secondary" id="btn-bulk-deselect-all">Clear</button>
           <button class="btn-primary" id="btn-bulk-edit"
             style="background-color: var(--accent-purple); border-color: var(--accent-purple); color: white;">
-            <i class="fa-solid fa-pen-to-square"></i> Edit Selected
+            <i class="app-icon icon-pen-to-square"></i> Edit Selected
           </button>
           <button class="btn-primary btn-danger" id="btn-bulk-delete">
-            <i class="fa-solid fa-trash"></i> Delete Selected
+            <i class="app-icon icon-trash"></i> Delete Selected
           </button>
           <button class="btn-secondary" id="btn-bulk-cancel">Cancel</button>
         </div>

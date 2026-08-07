@@ -14,17 +14,17 @@ const updateSyncStatusUI = (...args) => actions.updateSyncStatusUI(...args);
 function updateAdminLoginUI(isAdmin) {
   if (!DOM.btnAdminLogin) return;
   if (!AppState.isServerConnected) {
-    DOM.btnAdminLogin.innerHTML = `<i class="fa-solid fa-user-gear"></i> <span class="btn-text">Admin Mode</span>`;
+    DOM.btnAdminLogin.innerHTML = `<i class="app-icon icon-user-gear"></i> <span class="btn-text">Admin Mode</span>`;
     DOM.btnAdminLogin.title = "Offline mode - all editing controls are enabled";
     DOM.btnAdminLogin.style.display = 'inline-flex';
     return;
   }
   DOM.btnAdminLogin.style.display = 'inline-flex';
   if (isAdmin) {
-    DOM.btnAdminLogin.innerHTML = `<i class="fa-solid fa-lock-open"></i> <span class="btn-text">Logout</span>`;
+    DOM.btnAdminLogin.innerHTML = `<i class="app-icon icon-lock-open"></i> <span class="btn-text">Logout</span>`;
     DOM.btnAdminLogin.title = "Log out from Admin session";
   } else {
-    DOM.btnAdminLogin.innerHTML = `<i class="fa-solid fa-lock"></i> <span class="btn-text">Admin Login</span>`;
+    DOM.btnAdminLogin.innerHTML = `<i class="app-icon icon-lock"></i> <span class="btn-text">Admin Login</span>`;
     DOM.btnAdminLogin.title = "Admin Login";
   }
 }
@@ -109,7 +109,7 @@ function initAuthEvents() {
     loginSubmit.disabled = submitting;
     loginSubmit.setAttribute('aria-busy', String(submitting));
     loginSubmit.innerHTML = submitting
-      ? '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Signing in...</span>'
+      ? '<i class="app-icon icon-circle-notch icon-spin" aria-hidden="true"></i><span>Signing in...</span>'
       : '<span>Sign in</span>';
   };
 

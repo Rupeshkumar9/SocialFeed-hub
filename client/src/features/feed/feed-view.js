@@ -86,7 +86,7 @@ function renderFeedGrid() {
     if (AppState.databaseConnected === false) {
       DOM.bookmarksGrid.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon"><i class="fa-solid fa-database"></i></div>
+          <div class="empty-state-icon"><i class="app-icon icon-database"></i></div>
           <h3>Bookmarks are unavailable</h3>
           <p>The dashboard is open, but the database connection must recover before bookmarks can be displayed.</p>
         </div>
@@ -100,7 +100,7 @@ function renderFeedGrid() {
     } else {
       DOM.bookmarksGrid.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <div class="empty-state-icon"><i class="app-icon icon-folder-open"></i></div>
           <h3>No bookmarks found</h3>
           <p>Try clearing your search filters, adjusting categories, or importing a fresh data archive.</p>
         </div>
@@ -167,10 +167,10 @@ function changeLayout(layout, showFeedbackToast = true) {
   const activeLabel = document.getElementById('layout-active-label');
   if (activeIcon) {
     activeIcon.className = (() => {
-      if (layout === 'grid') return 'fa-solid fa-grip';
-      if (layout === 'list') return 'fa-solid fa-list';
-      if (layout === 'compact') return 'fa-solid fa-bars';
-      return 'fa-solid fa-grip';
+      if (layout === 'grid') return 'app-icon icon-grip';
+      if (layout === 'list') return 'app-icon icon-list';
+      if (layout === 'compact') return 'app-icon icon-bars';
+      return 'app-icon icon-grip';
     })();
   }
   if (activeLabel) {
@@ -207,7 +207,7 @@ function renderInfiniteScrollSentinel() {
   sentinel.id = "infinite-scroll-sentinel";
   sentinel.className = "infinite-scroll-sentinel";
   if (showing < total || AppState.isLoadingMore) {
-    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><i class=\"fa-solid fa-circle-notch fa-spin\"></i><span>Loading more bookmarks…</span></div>";
+    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><i class=\"app-icon icon-circle-notch icon-spin\"></i><span>Loading more bookmarks…</span></div>";
   } else if (AppState.hasMore) {
     sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><span>More bookmarks load automatically as you scroll</span></div>";
   } else {

@@ -164,8 +164,8 @@ function sortedCategoryItemsFromCounts(counts = {}, source = AppState.activeSour
     .map(([key, count]) => {
       const normalized = normalizeCollectionKey(key);
       return normalized === "uncategorized"
-        ? { value: "uncategorized", label: defaultLabel, count: count || 0, icon: "fa-regular fa-folder" }
-        : { value: normalized, label: normalized, count: count || 0, icon: "fa-solid fa-folder" };
+        ? { value: "uncategorized", label: defaultLabel, count: count || 0, icon: "app-icon icon-folder" }
+        : { value: normalized, label: normalized, count: count || 0, icon: "app-icon icon-folder" };
     })
     .filter((item, index, list) => list.findIndex(candidate => candidate.value.toLowerCase() === item.value.toLowerCase()) === index)
     .sort((a, b) => (b.count - a.count) || a.label.localeCompare(b.label));
@@ -179,8 +179,8 @@ function platformIconMarkup(platform, className = "") {
   if (platform === "threads") {
     return "<svg class=\"platform-inline-icon" + extra + "\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z\"/></svg>";
   }
-  const classes = { instagram: "fa-brands fa-instagram", facebook: "fa-brands fa-facebook", reddit: "fa-brands fa-reddit-alien", browser: "fa-solid fa-bookmark" };
-  return "<i class=\"" + (classes[platform] || "fa-solid fa-circle-nodes") + extra + "\"></i>";
+  const classes = { instagram: "app-icon icon-instagram", facebook: "app-icon icon-facebook", reddit: "app-icon icon-reddit-alien", browser: "app-icon icon-bookmark" };
+  return "<i class=\"" + (classes[platform] || "app-icon icon-circle-nodes") + extra + "\"></i>";
 }
 
 function getLoadedTagCounts() {
@@ -235,8 +235,8 @@ function updateSidebarNavigation() {
       const socialCollections = getLibraryCountGroup("collections", "social") || { all: platformCounts.all || 0, uncategorized: 0 };
       collectionList.innerHTML = "";
       [
-        { value: "all", label: "All", count: socialCollections.all || 0, icon: "fa-solid fa-folder-tree" },
-        { value: "uncategorized", label: "Others", count: socialCollections.uncategorized || 0, icon: "fa-regular fa-folder" }
+        { value: "all", label: "All", count: socialCollections.all || 0, icon: "app-icon icon-folder-tree" },
+        { value: "uncategorized", label: "Others", count: socialCollections.uncategorized || 0, icon: "app-icon icon-folder" }
       ].forEach(item => {
         const li = document.createElement("li");
         li.className = "menu-item sidebar-category-disabled";
@@ -264,10 +264,10 @@ function updateSidebarNavigation() {
   const collectionList = DOM.sidebarCollectionList;
   if (collectionList) {
     collectionList.innerHTML = "";
-    const allItem = { value: "all", label: "All", count: counts.all || 0, icon: "fa-solid fa-folder-tree" };
+    const allItem = { value: "all", label: "All", count: counts.all || 0, icon: "app-icon icon-folder-tree" };
     const categoryItems = sortedCategoryItemsFromCounts(counts, "social");
     if (!categoryItems.some(item => item.value === "uncategorized")) {
-      categoryItems.unshift({ value: "uncategorized", label: "Others", count: 0, icon: "fa-regular fa-folder" });
+      categoryItems.unshift({ value: "uncategorized", label: "Others", count: 0, icon: "app-icon icon-folder" });
     }
 
     [allItem, ...categoryItems].forEach(item => {
@@ -317,7 +317,7 @@ function showSidebarContextMenu(event, hash) {
   menu.style.top = event.clientY + 'px';
   const item = document.createElement('button');
   item.type = 'button';
-  item.innerHTML = '<i class="fa-regular fa-window-restore"></i><span>Open in new tab</span>';
+  item.innerHTML = '<i class="app-icon icon-window-restore"></i><span>Open in new tab</span>';
   item.addEventListener('click', () => {
     window.open(appUrlForRoute(hash), '_blank', 'noopener');
     menu.remove();
