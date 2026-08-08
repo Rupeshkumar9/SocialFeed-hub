@@ -22,6 +22,8 @@ export const AppState = {
   pendingDeletedIds: new Set(),
   isTagsExpanded: false,
   analyticsOpenPlatform: "instagram",
+  isAnalyticsOpen: false,
+  analyticsReturnFocus: null,
   isSettingsOpen: false,
   activeSource: 'browser',
   nextCursor: null,
@@ -30,7 +32,8 @@ export const AppState = {
   linkPreview: null,
   databaseConnected: null,
   activeRequestId: 0,
-  scrollObserver: null
+  scrollObserver: null,
+  layoutInitialized: false
 };
 
 // DOM Cache
@@ -63,6 +66,7 @@ export const DOM = {
   addBookmarkForm: document.getElementById('add-bookmark-form'),
   btnAddCancel: document.getElementById('btn-add-cancel'),
   addUrl: document.getElementById('add-url'),
+  addUrlLabel: document.getElementById('add-url-label'),
   addAuthorName: document.getElementById('add-author-name'),
   addContent: document.getElementById('add-content'),
   addTags: document.getElementById('add-tags'),
@@ -78,7 +82,7 @@ export const DOM = {
   addTagsGroup: document.getElementById('add-tags-group'),
   addCustomPlatformGroup: document.getElementById('add-custom-platform-group'),
   addCustomPlatformName: document.getElementById('add-custom-platform-name'),
-  btnEditCategoryName: document.getElementById('btn-edit-category-name'),
+  themeToggle: document.getElementById('theme-toggle'),
 
   // Sync Actions
   syncBtn: document.getElementById('sync-btn'),

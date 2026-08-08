@@ -75,8 +75,11 @@ CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@cloudname
 # Password used to sign into your private dashboard
 ADMIN_PASSWORD=my_secure_admin_password
 
-# Long random secret used to sign the HttpOnly login session
+# Long random secret used to sign the HttpOnly login session (keep stable between deployments)
 SESSION_SECRET=generate_a_long_random_secret
+
+# Optional session lifetime in seconds (default: 30 days)
+SESSION_MAX_AGE_SECONDS=2592000
 
 # Separate token used only by the Chrome extension to insert scanned bookmarks
 EXTENSION_SYNC_TOKEN=generate_a_different_long_random_token

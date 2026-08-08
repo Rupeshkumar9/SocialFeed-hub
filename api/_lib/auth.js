@@ -1,7 +1,12 @@
 const crypto = require('crypto');
 
 const SESSION_COOKIE = 'socialfeed_session';
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+function sessionMaxAgeSeconds() {
+  const configured = Number.parseInt(process.env.SESSION_MAX_AGE_SECONDS || '', 10);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_SESSION_MAX_AGE_SECONDS;
+}
 
 function parseCookies(req) {
   const header = req.headers && req.headers.cookie;
@@ -26,7 +31,7 @@ function sign(value) {
 
 function createSessionToken() {
   if (!sessionSecret()) throw new Error('SESSION_SECRET must be configured.');
-  const payload = Buffer.from(JSON.stringify({ v: 1, exp: Date.now() + SESSION_MAX_AGE_SECONDS * 1000 })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ v: 1, exp: Date.now() + sessionMaxAgeSeconds() * 1000 })).toString('base64url');
   return `${payload}.${sign(payload)}`;
 }
 
@@ -57,7 +62,7 @@ function requireSession(req, res) {
 
 function sessionCookie(token) {
   const secure = process.env.NODE_ENV === 'production' || process.env.VERCEL ? '; Secure' : '';
-  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_MAX_AGE_SECONDS}${secure}`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${sessionMaxAgeSeconds()}${secure}`;
 }
 
 function clearSessionCookie() {
@@ -71,4 +76,11 @@ function hasValidPassword(value) {
   return crypto.timingSafeEqual(Buffer.from(value), Buffer.from(expected));
 }
 
-module.exports = { clearSessionCookie, createSessionToken, hasValidPassword, isAuthenticated, requireSession, sessionCookie };
+function hasValidEmail(value) {
+  const expected = String(process.env.PROFILE_EMAIL || '').trim().toLowerCase();
+  const actual = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!expected || !actual || expected.length !== actual.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+}
+
+module.exports = { clearSessionCookie, createSessionToken, hasValidEmail, hasValidPassword, isAuthenticated, requireSession, sessionCookie, sessionMaxAgeSeconds };

@@ -22,7 +22,7 @@ function categoryRowsMarkup(counts = {}, source = "social") {
 
 function updateStatsAnalytics() {
   const panel = document.getElementById("stats-panel");
-  if (!panel || panel.style.display === "none") return;
+  if (!panel || panel.hidden || !AppState.isAnalyticsOpen) return;
 
   const platformContainer = document.getElementById("stat-platform-splits");
   const browserContainer = document.getElementById("stat-browser-splits");

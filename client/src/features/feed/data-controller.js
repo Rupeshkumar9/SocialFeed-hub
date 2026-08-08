@@ -25,9 +25,15 @@ async function checkDatabaseConnection() {
 async function loadData(options = {}) {
   if (!AppState.isServerConnected) return null;
   const append = Boolean(options.append);
-  if (AppState.isLoadingMore) return null;
+  if (AppState.isLoadingMore) {
+    if (append) return null;
+    // A fresh navigation/filter load supersedes an in-flight page request.
+    AppState.activeRequestId += 1;
+    AppState.isLoadingMore = false;
+  }
   AppState.isLoadingMore = true;
   const requestId = ++AppState.activeRequestId;
+  const requestContext = `${AppState.activeSource}|${AppState.activePlatform}|${AppState.activeCollection}`;
   renderInfiniteScrollSentinel();
   const params = new URLSearchParams({ source: AppState.activeSource || 'browser', limit: '40' });
   if (AppState.activeSource === 'social' && AppState.activePlatform !== 'all') params.set('platform', AppState.activePlatform);
@@ -35,14 +41,17 @@ async function loadData(options = {}) {
   if (append && AppState.nextCursor) params.set('cursor', AppState.nextCursor);
   try {
     const data = await socialFeedApi.getBookmarks(params);
-    if (requestId !== AppState.activeRequestId) return null;
+    if (requestId !== AppState.activeRequestId || requestContext !== `${AppState.activeSource}|${AppState.activePlatform}|${AppState.activeCollection}`) {
+      if (requestId === AppState.activeRequestId) AppState.isLoadingMore = false;
+      return null;
+    }
     const incoming = Array.isArray(data) ? data : (data?.bookmarks || []);
     AppState.bookmarks = append ? AppState.bookmarks.concat(incoming) : incoming;
     AppState.nextCursor = data?.nextCursor || null;
     AppState.hasMore = Boolean(data?.hasMore);
-    AppState.isLoadingMore = false;
     setDatabaseStatus(true);
-    onDataLoadedSuccess();
+    onDataLoadedSuccess({ append });
+    AppState.isLoadingMore = false;
     const more = document.getElementById('load-more-container');
     if (more) more.hidden = true;
     return data;
@@ -52,7 +61,7 @@ async function loadData(options = {}) {
     else {
       setDatabaseStatus(false);
       AppState.bookmarks = append ? AppState.bookmarks : [];
-      onDataLoadedSuccess();
+      onDataLoadedSuccess({ append });
     }
     const more = document.getElementById('load-more-container');
     if (more) more.hidden = true;

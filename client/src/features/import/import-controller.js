@@ -20,9 +20,7 @@ function saveDataToServer() {
   DOM.syncBtn.classList.add('saving');
   DOM.syncStatusText.textContent = 'Syncing...';
 
-  const token = localStorage.getItem('admin_token');
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   return fetch('/api/save', {
     method: 'POST',

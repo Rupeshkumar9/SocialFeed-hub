@@ -3,11 +3,12 @@ import { actions, registerActions } from '../../app/actions.js';
 
 const getBookmarkDateMs = (...args) => actions.getBookmarkDateMs(...args);
 const platformLabel = (...args) => actions.platformLabel(...args);
+const escapeHTML = (...args) => actions.escapeHTML(...args);
 const renderFeedGrid = (...args) => actions.renderFeedGrid(...args);
 const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
 const updateStatsAnalytics = (...args) => actions.updateStatsAnalytics(...args);
 
-function applyFiltersAndSearch() {
+function applyFiltersAndSearch(options = {}) {
   const query = AppState.searchQuery.toLowerCase().trim();
 
   AppState.filteredBookmarks = AppState.bookmarks.filter(bm => {
@@ -67,8 +68,9 @@ function applyFiltersAndSearch() {
     return 0;
   });
 
-  // Reset pagination on any filter/search change
-  AppState.visibleCount = POSTS_PER_PAGE;
+  // Reset pagination on a fresh/filter-driven render, but retain the visible
+  // window when a server page is appended at the current scroll position.
+  if (options.resetPagination !== false) AppState.visibleCount = POSTS_PER_PAGE;
 
   // Update Headers
   updateFeedHeaders();
@@ -89,9 +91,20 @@ function applyFiltersAndSearch() {
 
 function updateFeedHeaders() {
   let title = AppState.activeSource === "browser" ? "Browser Bookmarks" : "All Social Bookmarks";
-  if (AppState.activeSource === "social" && AppState.activePlatform !== "all") title = platformLabel(AppState.activePlatform);
-  if (AppState.activeCollection && AppState.activeCollection !== "all") title += " in " + (AppState.activeCollection === "uncategorized" ? "Others" : AppState.activeCollection);
-  DOM.feedTitle.textContent = title;
+  const category = AppState.activeCollection && AppState.activeCollection !== "all"
+    ? (AppState.activeCollection === "uncategorized" ? "Others" : AppState.activeCollection)
+    : '';
+  const platform = AppState.activeSource === "social" && AppState.activePlatform !== "all"
+    ? platformLabel(AppState.activePlatform)
+    : 'All Social Bookmarks';
+  if (AppState.activeSource === "social") title = category ? `${category} in ${platform}` : platform;
+  const canRename = AppState.activeSource === 'social'
+    && AppState.activePlatform !== 'all'
+    && AppState.activeCollection !== 'all'
+    && AppState.activeCollection !== 'uncategorized';
+  DOM.feedTitle.innerHTML = canRename
+    ? `<span>${escapeHTML(title)}</span><button type="button" class="category-rename-btn" data-category-rename="social" aria-label="Rename category" title="Rename category"><i class="app-icon icon-pen"></i></button>`
+    : escapeHTML(title);
   DOM.feedSubtitle.textContent = "Showing " + AppState.filteredBookmarks.length + " loaded bookmark" + (AppState.filteredBookmarks.length === 1 ? "" : "s");
   const browserItem = document.getElementById("sidebar-browser-item");
   if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser");

@@ -20,11 +20,11 @@ const setManualImageFieldVisible = (...args) => actions.setManualImageFieldVisib
 const showToast = (...args) => actions.showToast(...args);
 const sortedCategoryItemsFromCounts = (...args) => actions.sortedCategoryItemsFromCounts(...args);
 const toggleSelectionMode = (...args) => actions.toggleSelectionMode(...args);
-const updateCategoryEditButtonVisibility = (...args) => actions.updateCategoryEditButtonVisibility(...args);
 const updateCollectionsFilterDropdown = (...args) => actions.updateCollectionsFilterDropdown(...args);
 const updateManualModalPlatformUI = (...args) => actions.updateManualModalPlatformUI(...args);
 
 let currentPostModalBookmarkId = null;
+let previewRequestId = 0;
 
 function resolveManualPlatformSelection() {
   const selectedPlatform = document.getElementById('add-platform')?.value || '';
@@ -85,13 +85,14 @@ function saveBookmarkFolder(id, folder) {
  * Layout Switcher Controller
  */
 
-function handleManualBookmarkSubmit(e) {
+async function handleManualBookmarkSubmit(e) {
   e.preventDefault();
 
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
   const tagListInput = DOM.addTags.value.trim();
   const imageUrl = DOM.addThumbnail ? DOM.addThumbnail.value.trim() : '';
+  const url = DOM.addUrl.value.trim();
 
   let categoryVal = '';
   if (DOM.addCategory.value === '__new__') {
@@ -116,14 +117,28 @@ function handleManualBookmarkSubmit(e) {
     const idx = AppState.bookmarks.findIndex(bm => bm.id === AppState.editingId);
     if (idx !== -1) {
       const bm = AppState.bookmarks[idx];
+      const browser = platform === 'browser';
+      const previousBrowser = bm.source === 'browser' || bm.platform === 'browser';
+      const browserUrlChanged = browser && (!previousBrowser || String(bm.url || '') !== url);
+      const preview = browserUrlChanged ? await previewBrowserLink(url) : null;
+      const canonical = browser ? (preview?.canonicalUrl || url.toLowerCase().replace(/\/$/, '')) : '';
+      if (browser && AppState.bookmarks.some(item => item.id !== bm.id && (item.source === 'browser' || item.platform === 'browser') && (item.canonicalUrl || String(item.url || '').toLowerCase().replace(/\/$/, '')) === canonical)) {
+        showToast("This browser bookmark is already saved.", "error");
+        return;
+      }
       bm.platform = platform;
       bm.platformName = platformName;
       bm.authorName = authorName || defaultAuthorNameForPlatform(platform, platformName);
       bm.authorUsername = authorName ? authorName.toLowerCase().replace(/\s+/g, '') : bm.authorUsername;
       bm.content = content || bm.content;
       bm.folder = categoryVal;
-      bm.source = platform === 'browser' ? 'browser' : (bm.source === 'browser' && platform !== 'browser' ? 'social' : bm.source);
-      bm.thumbnail = imageUrl;
+      bm.source = browser ? 'browser' : 'social';
+      bm.url = browser ? (preview?.url || url) : url;
+      if (browser) {
+        bm.canonicalUrl = canonical;
+        if (preview?.favicon) bm.favicon = preview.favicon;
+      }
+      bm.thumbnail = imageUrl || bm.thumbnail || '';
 
       const newUserTags = tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : [];
       bm.hashtags = platform === 'browser' ? [] : newUserTags;
@@ -135,15 +150,13 @@ function handleManualBookmarkSubmit(e) {
       // Close Modal & Reset
       DOM.addModalOverlay.classList.remove('active');
       DOM.addBookmarkForm.reset();
-      DOM.addUrl.readOnly = false;
       AppState.editingId = null;
+      AppState.linkPreview = null;
 
       showToast("Bookmark updated successfully!", "success");
     }
     return;
   }
-
-  const url = DOM.addUrl.value.trim();
 
   // Parse hashtags
   const hashtags = platform === 'browser' ? [] : (tagListInput ? tagListInput.split(',').map(t => t.trim().toLowerCase().replace('#', '')).filter(Boolean) : []);
@@ -168,21 +181,33 @@ function handleManualBookmarkSubmit(e) {
     id = `${platform}_${Date.now()}`;
   }
 
+  const browser = platform === 'browser';
+  const preview = browser ? await previewBrowserLink(url) : null;
+  const canonical = browser ? (preview?.canonicalUrl || url.toLowerCase().replace(/\/$/, '')) : '';
+  if (browser && AppState.bookmarks.some(item => (item.source === 'browser' || item.platform === 'browser') && (item.canonicalUrl || String(item.url || '').toLowerCase().replace(/\/$/, '')) === canonical)) {
+    showToast("This browser bookmark is already saved.", "error");
+    return;
+  }
+
+  const browserSite = preview?.siteName || (() => { try { return new URL(url).hostname; } catch { return 'Saved Link'; } })();
+
   // Create new bookmark record
   const newBookmark = {
     id: id,
     platform: platform,
     platformName,
-    source: 'social',
-    url: url,
-    authorName: authorName || defaultAuthorNameForPlatform(platform, platformName),
-    authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : platform,
-    content: content || `Saved ${platformLabel(platform, platformName)} Post (click to load embed)`,
+    source: browser ? 'browser' : 'social',
+    url: browser ? (preview?.url || url) : url,
+    canonicalUrl: browser ? canonical : undefined,
+    favicon: browser ? (preview?.favicon || '') : undefined,
+    authorName: authorName || (browser ? browserSite : defaultAuthorNameForPlatform(platform, platformName)),
+    authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : (browser ? browserSite.replace(/^www\./, '') : platform),
+    content: content || (browser ? (preview?.title || 'Saved browser bookmark') : `Saved ${platformLabel(platform, platformName)} Post (click to load embed)`),
     timestamp: new Date().toISOString(),
     hashtags: hashtags,
     folder: categoryVal,
     notes: document.getElementById('add-notes')?.value.trim() || '',
-    thumbnail: imageUrl
+    thumbnail: imageUrl || (browser ? (preview?.image || '') : '')
   };
 
   // Merge (deduplicate)
@@ -202,6 +227,7 @@ function handleManualBookmarkSubmit(e) {
   // Close Modal
   DOM.addModalOverlay.classList.remove('active');
   DOM.addBookmarkForm.reset();
+  AppState.linkPreview = null;
 
   showToast("Bookmark added to feed successfully!", "success");
 }
@@ -262,7 +288,6 @@ function populateModalCategorySelect(selectedVal = '', context = null) {
 
   DOM.addCategoryNew.style.display = 'none';
   DOM.addCategoryNew.value = '';
-  updateCategoryEditButtonVisibility();
 }
 
 
@@ -489,6 +514,9 @@ function handleBulkEditSubmit(e) {
  * Open Modal pre-filled with existing bookmark metadata for editing
  */
 function openEditBookmarkModal(bm) {
+  AppState.linkPreview = null;
+  const previewStatus = document.getElementById('add-preview-status');
+  if (previewStatus) { previewStatus.hidden = true; previewStatus.textContent = ''; }
   AppState.editingId = bm.id;
 
   // Update header and submit button layout
@@ -500,7 +528,7 @@ function openEditBookmarkModal(bm) {
 
   // Prefill values
   DOM.addUrl.value = bm.url;
-  DOM.addUrl.readOnly = true;
+  DOM.addUrl.readOnly = false;
 
   const addPlatformSelect = document.getElementById('add-platform');
   if (addPlatformSelect) {
@@ -530,12 +558,16 @@ function openEditBookmarkModal(bm) {
  */
 
 async function previewBrowserLink(url) {
-  if (!url) return null;
+  const selectedPlatform = document.getElementById('add-platform')?.value || '';
+  if (selectedPlatform !== 'browser' || !url) return null;
+  const requestId = ++previewRequestId;
+  AppState.linkPreview = null;
   const status = document.getElementById("add-preview-status");
   if (status) { status.hidden = false; status.textContent = "Looking up link preview…"; }
   try {
     const response = await fetch("/api/bookmark-preview", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
     const data = await response.json();
+    if (requestId !== previewRequestId || document.getElementById('add-platform')?.value !== 'browser' || DOM.addUrl.value.trim() !== url) return null;
     if (!response.ok) throw new Error(data.error || "Preview unavailable");
     AppState.linkPreview = data;
     if (DOM.addContent && !DOM.addContent.value) DOM.addContent.value = data.description || data.title || "";
@@ -543,29 +575,11 @@ async function previewBrowserLink(url) {
     if (status) status.textContent = "Preview found: " + (data.title || data.siteName);
     return data;
   } catch (error) {
-    AppState.linkPreview = null;
+    if (requestId === previewRequestId) AppState.linkPreview = null;
     if (status) status.textContent = "Preview unavailable — the link can still be saved.";
     return null;
   }
 }
 
-async function saveBrowserBookmark(event) {
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const url = DOM.addUrl.value.trim();
-  const preview = AppState.linkPreview && AppState.linkPreview.url ? AppState.linkPreview : await previewBrowserLink(url);
-  const canonical = preview && preview.canonicalUrl ? preview.canonicalUrl : url.toLowerCase().replace(/\/$/, "");
-  if (AppState.bookmarks.some(item => item.source === "browser" && (item.canonicalUrl || item.url.toLowerCase().replace(/\/$/, "")) === canonical)) { showToast("This browser bookmark is already saved.", "error"); return; }
-  const tagText = '';
-  const imageUrl = DOM.addThumbnail ? DOM.addThumbnail.value.trim() : '';
-  const category = DOM.addCategory.value === "__new__" ? DOM.addCategoryNew.value.trim() : DOM.addCategory.value.trim();
-  const site = preview && preview.siteName ? preview.siteName : new URL(url).hostname;
-  const bookmark = { id: "browser_" + Date.now(), source: "browser", platform: "browser", url: preview && preview.url ? preview.url : url, canonicalUrl: canonical, authorName: DOM.addAuthorName.value.trim() || site, authorUsername: site.replace(/^www\./, ""), content: DOM.addContent.value.trim() || (preview && preview.title) || "Saved browser bookmark", thumbnail: imageUrl || (preview && preview.image ? preview.image : ""), favicon: preview && preview.favicon ? preview.favicon : "", notes: (document.getElementById("add-notes") || {}).value || "", hashtags: [], folder: category === "uncategorized" ? "" : category, extensionScrapedAt: new Date().toISOString() };
-  AppState.bookmarks.unshift(bookmark);
-  AppState.linkPreview = null;
-  refreshLocalMetadataAndCounts(); saveDataToServer();
-  DOM.addModalOverlay.classList.remove("active"); DOM.addBookmarkForm.reset(); showToast("Browser bookmark saved.", "success");
-}
-
-registerActions('bookmark-editor', { saveBookmarkNotes, saveBookmarkFolder, handleManualBookmarkSubmit, populateModalCategorySelect, cleanPostContent, formatConciseDate, openPostModal, saveModalNoteAndClose, openBulkEditModal, handleBulkEditSubmit, openEditBookmarkModal, previewBrowserLink, saveBrowserBookmark });
-export { saveBookmarkNotes, saveBookmarkFolder, handleManualBookmarkSubmit, populateModalCategorySelect, cleanPostContent, formatConciseDate, openPostModal, saveModalNoteAndClose, openBulkEditModal, handleBulkEditSubmit, openEditBookmarkModal, previewBrowserLink, saveBrowserBookmark };
+registerActions('bookmark-editor', { saveBookmarkNotes, saveBookmarkFolder, handleManualBookmarkSubmit, populateModalCategorySelect, cleanPostContent, formatConciseDate, openPostModal, saveModalNoteAndClose, openBulkEditModal, handleBulkEditSubmit, openEditBookmarkModal, previewBrowserLink });
+export { saveBookmarkNotes, saveBookmarkFolder, handleManualBookmarkSubmit, populateModalCategorySelect, cleanPostContent, formatConciseDate, openPostModal, saveModalNoteAndClose, openBulkEditModal, handleBulkEditSubmit, openEditBookmarkModal, previewBrowserLink };

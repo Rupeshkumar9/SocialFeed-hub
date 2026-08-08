@@ -13,6 +13,7 @@ const apiAuthLogin = require('./api/auth/login');
 const apiAuthLogout = require('./api/auth/logout');
 const apiBookmarkPreview = require('./api/bookmark-preview');
 const apiCounts = require('./api/counts');
+const apiRenameCategory = require('./api/categories/rename');
 const { setExtensionCors } = require('./api/_lib/extension-auth');
 
 const apiAuthSession = require('./api/auth/session');
@@ -120,6 +121,10 @@ const server = http.createServer((req, res) => {
   }
   if (cleanUrl === '/api/counts') {
     handleServerless(apiCounts, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/categories/rename') {
+    handleServerless(apiRenameCategory, req, res);
     return;
   }
   if (cleanUrl === '/api/bookmark-preview') {

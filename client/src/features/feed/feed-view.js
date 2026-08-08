@@ -10,19 +10,29 @@ const processCollections = (...args) => actions.processCollections(...args);
 const processTags = (...args) => actions.processTags(...args);
 const showToast = (...args) => actions.showToast(...args);
 const updateCollectionsFilterDropdown = (...args) => actions.updateCollectionsFilterDropdown(...args);
+const normalizeCollectionKey = (...args) => actions.normalizeCollectionKey(...args);
 
 let isScrollLoading = false;
 
-function onDataLoadedSuccess() {
+function onDataLoadedSuccess({ append = false } = {}) {
+  const scrollContainer = document.getElementById('main-panel');
+  const previousScrollTop = append && scrollContainer ? scrollContainer.scrollTop : null;
   processCollections();
   updateCollectionsFilterDropdown();
   processTags();
 
   // Set layout from localStorage
-  const savedLayout = localStorage.getItem('bookmarks_layout') || 'grid';
-  changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
+  if (!AppState.layoutInitialized) {
+    const savedLayout = localStorage.getItem('bookmarks_layout') || 'grid';
+    changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
+    AppState.layoutInitialized = true;
+  }
 
-  applyFiltersAndSearch();
+  applyFiltersAndSearch({ resetPagination: !append });
+  if (previousScrollTop !== null && scrollContainer) {
+    scrollContainer.scrollTop = previousScrollTop;
+    requestAnimationFrame(() => { scrollContainer.scrollTop = previousScrollTop; });
+  }
   console.info("Bookmarks loaded successfully.");
 }
 
@@ -62,10 +72,12 @@ function renderBrowserGroupedFeed(visibleSlice) {
   ordered.forEach(([label, items]) => {
     const section = document.createElement("section");
     section.className = "browser-category-section";
+    const rawCategory = items.length ? normalizeCollectionKey(items[0].folder) : '';
+    const canRename = Boolean(rawCategory) && rawCategory.toLowerCase() !== 'uncategorized';
     section.innerHTML = `
       <div class="browser-category-heading">
         <div>
-          <h3>${escapeHTML(label)}</h3>
+          <h3>${escapeHTML(label)}${canRename ? ` <button type="button" class="category-rename-btn" data-category-rename="browser" data-category-old="${escapeHTML(rawCategory)}" aria-label="Rename category" title="Rename category"><i class="app-icon icon-pen"></i></button>` : ''}</h3>
           <p>${items.length} saved link${items.length === 1 ? "" : "s"}</p>
         </div>
       </div>
@@ -228,7 +240,14 @@ function initInfiniteScrollObserver() {
     const total = AppState.filteredBookmarks.length;
     if (AppState.visibleCount < total) {
       isScrollLoading = true;
-      setTimeout(() => { AppState.visibleCount += POSTS_PER_PAGE; renderFeedGrid(); isScrollLoading = false; }, 300);
+      const previousScrollTop = scrollContainer.scrollTop;
+      setTimeout(() => {
+        AppState.visibleCount += POSTS_PER_PAGE;
+        renderFeedGrid();
+        scrollContainer.scrollTop = previousScrollTop;
+        requestAnimationFrame(() => { scrollContainer.scrollTop = previousScrollTop; });
+        isScrollLoading = false;
+      }, 300);
       return;
     }
     if (AppState.hasMore && !AppState.isLoadingMore) loadData({ append: true });

@@ -2,7 +2,6 @@ import { AppState, DOM, POSTS_PER_PAGE } from '../../app/state.js';
 import { actions, registerActions } from '../../app/actions.js';
 
 const escapeHTML = (...args) => actions.escapeHTML(...args);
-const normalizeCollectionKey = (...args) => actions.normalizeCollectionKey(...args);
 const showToast = (...args) => actions.showToast(...args);
 
 function setManualImageFromFile(file) {
@@ -55,52 +54,10 @@ function setManualImageFieldVisible(visible) {
   if (visible) updateManualImagePreview();
 }
 
-function updateCategoryEditButtonVisibility() {
-  if (!DOM.btnEditCategoryName || !DOM.addCategory) return;
-  const value = DOM.addCategory.value;
-  DOM.btnEditCategoryName.hidden = !value || value === '__new__';
-}
-
-function renameSelectedModalCategory() {
-  if (!DOM.addCategory) return;
-  const currentValue = DOM.addCategory.value;
-  if (!currentValue || currentValue === '__new__') return;
-  const currentLabel = DOM.addCategory.options[DOM.addCategory.selectedIndex] ? DOM.addCategory.options[DOM.addCategory.selectedIndex].textContent : currentValue;
-  const nextName = window.prompt('Rename this category for this bookmark:', currentLabel);
-  if (nextName === null) return;
-  const cleaned = nextName.trim();
-  if (!cleaned) {
-    showToast('Category name cannot be empty.', 'error');
-    return;
-  }
-  const normalized = normalizeCollectionKey(cleaned);
-  if (normalized === 'uncategorized') {
-    DOM.addCategory.value = '';
-    updateCategoryEditButtonVisibility();
-    return;
-  }
-  let option = Array.from(DOM.addCategory.options).find(opt => opt.value.toLowerCase() === normalized.toLowerCase());
-  if (!option) {
-    option = document.createElement('option');
-    option.value = normalized;
-    option.textContent = normalized;
-    const newOption = Array.from(DOM.addCategory.options).find(opt => opt.value === '__new__');
-    DOM.addCategory.insertBefore(option, newOption || null);
-  } else {
-    option.textContent = normalized;
-  }
-  DOM.addCategory.value = option.value;
-  if (DOM.addCategoryNew) {
-    DOM.addCategoryNew.style.display = 'none';
-    DOM.addCategoryNew.value = '';
-  }
-  updateCategoryEditButtonVisibility();
-  showToast('Category name updated for this save.', 'info');
-}
-
 function updateManualModalPlatformUI(platformValue = '') {
   const isBrowser = platformValue === 'browser';
   const isCustom = platformValue === '__custom__';
+  if (DOM.addUrlLabel) DOM.addUrlLabel.textContent = isBrowser ? 'Site Link' : 'Post URL';
   if (DOM.addTagsGroup) DOM.addTagsGroup.hidden = isBrowser;
   if (isBrowser && DOM.addTags) DOM.addTags.value = '';
   if (DOM.addCustomPlatformGroup) DOM.addCustomPlatformGroup.hidden = !isCustom;
@@ -113,5 +70,5 @@ function updateManualModalPlatformUI(platformValue = '') {
   }
 }
 
-registerActions('bookmark-media', { setManualImageFromFile, setManualImageSourceControlsVisible, clearManualImageValue, updateManualImagePreview, setManualImageFieldVisible, updateCategoryEditButtonVisibility, renameSelectedModalCategory, updateManualModalPlatformUI });
-export { setManualImageFromFile, setManualImageSourceControlsVisible, clearManualImageValue, updateManualImagePreview, setManualImageFieldVisible, updateCategoryEditButtonVisibility, renameSelectedModalCategory, updateManualModalPlatformUI };
+registerActions('bookmark-media', { setManualImageFromFile, setManualImageSourceControlsVisible, clearManualImageValue, updateManualImagePreview, setManualImageFieldVisible, updateManualModalPlatformUI });
+export { setManualImageFromFile, setManualImageSourceControlsVisible, clearManualImageValue, updateManualImagePreview, setManualImageFieldVisible, updateManualModalPlatformUI };

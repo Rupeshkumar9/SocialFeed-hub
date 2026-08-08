@@ -8,21 +8,37 @@
   <meta name="description"
     content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    
+  <script>
+    (() => {
+      const stored = localStorage.getItem('socialfeed_theme');
+      const theme = stored === 'dark' || stored === 'light'
+        ? stored
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+    })();
+  </script>
 </head>
 
-<body class="auth-pending">
+<body class="auth-checking">
+  <div id="auth-loading" class="auth-loading" role="status">
+    <span id="auth-loading-message">Checking your session…</span>
+    <button id="auth-retry" class="btn-secondary" type="button" hidden>Retry</button>
+  </div>
   <div id="login-gate" class="login-gate" aria-live="polite">
     <form id="private-login-form" class="login-card">
       <div class="logo-icon"><img class="brand-logo-image" src="/favicon.svg" alt=""></div>
       <h2>Welcome back</h2>
       <p>Your SocialFeed Hub is private. Sign in to open your bookmarks.</p>
+      <label for="private-login-email">Email</label>
+      <input id="private-login-email" type="email" autocomplete="username" required placeholder="you@example.com">
       <label for="private-login-password">Password</label>
       <input id="private-login-password" type="password" autocomplete="current-password" required placeholder="Enter your password">
       <p id="private-login-error" class="login-error" hidden></p>
       <button id="private-login-submit" class="btn-primary login-submit" type="submit" aria-busy="false">
         <span>Sign in</span>
       </button>
+      <button id="private-signup-button" class="btn-secondary login-signup" type="button" disabled>Sign up - (coming soon)</button>
     </form>
   </div>
 
@@ -58,6 +74,11 @@
         <button id="sync-btn" class="sync-status-btn" title="Sync status">
           <span class="sync-dot" id="sync-dot"></span>
           <span id="sync-status-text" class="btn-text">Server Connected</span>
+        </button>
+
+        <button id="theme-toggle" class="theme-toggle-btn" type="button" aria-pressed="false" title="Switch theme">
+          <i class="app-icon icon-moon" aria-hidden="true"></i>
+          <span class="sr-only">Switch theme</span>
         </button>
 
         <!-- sync -->
@@ -258,26 +279,34 @@
             </div>
           </div>
 
-          <!-- Collapsible Stats Panel -->
-          <div class="stats-panel" id="stats-panel" style="display: none;">
-            <div class="stats-grid stats-grid-refined" id="stats-grid">
-              <div class="stats-card stats-card-wide">
-                <h3><i class="app-icon icon-circle-nodes"></i> Platform Splits</h3>
-                <div class="stats-list" id="stat-platform-splits"></div>
-              </div>
-              <div class="stats-card stats-card-wide">
-                <h3><i class="app-icon icon-bookmark"></i> Browser Bookmarks</h3>
-                <div class="stats-list" id="stat-browser-splits"></div>
-              </div>
-            </div>
-          </div>
-
           <div class="bookmarks-grid" id="bookmarks-grid">
             <!-- Bookmark Cards will be dynamically injected here -->
           </div>
           <div id="load-more-container" class="load-more-container"><button type="button" id="btn-load-more" class="btn-secondary">Load more bookmarks</button></div>
         </section>
       </main>
+    </div>
+
+    <!-- Analytics Modal Overlay -->
+    <div class="modal-overlay analytics-modal-overlay" id="stats-panel" hidden>
+      <div class="modal-box analytics-modal-box" role="dialog" aria-modal="true" aria-labelledby="analytics-modal-title">
+        <div class="modal-header">
+          <h3 id="analytics-modal-title">Analytics</h3>
+          <button class="close-btn" id="close-analytics-modal" type="button" aria-label="Close analytics">&times;</button>
+        </div>
+        <div class="modal-body analytics-modal-body">
+          <div class="stats-grid stats-grid-refined" id="stats-grid">
+            <div class="stats-card stats-card-wide">
+              <h3><i class="app-icon icon-circle-nodes"></i> Platform Splits</h3>
+              <div class="stats-list" id="stat-platform-splits"></div>
+            </div>
+            <div class="stats-card stats-card-wide">
+              <h3><i class="app-icon icon-bookmark"></i> Browser Bookmarks</h3>
+              <div class="stats-list" id="stat-browser-splits"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Import Modal Overlay -->
@@ -347,8 +376,7 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-url" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Post
-                URL</label>
+              <label id="add-url-label" for="add-url" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Post URL</label>
               <input type="url" id="add-url" class="search-input" style="padding-left: 14px;"
                 placeholder="Paste any bookmark link..." required>
               <div id="add-preview-status" class="link-preview-status" hidden></div>
@@ -361,9 +389,6 @@
                 <select id="add-category" class="filter-select" style="padding-left: 14px; width: 100%; height: 42px;">
                   <!-- Filled dynamically -->
                 </select>
-                <button type="button" id="btn-edit-category-name" class="btn-inline-edit-category" title="Edit selected category" hidden>
-                  <i class="app-icon icon-pen"></i>
-                </button>
               </div>
               <input type="text" id="add-category-new" class="search-input"
                 style="padding-left: 14px; margin-top: 6px; display: none;" placeholder="Enter new category name">

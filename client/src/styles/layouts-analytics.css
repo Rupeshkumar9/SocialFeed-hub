@@ -253,6 +253,49 @@
   animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.analytics-modal-overlay.stats-panel {
+  height: 100dvh;
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--overlay-bg);
+}
+
+.analytics-modal-box {
+  width: min(1000px, calc(100vw - 48px));
+  max-height: 85dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-modal-box .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.analytics-modal-box .modal-header {
+  flex: 0 0 auto;
+}
+
+.analytics-modal-box .stats-grid {
+  margin-top: 0;
+}
+
+@media (max-width: 680px) {
+  .analytics-modal-overlay.stats-panel {
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .analytics-modal-box {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

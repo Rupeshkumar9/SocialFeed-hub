@@ -1,0 +1,82 @@
+html[data-theme="dark"] body,
+html[data-theme="dark"] #app-layout {
+  background-color: var(--bg-color);
+  background-image: linear-gradient(135deg, var(--surface-solid) 0%, var(--bg-color) 100%);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .main-header,
+html[data-theme="dark"] #sidebar,
+html[data-theme="dark"] .mobile-drawer,
+html[data-theme="dark"] .settings-view,
+html[data-theme="dark"] .login-gate {
+  background: var(--surface-solid);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .login-card {
+  background: var(--surface-solid);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .search-input,
+html[data-theme="dark"] .filter-select,
+html[data-theme="dark"] .login-card input,
+html[data-theme="dark"] .modal-input,
+html[data-theme="dark"] .card-notes-textarea,
+html[data-theme="dark"] textarea {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .modal-box,
+html[data-theme="dark"] .stats-card,
+html[data-theme="dark"] .bookmark-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .dropdown-menu {
+  background-color: var(--surface-solid);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .settings-details div,
+html[data-theme="dark"] .link-preview-status,
+html[data-theme="dark"] .folder-select,
+html[data-theme="dark"] .stats-panel {
+  background-color: var(--surface-soft);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .modal-overlay,
+html[data-theme="dark"] .mobile-drawer-overlay {
+  background-color: var(--overlay-bg);
+}
+
+html[data-theme="dark"] .settings-logout {
+  background: var(--surface-solid);
+  color: #fb7185;
+}
+
+.theme-toggle-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.theme-toggle-btn:hover,
+.theme-toggle-btn:focus-visible {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--border-focus);
+}

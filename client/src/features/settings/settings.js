@@ -7,6 +7,7 @@ function openSettings() {
   AppState.isSettingsOpen = true;
   document.getElementById("feed-content").hidden = true;
   document.getElementById("settings-view").hidden = false;
+  document.getElementById("settings-view").scrollTop = 0;
   updateSidebarNavigation();
 }
 

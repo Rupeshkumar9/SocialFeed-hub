@@ -49,7 +49,6 @@ function handleAdminLoginSubmit(e) {
     .then(res => res.json())
     .then(data => {
       if (data && data.status === 'ok' && data.isAdmin) {
-        localStorage.setItem('admin_token', password);
         AppState.isAdmin = true;
         document.body.classList.remove('visitor-mode');
         updateAdminLoginUI(true);
@@ -67,12 +66,22 @@ function handleAdminLoginSubmit(e) {
 }
 
 function showPrivateLogin(message) {
-  document.body.classList.add("auth-pending");
+  document.body.classList.remove('auth-checking');
+  document.body.classList.add("auth-required");
   document.body.classList.remove("visitor-mode");
   AppState.isAdmin = false;
   AppState.isServerConnected = false;
   const error = document.getElementById("private-login-error");
   if (error) { error.hidden = !message; error.textContent = message || ""; }
+}
+
+function showAuthStartupError(message = 'Unable to verify your private session.') {
+  document.body.classList.remove('auth-required');
+  document.body.classList.add('auth-checking');
+  const loadingMessage = document.getElementById('auth-loading-message');
+  const retry = document.getElementById('auth-retry');
+  if (loadingMessage) loadingMessage.textContent = message;
+  if (retry) retry.hidden = false;
 }
 
 async function checkServerConnection() {
@@ -81,7 +90,7 @@ async function checkServerConnection() {
     AppState.isServerConnected = true;
     AppState.isAdmin = true;
     applyRouteFromHash({ load: false });
-    document.body.classList.remove('auth-pending', 'visitor-mode');
+    document.body.classList.remove('auth-checking', 'auth-required', 'visitor-mode');
     updateSyncStatusUI(true);
     const profile = data?.profile || {};
     const name = document.getElementById('settings-profile-name');
@@ -93,16 +102,26 @@ async function checkServerConnection() {
     return { authenticated: true, data };
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) showPrivateLogin();
-    else showPrivateLogin('Unable to verify your private session.');
+    else showAuthStartupError();
     return { authenticated: false, error };
   }
 }
 
 function initAuthEvents() {
   const loginForm = document.getElementById('private-login-form');
+  const loginEmail = document.getElementById('private-login-email');
   const loginPassword = document.getElementById('private-login-password');
   const loginError = document.getElementById('private-login-error');
   const loginSubmit = document.getElementById('private-login-submit');
+  const retry = document.getElementById('auth-retry');
+
+  retry?.addEventListener('click', async () => {
+    retry.hidden = true;
+    const loadingMessage = document.getElementById('auth-loading-message');
+    if (loadingMessage) loadingMessage.textContent = 'Checking your session…';
+    const session = await checkServerConnection();
+    if (session.authenticated) await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData()]);
+  });
 
   const setLoginSubmitting = (submitting) => {
     if (!loginSubmit) return;
@@ -119,7 +138,8 @@ function initAuthEvents() {
     loginError.hidden = true;
     setLoginSubmitting(true);
     try {
-      await socialFeedApi.login(loginPassword.value);
+      await socialFeedApi.login(loginEmail.value, loginPassword.value);
+      loginEmail.value = '';
       loginPassword.value = '';
       const session = await checkServerConnection();
       if (session.authenticated) {
@@ -147,5 +167,5 @@ function initAuthEvents() {
   document.getElementById('btn-settings-logout')?.addEventListener('click', logout);
 }
 
-registerActions('auth', { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, checkServerConnection, initAuthEvents });
-export { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, checkServerConnection, initAuthEvents };
+registerActions('auth', { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, showAuthStartupError, checkServerConnection, initAuthEvents });
+export { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, showAuthStartupError, checkServerConnection, initAuthEvents };

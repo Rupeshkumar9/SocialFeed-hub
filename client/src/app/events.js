@@ -26,10 +26,8 @@ const populateModalCategorySelect = (...args) => actions.populateModalCategorySe
 const previewBrowserLink = (...args) => actions.previewBrowserLink(...args);
 const isKnownSocialPlatform = (...args) => actions.isKnownSocialPlatform(...args);
 const platformLabel = (...args) => actions.platformLabel(...args);
-const renameSelectedModalCategory = (...args) => actions.renameSelectedModalCategory(...args);
 const renderFeedGrid = (...args) => actions.renderFeedGrid(...args);
 const saveBookmarkNotes = (...args) => actions.saveBookmarkNotes(...args);
-const saveBrowserBookmark = (...args) => actions.saveBrowserBookmark(...args);
 const saveDataToServer = (...args) => actions.saveDataToServer(...args);
 const saveModalNoteAndClose = (...args) => actions.saveModalNoteAndClose(...args);
 const setManualImageFieldVisible = (...args) => actions.setManualImageFieldVisible(...args);
@@ -40,13 +38,27 @@ const syncFilterSelects = (...args) => actions.syncFilterSelects(...args);
 const toggleSelectionMode = (...args) => actions.toggleSelectionMode(...args);
 const triggerManualDownload = (...args) => actions.triggerManualDownload(...args);
 const updateAdminLoginUI = (...args) => actions.updateAdminLoginUI(...args);
-const updateCategoryEditButtonVisibility = (...args) => actions.updateCategoryEditButtonVisibility(...args);
 const updateManualImagePreview = (...args) => actions.updateManualImagePreview(...args);
 const updateManualModalPlatformUI = (...args) => actions.updateManualModalPlatformUI(...args);
 const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
 const updateStatsAnalytics = (...args) => actions.updateStatsAnalytics(...args);
+const openCategoryRenameDialog = (...args) => actions.openCategoryRenameDialog(...args);
 
 function initEventListeners() {
+  DOM.feedTitle?.addEventListener('click', event => {
+    const button = event.target.closest('[data-category-rename]');
+    if (!button || button.dataset.categoryRename !== 'social') return;
+    openCategoryRenameDialog({
+      source: 'social',
+      platform: AppState.activePlatform,
+      oldName: AppState.activeCollection
+    });
+  });
+  DOM.bookmarksGrid?.addEventListener('click', event => {
+    const button = event.target.closest('[data-category-rename]');
+    if (!button || button.dataset.categoryRename !== 'browser') return;
+    openCategoryRenameDialog({ source: 'browser', oldName: button.dataset.categoryOld });
+  });
   // Search typing (debounced to prevent typing lag and layout re-calculations)
   DOM.searchInput.addEventListener('input', debounce((e) => {
     AppState.searchQuery = e.target.value;
@@ -254,28 +266,68 @@ function initEventListeners() {
 
 
 
-  // Analytics toggle stats panel (sidebar item)
+  // Analytics modal (sidebar item)
   const btnToggleStats = document.getElementById('btn-toggle-stats');
   const statsPanel = document.getElementById('stats-panel');
+  const closeAnalytics = document.getElementById('close-analytics-modal');
+  const closeAnalyticsModal = () => {
+    if (!statsPanel) return;
+    statsPanel.hidden = true;
+    statsPanel.classList.remove('active');
+    AppState.isAnalyticsOpen = false;
+    const li = btnToggleStats?.closest('.menu-item');
+    btnToggleStats?.classList.remove('active');
+    li?.classList.remove('active');
+    AppState.analyticsReturnFocus?.focus?.();
+    AppState.analyticsReturnFocus = null;
+  };
   if (btnToggleStats && statsPanel) {
     btnToggleStats.addEventListener('click', () => {
-      const isOpen = statsPanel.style.display !== 'none';
+      const isOpen = !statsPanel.hidden;
       const li = btnToggleStats.closest('.menu-item');
       if (isOpen) {
-        statsPanel.style.display = 'none';
-        btnToggleStats.classList.remove('active');
-        if (li) li.classList.remove('active');
+        closeAnalyticsModal();
       } else {
-        statsPanel.style.display = 'block';
+        closeSettings();
+        AppState.analyticsReturnFocus = btnToggleStats;
+        statsPanel.hidden = false;
+        statsPanel.classList.add('active');
+        AppState.isAnalyticsOpen = true;
         btnToggleStats.classList.add('active');
         if (li) li.classList.add('active');
         updateStatsAnalytics();
+        closeAnalytics?.focus();
       }
       // Close mobile drawer after activation
       const drawer = document.getElementById('mobile-drawer-overlay');
       if (drawer) drawer.classList.remove('active');
     });
   }
+  closeAnalytics?.addEventListener('click', closeAnalyticsModal);
+  statsPanel?.addEventListener('click', event => {
+    if (event.target === statsPanel) closeAnalyticsModal();
+  });
+  document.addEventListener('keydown', event => {
+    if (!AppState.isAnalyticsOpen || !statsPanel) return;
+    if (event.key === 'Escape') {
+      closeAnalyticsModal();
+      return;
+    }
+    if (event.key === 'Tab') {
+      const focusable = [...statsPanel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter(element => !element.disabled && !element.hidden && element.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
 
   // Import Modal Overlay bindings
   DOM.btnImport.addEventListener('click', () => DOM.importModalOverlay.classList.add('active'));
@@ -318,6 +370,9 @@ function initEventListeners() {
     if (submitBtn) submitBtn.textContent = 'Add to Feed';
     DOM.addUrl.readOnly = false;
     DOM.addBookmarkForm.reset();
+    AppState.linkPreview = null;
+    const previewStatus = document.getElementById('add-preview-status');
+    if (previewStatus) { previewStatus.hidden = true; previewStatus.textContent = ''; }
     updateManualModalPlatformUI('');
     if (DOM.addThumbnail) DOM.addThumbnail.value = '';
     setManualImageFieldVisible(false);
@@ -333,7 +388,6 @@ function initEventListeners() {
         DOM.addCategoryNew.style.display = 'none';
         DOM.addCategoryNew.value = '';
       }
-      updateCategoryEditButtonVisibility();
     });
   }
 
@@ -344,6 +398,11 @@ function initEventListeners() {
       populateModalCategorySelect('', getCategoryContextFromPlatform(addPlatformSelect.value));
       updateManualModalPlatformUI(addPlatformSelect.value);
       if (addPlatformSelect.value === 'browser' && DOM.addUrl && DOM.addUrl.value.trim()) previewBrowserLink(DOM.addUrl.value.trim());
+      else {
+        AppState.linkPreview = null;
+        const status = document.getElementById('add-preview-status');
+        if (status) { status.hidden = true; status.textContent = ''; }
+      }
     });
   }
 
@@ -355,7 +414,6 @@ function initEventListeners() {
   }
   if (DOM.addThumbnail) DOM.addThumbnail.addEventListener('input', updateManualImagePreview);
   if (DOM.addImagePreview) DOM.addImagePreview.addEventListener('click', event => { if (event.target.closest('.manual-image-remove')) clearManualImageValue(); });
-  if (DOM.btnEditCategoryName) DOM.btnEditCategoryName.addEventListener('click', renameSelectedModalCategory);
   if (DOM.addImageDropzone && DOM.addImageFile) {
     DOM.addImageDropzone.addEventListener('click', () => DOM.addImageFile.click());
     DOM.addImageDropzone.addEventListener('dragover', event => { event.preventDefault(); DOM.addImageDropzone.classList.add('dragover'); });
@@ -641,9 +699,11 @@ function initPrivateEventListeners() {
   if (DOM.addUrl) DOM.addUrl.addEventListener('blur', () => {
     if (platformSelect?.value === 'browser' && DOM.addUrl.value.trim()) previewBrowserLink(DOM.addUrl.value.trim());
   });
-  if (DOM.addBookmarkForm) DOM.addBookmarkForm.addEventListener('submit', event => {
-    if (platformSelect?.value === 'browser' && !AppState.editingId) saveBrowserBookmark(event);
-  }, true);
+  if (DOM.addUrl) DOM.addUrl.addEventListener('input', () => {
+    AppState.linkPreview = null;
+    const status = document.getElementById('add-preview-status');
+    if (status) { status.hidden = true; status.textContent = ''; }
+  });
 }
 
 registerActions('events', { initEventListeners, checkMobileDrawerLayout, initPrivateEventListeners });

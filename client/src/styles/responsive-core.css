@@ -22,6 +22,15 @@
 }
 
 @media (max-width: 768px) {
+  .app-body {
+    height: calc(100vh - 64px);
+    height: calc(100dvh - 64px);
+  }
+
+  #main-panel {
+    min-height: 0;
+  }
+
   .bookmarks-grid {
     gap: 12px;
   }
@@ -172,4 +181,3 @@
     padding: 2px 5px;
   }
 }
-
