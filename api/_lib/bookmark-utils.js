@@ -16,6 +16,7 @@ function detectPlatform(url = '') {
   if (lower.includes('threads.net')) return 'threads';
   if (lower.includes('reddit.com') || lower.includes('redd.it')) return 'reddit';
   if (lower.includes('facebook.com') || lower.includes('fb.watch')) return 'facebook';
+  if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
   return 'web';
 }
 
@@ -42,6 +43,20 @@ function extractPlatformItemId(url = '', platform = detectPlatform(url)) {
     const post = value.match(/\/posts\/([a-zA-Z0-9_.-]+)/i);
     const story = value.match(/[?&]story_fbid=([0-9]+)/i);
     return post ? post[1] : story ? story[1] : null;
+  }
+  if (platform === 'youtube') {
+    try {
+      const parsed = new URL(value);
+      if (parsed.hostname.toLowerCase().replace(/^www\./, '') === 'youtu.be') {
+        return parsed.pathname.split('/').filter(Boolean)[0] || null;
+      }
+      const queryId = parsed.searchParams.get('v');
+      if (queryId) return queryId;
+      const pathMatch = parsed.pathname.match(/\/(?:shorts|embed|live)\/([a-zA-Z0-9_-]+)/i);
+      return pathMatch ? pathMatch[1] : null;
+    } catch (error) {
+      return null;
+    }
   }
   return null;
 }
@@ -100,7 +115,7 @@ function normalizeHashtags(hashtags, content = '') {
   }
 
   // Filter out any system tags that may have leaked in from old data
-  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook'];
+  const SYSTEM_TAGS = ['imported', 'manual', 'x-archive', 'instagram-archive', 'extracted-link', 'instagram', 'x-post', 'threads', 'reddit', 'facebook', 'youtube'];
   const result = Array.from(out).filter(t => !SYSTEM_TAGS.includes(t));
   return result;
 }
@@ -118,7 +133,13 @@ function normalizeFolderValue(value) {
 
 function normalizeBookmark(item = {}, options = {}) {
   const now = options.now || new Date().toISOString();
-  const platform = String(item.platform || detectPlatform(item.url)).toLowerCase();
+  const rawPlatform = String(item.platform || detectPlatform(item.url)).toLowerCase().trim();
+  const platform = (rawPlatform === 'twitter' ? 'x' : rawPlatform)
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'web';
+  const platformName = String(item.platformName || '').trim().slice(0, 40);
   const platformItemId = item.platformItemId || extractPlatformItemId(item.url, platform);
   const canonical = item.canonicalUrl || canonicalUrl(item.url);
   
@@ -141,11 +162,12 @@ function normalizeBookmark(item = {}, options = {}) {
     ...item,
     id: buildBookmarkId(platform, platformItemId, item.id),
     platform,
+    platformName,
     platformItemId,
     canonicalUrl: canonical,
     identityKey: item.identityKey || (platformItemId ? platform + ':' + platformItemId : 'url:' + canonical),
     source: item.source || options.source || 'social',
-    authorName: item.authorName || (platform === 'instagram' ? 'Instagram Creator' : platform === 'x' ? 'X User' : 'Social Creator'),
+    authorName: item.authorName || (platform === 'instagram' ? 'Instagram Creator' : platform === 'x' ? 'X User' : platform === 'youtube' ? 'YouTube Creator' : platformName ? `${platformName} Creator` : 'Social Creator'),
     authorUsername: item.authorUsername || (platform === 'instagram' ? 'instagram_user' : platform === 'x' ? 'twitter_user' : 'user'),
     content: cleanedContent,
     postUploadedAt,

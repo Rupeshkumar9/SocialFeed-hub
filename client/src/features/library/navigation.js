@@ -5,6 +5,7 @@ const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args
 const closeSettings = (...args) => actions.closeSettings(...args);
 const loadData = (...args) => actions.loadData(...args);
 const openSettings = (...args) => actions.openSettings(...args);
+const platformLabel = (...args) => actions.platformLabel(...args);
 const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
 
 function processCollections() {
@@ -82,7 +83,17 @@ function filterByTag(tag) {
 
 
 function syncFilterSelects() {
-  if (DOM.filterPlatform) DOM.filterPlatform.value = AppState.activePlatform;
+  if (DOM.filterPlatform) {
+    DOM.filterPlatform.querySelectorAll('option[data-dynamic-platform]').forEach(option => option.remove());
+    if (AppState.activePlatform !== 'all' && !Array.from(DOM.filterPlatform.options).some(option => option.value === AppState.activePlatform)) {
+      const option = document.createElement('option');
+      option.value = AppState.activePlatform;
+      option.textContent = platformLabel(AppState.activePlatform);
+      option.dataset.dynamicPlatform = 'true';
+      DOM.filterPlatform.appendChild(option);
+    }
+    DOM.filterPlatform.value = AppState.activePlatform;
+  }
   const collectionSelect = document.getElementById('filter-collection');
   if (collectionSelect) collectionSelect.value = AppState.activeCollection;
 }
@@ -130,6 +141,7 @@ function getCategoryDefaultLabel(source = AppState.activeSource) {
 function getCategoryContextFromPlatform(platformValue) {
   const platform = String(platformValue || "").trim();
   if (platform === "browser") return { source: "browser", platform: "browser" };
+  if (platform === "__custom__") return { source: "social", platform: "all" };
   if (platform && platform !== "all") return { source: "social", platform };
   return { source: AppState.activeSource === "browser" ? "browser" : "social", platform: AppState.activePlatform || "all" };
 }
@@ -179,8 +191,8 @@ function platformIconMarkup(platform, className = "") {
   if (platform === "threads") {
     return "<svg class=\"platform-inline-icon" + extra + "\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z\"/></svg>";
   }
-  const classes = { instagram: "app-icon icon-instagram", facebook: "app-icon icon-facebook", reddit: "app-icon icon-reddit-alien", browser: "app-icon icon-bookmark" };
-  return "<i class=\"" + (classes[platform] || "app-icon icon-circle-nodes") + extra + "\"></i>";
+  const classes = { instagram: "app-icon icon-instagram", facebook: "app-icon icon-facebook", reddit: "app-icon icon-reddit-alien", youtube: "app-icon icon-youtube", browser: "app-icon icon-bookmark" };
+  return "<i class=\"" + (classes[platform] || "app-icon icon-globe") + extra + "\"></i>";
 }
 
 function getLoadedTagCounts() {
@@ -196,13 +208,42 @@ function getLoadedTagCounts() {
 }
 
 function updateSidebarNavigation() {
-  const platformCounts = AppState.platformCounts ? { ...AppState.platformCounts } : { all: AppState.bookmarks.length, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0 };
+  const platformCounts = AppState.platformCounts ? { ...AppState.platformCounts } : { all: 0, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0, youtube: 0 };
   if (!AppState.platformCounts) {
     AppState.bookmarks.forEach(bm => {
+      if (bm.source === 'browser' || bm.platform === 'browser') return;
       let platform = (bm.platform || "web").toLowerCase().trim();
       if (platform === "twitter") platform = "x";
-      if (platformCounts[platform] !== undefined) platformCounts[platform]++;
+      platformCounts[platform] = (platformCounts[platform] || 0) + 1;
+      platformCounts.all += 1;
     });
+  }
+
+  if (DOM.sidebarPlatformList) {
+    DOM.sidebarPlatformList.querySelectorAll('[data-dynamic-platform]').forEach(item => item.remove());
+    const knownPlatforms = new Set(['all', 'instagram', 'x', 'threads', 'reddit', 'facebook', 'youtube']);
+    Object.entries(platformCounts)
+      .filter(([platform, count]) => !knownPlatforms.has(platform) && Number(count) > 0)
+      .sort(([platformA], [platformB]) => platformLabel(platformA).localeCompare(platformLabel(platformB)))
+      .forEach(([platform, count]) => {
+        const li = document.createElement('li');
+        li.className = 'menu-item';
+        li.dataset.dynamicPlatform = 'true';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.platform = platform;
+        button.dataset.sidebarRoute = '#platform=' + encodeURIComponent(platform);
+        button.insertAdjacentHTML('afterbegin', platformIconMarkup(platform));
+        const label = document.createElement('span');
+        label.textContent = platformLabel(platform);
+        const countElement = document.createElement('span');
+        countElement.className = 'menu-count';
+        countElement.textContent = count;
+        button.append(label, countElement);
+        button.addEventListener('contextmenu', event => showSidebarContextMenu(event, button.dataset.sidebarRoute));
+        li.appendChild(button);
+        DOM.sidebarPlatformList.appendChild(li);
+      });
   }
 
   Object.entries(platformCounts).forEach(([platform, count]) => {

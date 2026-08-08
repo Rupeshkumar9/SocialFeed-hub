@@ -65,7 +65,7 @@ async function refreshPlatformCounts() {
   try {
     const data = await socialFeedApi.getCounts();
     AppState.libraryCounts = data;
-    AppState.platformCounts = data?.platforms || { all: data?.all || 0, instagram: data?.instagram || 0, x: data?.x || 0, threads: data?.threads || 0, reddit: data?.reddit || 0, facebook: data?.facebook || 0 };
+    AppState.platformCounts = data?.platforms || { all: data?.all || 0, instagram: data?.instagram || 0, x: data?.x || 0, threads: data?.threads || 0, reddit: data?.reddit || 0, facebook: data?.facebook || 0, youtube: data?.youtube || 0 };
     setDatabaseStatus(true);
     updateSidebarNavigation();
     updateStatsAnalytics();

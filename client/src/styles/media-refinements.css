@@ -63,6 +63,14 @@
   background-color: #ff4500;
 }
 
+.metric-bar.youtube-bar {
+  background-color: var(--platform-youtube);
+}
+
+.metric-bar.custom-platform-bar {
+  background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+}
+
 .stats-empty-line {
   font-size: 0.75rem;
   color: var(--text-muted);

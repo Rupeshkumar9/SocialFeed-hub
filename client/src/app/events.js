@@ -24,6 +24,8 @@ const openBulkEditModal = (...args) => actions.openBulkEditModal(...args);
 const openSettings = (...args) => actions.openSettings(...args);
 const populateModalCategorySelect = (...args) => actions.populateModalCategorySelect(...args);
 const previewBrowserLink = (...args) => actions.previewBrowserLink(...args);
+const isKnownSocialPlatform = (...args) => actions.isKnownSocialPlatform(...args);
+const platformLabel = (...args) => actions.platformLabel(...args);
 const renameSelectedModalCategory = (...args) => actions.renameSelectedModalCategory(...args);
 const renderFeedGrid = (...args) => actions.renderFeedGrid(...args);
 const saveBookmarkNotes = (...args) => actions.saveBookmarkNotes(...args);
@@ -316,6 +318,7 @@ function initEventListeners() {
     if (submitBtn) submitBtn.textContent = 'Add to Feed';
     DOM.addUrl.readOnly = false;
     DOM.addBookmarkForm.reset();
+    updateManualModalPlatformUI('');
     if (DOM.addThumbnail) DOM.addThumbnail.value = '';
     setManualImageFieldVisible(false);
     populateModalCategorySelect('', getCategoryContextFromPlatform(''));
@@ -375,9 +378,12 @@ function initEventListeners() {
     const addPlatformSelect = document.getElementById('add-platform');
     if (addPlatformSelect) {
       const nextPlatform = AppState.activeSource === 'browser' ? 'browser' : (AppState.activePlatform !== 'all' ? AppState.activePlatform : '');
-      addPlatformSelect.value = nextPlatform;
-      populateModalCategorySelect('', getCategoryContextFromPlatform(nextPlatform));
-      updateManualModalPlatformUI(nextPlatform);
+      const isCustom = AppState.activeSource === 'social' && nextPlatform && !isKnownSocialPlatform(nextPlatform);
+      const selectedValue = isCustom ? '__custom__' : nextPlatform;
+      addPlatformSelect.value = selectedValue;
+      updateManualModalPlatformUI(selectedValue);
+      if (isCustom && DOM.addCustomPlatformName) DOM.addCustomPlatformName.value = platformLabel(nextPlatform);
+      populateModalCategorySelect('', getCategoryContextFromPlatform(isCustom ? nextPlatform : selectedValue));
     }
     DOM.addModalOverlay.classList.add('active');
   });

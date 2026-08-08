@@ -102,6 +102,20 @@
   background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
 }
 
+.bookmark-card.youtube-post .card-platform-icon {
+  background-color: var(--platform-youtube-bg);
+  border: 1px solid rgba(255, 0, 0, 0.14);
+  color: var(--platform-youtube);
+}
+
+.youtube-fallback {
+  background: linear-gradient(135deg, #fff1f1 0%, #ffffff 100%);
+}
+
+.custom-platform-fallback {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+}
+
 @media (max-width: 768px) {
   #sidebar {
     display: none;
@@ -295,5 +309,4 @@
     flex-direction: column;
   }
 }
-
 

@@ -1,5 +1,6 @@
 import { AppState, DOM, POSTS_PER_PAGE } from '../../app/state.js';
 import { actions, registerActions } from '../../app/actions.js';
+import { BookmarksImporter } from '../import/importer.js';
 
 const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
 const defaultAuthorNameForPlatform = (...args) => actions.defaultAuthorNameForPlatform(...args);
@@ -8,6 +9,9 @@ const getCategoryContextFromPlatform = (...args) => actions.getCategoryContextFr
 const getCategoryCountsForContext = (...args) => actions.getCategoryCountsForContext(...args);
 const getCategoryDefaultLabel = (...args) => actions.getCategoryDefaultLabel(...args);
 const normalizeCollectionKey = (...args) => actions.normalizeCollectionKey(...args);
+const normalizePlatformSlug = (...args) => actions.normalizePlatformSlug(...args);
+const isKnownSocialPlatform = (...args) => actions.isKnownSocialPlatform(...args);
+const platformLabel = (...args) => actions.platformLabel(...args);
 const platformIconMarkup = (...args) => actions.platformIconMarkup(...args);
 const processCollections = (...args) => actions.processCollections(...args);
 const refreshLocalMetadataAndCounts = (...args) => actions.refreshLocalMetadataAndCounts(...args);
@@ -21,6 +25,37 @@ const updateCollectionsFilterDropdown = (...args) => actions.updateCollectionsFi
 const updateManualModalPlatformUI = (...args) => actions.updateManualModalPlatformUI(...args);
 
 let currentPostModalBookmarkId = null;
+
+function resolveManualPlatformSelection() {
+  const selectedPlatform = document.getElementById('add-platform')?.value || '';
+  if (selectedPlatform !== '__custom__') return { platform: selectedPlatform, platformName: '' };
+
+  const platformName = DOM.addCustomPlatformName?.value.trim() || '';
+  const platform = normalizePlatformSlug(platformName);
+  if (!platformName || !platform) {
+    showToast('Please enter a custom platform name.', 'error');
+    DOM.addCustomPlatformName?.focus();
+    return null;
+  }
+  if (['all', 'browser', 'web'].includes(platform) || isKnownSocialPlatform(platform)) {
+    showToast('That platform is already available. Select it from the platform list.', 'error');
+    DOM.addCustomPlatformName?.focus();
+    return null;
+  }
+  return { platform, platformName };
+}
+
+function extractYouTubeVideoId(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.toLowerCase().replace(/^www\./, '') === 'youtu.be') {
+      return parsed.pathname.split('/').filter(Boolean)[0] || '';
+    }
+    return parsed.searchParams.get('v') || parsed.pathname.match(/\/(?:shorts|embed|live)\/([a-zA-Z0-9_-]+)/i)?.[1] || '';
+  } catch (error) {
+    return '';
+  }
+}
 
 function saveBookmarkNotes(id, notes) {
   const idx = AppState.bookmarks.findIndex(bm => bm.id === id);
@@ -68,8 +103,9 @@ function handleManualBookmarkSubmit(e) {
     categoryVal = '';
   }
 
-  const addPlatformSelect = document.getElementById('add-platform');
-  const platform = addPlatformSelect ? addPlatformSelect.value : '';
+  const resolvedPlatform = resolveManualPlatformSelection();
+  if (!resolvedPlatform) return;
+  const { platform, platformName } = resolvedPlatform;
 
   if (!platform) {
     showToast("Please select a platform.", "error");
@@ -81,7 +117,8 @@ function handleManualBookmarkSubmit(e) {
     if (idx !== -1) {
       const bm = AppState.bookmarks[idx];
       bm.platform = platform;
-      bm.authorName = authorName || (defaultAuthorNameForPlatform(platform));
+      bm.platformName = platformName;
+      bm.authorName = authorName || defaultAuthorNameForPlatform(platform, platformName);
       bm.authorUsername = authorName ? authorName.toLowerCase().replace(/\s+/g, '') : bm.authorUsername;
       bm.content = content || bm.content;
       bm.folder = categoryVal;
@@ -125,6 +162,8 @@ function handleManualBookmarkSubmit(e) {
   } else if (platform === 'facebook') {
     const match = url.match(/\/posts\/([A-Za-z0-9_-]+)/i) || url.match(/story_fbid=([0-9]+)/i);
     id = `fb_${match ? match[1] : Date.now()}`;
+  } else if (platform === 'youtube') {
+    id = `youtube_${extractYouTubeVideoId(url) || Date.now()}`;
   } else {
     id = `${platform}_${Date.now()}`;
   }
@@ -133,14 +172,16 @@ function handleManualBookmarkSubmit(e) {
   const newBookmark = {
     id: id,
     platform: platform,
+    platformName,
+    source: 'social',
     url: url,
-    authorName: authorName || (defaultAuthorNameForPlatform(platform)),
-    authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : 'username',
-    content: content || `Saved ${platform.toUpperCase()} Post (click to load embed)`,
+    authorName: authorName || defaultAuthorNameForPlatform(platform, platformName),
+    authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : platform,
+    content: content || `Saved ${platformLabel(platform, platformName)} Post (click to load embed)`,
     timestamp: new Date().toISOString(),
     hashtags: hashtags,
     folder: categoryVal,
-    notes: '',
+    notes: document.getElementById('add-notes')?.value.trim() || '',
     thumbnail: imageUrl
   };
 
@@ -422,6 +463,8 @@ function handleBulkEditSubmit(e) {
       // 2. Update Platform
       if (platformVal !== '__no_change__') {
         bm.platform = platformVal;
+        bm.platformName = '';
+        bm.source = 'social';
         bookmarkChanged = true;
       }
 
@@ -461,8 +504,11 @@ function openEditBookmarkModal(bm) {
 
   const addPlatformSelect = document.getElementById('add-platform');
   if (addPlatformSelect) {
-    addPlatformSelect.value = bm.source === 'browser' ? 'browser' : bm.platform;
+    const isBrowser = bm.source === 'browser' || bm.platform === 'browser';
+    const isCustom = !isBrowser && !isKnownSocialPlatform(bm.platform);
+    addPlatformSelect.value = isBrowser ? 'browser' : (isCustom ? '__custom__' : bm.platform);
     updateManualModalPlatformUI(addPlatformSelect.value);
+    if (isCustom && DOM.addCustomPlatformName) DOM.addCustomPlatformName.value = bm.platformName || platformLabel(bm.platform);
   }
 
   DOM.addAuthorName.value = bm.authorName || '';

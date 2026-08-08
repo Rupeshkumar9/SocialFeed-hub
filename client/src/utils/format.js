@@ -11,16 +11,35 @@ function getBookmarkDateMs(bm, fields) {
   return 0;
 }
 
-function defaultAuthorNameForPlatform(platform) {
+const KNOWN_SOCIAL_PLATFORMS = Object.freeze(['instagram', 'x', 'threads', 'reddit', 'facebook', 'youtube']);
+
+function normalizePlatformSlug(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return normalized === 'twitter' ? 'x' : normalized;
+}
+
+function isKnownSocialPlatform(platform) {
+  return KNOWN_SOCIAL_PLATFORMS.includes(normalizePlatformSlug(platform));
+}
+
+function defaultAuthorNameForPlatform(platform, customName = '') {
   return platform === 'x' ? 'X User' :
     platform === 'instagram' ? 'Instagram Creator' :
     platform === 'threads' ? 'Threads Creator' :
     platform === 'reddit' ? 'Reddit User' :
+    platform === 'youtube' ? 'YouTube Creator' :
     platform === 'browser' ? 'Saved Link' :
-    'Facebook User';
+    platform === 'facebook' ? 'Facebook User' :
+    `${customName || platformLabel(platform)} Creator`;
 }
 
-function platformLabel(platform) {
+function platformLabel(platform, customName = '') {
   const labels = {
     all: 'All Bookmarks',
     x: 'X / Twitter',
@@ -28,9 +47,16 @@ function platformLabel(platform) {
     threads: 'Threads',
     reddit: 'Reddit',
     facebook: 'Facebook',
+    youtube: 'YouTube',
+    browser: 'Browser Bookmark',
     web: 'Web'
   };
-  return labels[platform] || platform;
+  if (customName) return customName;
+  const libraryLabel = AppState.libraryCounts?.platformLabels?.[platform];
+  if (libraryLabel) return libraryLabel;
+  return labels[platform] || String(platform || 'Platform')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
 
@@ -87,5 +113,5 @@ function escapeHTML(str) {
   );
 }
 
-registerActions('format', { getBookmarkDateMs, defaultAuthorNameForPlatform, platformLabel, getInstagramFallbackGradient, debounce, formatDate, escapeHTML });
-export { getBookmarkDateMs, defaultAuthorNameForPlatform, platformLabel, getInstagramFallbackGradient, debounce, formatDate, escapeHTML };
+registerActions('format', { getBookmarkDateMs, defaultAuthorNameForPlatform, platformLabel, normalizePlatformSlug, isKnownSocialPlatform, getInstagramFallbackGradient, debounce, formatDate, escapeHTML });
+export { KNOWN_SOCIAL_PLATFORMS, getBookmarkDateMs, defaultAuthorNameForPlatform, platformLabel, normalizePlatformSlug, isKnownSocialPlatform, getInstagramFallbackGradient, debounce, formatDate, escapeHTML };

@@ -11,6 +11,10 @@ function applyFiltersAndSearch() {
   const query = AppState.searchQuery.toLowerCase().trim();
 
   AppState.filteredBookmarks = AppState.bookmarks.filter(bm => {
+    const isBrowserBookmark = bm.source === 'browser' || bm.platform === 'browser';
+    if (AppState.activeSource === 'browser' && !isBrowserBookmark) return false;
+    if (AppState.activeSource === 'social' && isBrowserBookmark) return false;
+
     // 1. Platform Filter
     if (AppState.activePlatform !== 'all' && bm.platform !== AppState.activePlatform) {
       return false;

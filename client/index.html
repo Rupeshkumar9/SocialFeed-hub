@@ -76,7 +76,9 @@
             <option value="x">X / Twitter</option>
             <option value="instagram">Instagram</option>
             <option value="threads">Threads</option>
+            <option value="reddit">Reddit</option>
             <option value="facebook">Facebook</option>
+            <option value="youtube">YouTube</option>
           </select>
           <select id="filter-sort">
             <option value="recent-desc">Recently Added</option>
@@ -122,6 +124,9 @@
               <li class="menu-item"><button type="button" data-platform="facebook" data-sidebar-route="#platform=facebook"><i
                     class="app-icon icon-facebook"></i><span>Facebook</span><span class="menu-count"
                     id="count-platform-facebook">0</span></button></li>
+              <li class="menu-item"><button type="button" data-platform="youtube" data-sidebar-route="#platform=youtube"><i
+                    class="app-icon icon-youtube"></i><span>YouTube</span><span class="menu-count"
+                    id="count-platform-youtube">0</span></button></li>
             </ul>
           </section>
 
@@ -325,8 +330,20 @@
                 <option value="x">X / Twitter</option>
                 <option value="instagram">Instagram</option>
                 <option value="threads">Threads</option>
+                <option value="reddit">Reddit</option>
                 <option value="facebook">Facebook</option>
+                <option value="youtube">YouTube</option>
+                <option value="browser">Browser Bookmark</option>
+                <option value="__custom__">Custom platform…</option>
               </select>
+            </div>
+
+            <div id="add-custom-platform-group" style="display: flex; flex-direction: column; gap: 6px;" hidden>
+              <label for="add-custom-platform-name"
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Custom Platform Name</label>
+              <input type="text" id="add-custom-platform-name" class="search-input" maxlength="40"
+                style="padding-left: 14px;" placeholder="For example: Mastodon">
+              <small class="form-help-text">A globe icon will be used. The platform stays in the sidebar while it has bookmarks.</small>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -541,6 +558,7 @@
                 <option value="threads">Threads</option>
                 <option value="reddit">Reddit</option>
                 <option value="facebook">Facebook</option>
+                <option value="youtube">YouTube</option>
               </select>
             </div>
           </div>

@@ -100,8 +100,17 @@ function renameSelectedModalCategory() {
 
 function updateManualModalPlatformUI(platformValue = '') {
   const isBrowser = platformValue === 'browser';
+  const isCustom = platformValue === '__custom__';
   if (DOM.addTagsGroup) DOM.addTagsGroup.hidden = isBrowser;
   if (isBrowser && DOM.addTags) DOM.addTags.value = '';
+  if (DOM.addCustomPlatformGroup) DOM.addCustomPlatformGroup.hidden = !isCustom;
+  if (DOM.addCustomPlatformName) {
+    DOM.addCustomPlatformName.required = isCustom;
+    if (!isCustom) {
+      DOM.addCustomPlatformName.value = '';
+      DOM.addCustomPlatformName.setCustomValidity('');
+    }
+  }
 }
 
 registerActions('bookmark-media', { setManualImageFromFile, setManualImageSourceControlsVisible, clearManualImageValue, updateManualImagePreview, setManualImageFieldVisible, updateCategoryEditButtonVisibility, renameSelectedModalCategory, updateManualModalPlatformUI });

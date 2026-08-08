@@ -1,11 +1,15 @@
 const { connectToDatabase } = require("./_lib/db");
 const { requireSession } = require("./_lib/auth");
 
-const PLATFORMS = ["instagram", "x", "threads", "reddit", "facebook"];
+const KNOWN_PLATFORMS = ["instagram", "x", "threads", "reddit", "facebook", "youtube"];
 
 function normalizePlatform(value) {
   const platform = String(value || "").toLowerCase().trim();
-  return platform === "twitter" ? "x" : platform;
+  return (platform === "twitter" ? "x" : platform)
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
 }
 
 function normalizeFolder(value) {
@@ -16,7 +20,7 @@ function normalizeFolder(value) {
 }
 
 function emptyPlatformCounts() {
-  return Object.fromEntries(PLATFORMS.map(platform => [platform, 0]));
+  return Object.fromEntries(KNOWN_PLATFORMS.map(platform => [platform, 0]));
 }
 
 async function countCollections(collection, filter = {}) {
@@ -58,20 +62,24 @@ module.exports = async (req, res) => {
     const collection = (await connectToDatabase()).collection("bookmarks");
     const rows = await collection.aggregate([
       { $match: { source: { $ne: "browser" } } },
-      { $group: { _id: "$platform", count: { $sum: 1 } } }
+      { $group: { _id: "$platform", count: { $sum: 1 }, platformName: { $max: { $ifNull: ["$platformName", ""] } } } }
     ]).toArray();
 
     const platforms = emptyPlatformCounts();
+    const platformLabels = {};
     rows.forEach(row => {
       const platform = normalizePlatform(row._id);
-      if (platform in platforms) platforms[platform] = row.count;
+      if (!platform || platform === "browser") return;
+      platforms[platform] = (platforms[platform] || 0) + row.count;
+      const label = String(row.platformName || "").trim();
+      if (label) platformLabels[platform] = label;
     });
     const socialTotal = Object.values(platforms).reduce((total, count) => total + count, 0);
     const socialFilter = { source: { $ne: "browser" } };
     const browserFilter = { source: "browser" };
 
     const platformCollectionPromises = Object.fromEntries(
-      PLATFORMS.map(platform => [platform, countCollections(collection, { ...socialFilter, platform })])
+      Object.keys(platforms).map(platform => [platform, countCollections(collection, { ...socialFilter, platform })])
     );
 
     const [browserTotal, socialCollections, browserCollections, socialTags, browserTags] = await Promise.all([
@@ -91,6 +99,7 @@ module.exports = async (req, res) => {
       all: socialTotal,
       ...platforms,
       platforms: { all: socialTotal, ...platforms },
+      platformLabels,
       sources: { browser: browserTotal, social: socialTotal },
       collections: { social: socialCollections, browser: browserCollections, platforms: platformCollections },
       tags: { social: socialTags, browser: browserTags }

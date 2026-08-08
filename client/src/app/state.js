@@ -76,6 +76,8 @@ export const DOM = {
   addImageFile: document.getElementById('add-image-file'),
   addImageSourceControls: document.getElementById('add-image-source-controls'),
   addTagsGroup: document.getElementById('add-tags-group'),
+  addCustomPlatformGroup: document.getElementById('add-custom-platform-group'),
+  addCustomPlatformName: document.getElementById('add-custom-platform-name'),
   btnEditCategoryName: document.getElementById('btn-edit-category-name'),
 
   // Sync Actions

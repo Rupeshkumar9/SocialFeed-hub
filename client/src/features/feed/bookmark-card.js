@@ -9,6 +9,7 @@ const getInstagramFallbackGradient = (...args) => actions.getInstagramFallbackGr
 const openEditBookmarkModal = (...args) => actions.openEditBookmarkModal(...args);
 const openPostModal = (...args) => actions.openPostModal(...args);
 const platformIconMarkup = (...args) => actions.platformIconMarkup(...args);
+const platformLabel = (...args) => actions.platformLabel(...args);
 const socialCategoryLabel = (...args) => actions.socialCategoryLabel(...args);
 const toggleSelectBookmark = (...args) => actions.toggleSelectBookmark(...args);
 const browserFaviconRequests = new Map();
@@ -201,6 +202,26 @@ function buildCardElement(bm) {
         </div>
       `;
     }
+  } else {
+    const displayName = platformLabel(bm.platform, bm.platformName);
+    const isYouTube = bm.platform === 'youtube';
+    if (bm.thumbnail) {
+      mediaMarkup = `
+        <div class="card-media">
+          <img src="${escapeHTML(bm.thumbnail)}" alt="${escapeHTML(displayName)} Post" loading="lazy" data-image-fallback="${escapeHTML(bm.platform)}">
+        </div>
+      `;
+    } else {
+      mediaMarkup = `
+        <div class="card-media fallback-media ${isYouTube ? 'youtube-fallback' : 'custom-platform-fallback'}">
+          <div class="fallback-gradient" style="color: ${isYouTube ? 'var(--platform-youtube)' : 'var(--accent-purple)'};">
+            ${platformIconMarkup(bm.platform, 'fallback-inline-icon')}
+            <span class="fallback-title" style="color: var(--text-primary);">${escapeHTML(displayName)} Post</span>
+            <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
+          </div>
+        </div>
+      `;
+    }
   }
 
   const checkboxMarkup = `
@@ -237,7 +258,7 @@ function buildCardElement(bm) {
           </div>
         </div>
 
-        <div class="card-platform-icon" title="Original Platform: ${(bm.platform || "web").toUpperCase()}">
+        <div class="card-platform-icon" title="Original Platform: ${escapeHTML(platformLabel(bm.platform, bm.platformName))}">
           ${platformIconMarkup(bm.platform)}
         </div>
       </div>
@@ -263,7 +284,7 @@ function buildCardElement(bm) {
 
   card.querySelectorAll('img[data-image-fallback]').forEach((image) => {
     const fallbackPlatform = image.dataset.imageFallback;
-    image.addEventListener('error', () => handleImageError(image, bm.id, fallbackPlatform), { once: true });
+    image.addEventListener('error', () => handleImageError(image, bm.id, fallbackPlatform, bm.platformName), { once: true });
   });
 
   const faviconImage = card.querySelector('img[data-favicon-src]');
@@ -385,52 +406,30 @@ function buildCardElement(bm) {
  * Render the Infinite Scroll Sentinel and status at the bottom of the feed
  */
 
-function handleImageError(img, id, platform) {
+function handleImageError(img, id, platform, platformName = '') {
   const container = img.parentNode;
   if (!container) return;
 
   container.className = 'card-media fallback-media';
-  if (platform === 'x') {
-    container.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
-    container.style.borderColor = 'rgba(255,255,255,0.05)';
-    container.innerHTML = `
-      <div class="fallback-gradient" style="color: #f8fafc;">
-        <i class="app-icon icon-x-twitter fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
-        <span class="fallback-title" style="color: #f8fafc;">X Post</span>
-        <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
-      </div>
-    `;
-  } else if (platform === 'threads') {
-    container.style.background = 'linear-gradient(135deg, #262626 0%, #000000 100%)';
-    container.style.borderColor = 'rgba(255,255,255,0.05)';
-    container.innerHTML = `
-      <div class="fallback-gradient" style="color: #f8fafc;">
-        <i class="app-icon icon-threads fallback-icon" style="background: none; -webkit-text-fill-color: #f8fafc; color: #f8fafc; font-size: 1.4rem; opacity: 0.85;"></i>
-        <span class="fallback-title" style="color: #f8fafc;">Threads Post</span>
-        <span class="fallback-subtitle" style="color: #cbd5e1;">Click to View</span>
-      </div>
-    `;
-  } else if (platform === 'facebook') {
-    container.style.background = 'linear-gradient(135deg, #e7f3ff 0%, #cbd5e1 100%)';
-    container.innerHTML = `
-      <div class="fallback-gradient" style="color: var(--platform-fb);">
-        <i class="app-icon icon-facebook fallback-icon" style="background: none; -webkit-text-fill-color: var(--platform-fb); color: var(--platform-fb); font-size: 1.4rem; opacity: 0.85;"></i>
-        <span class="fallback-title" style="color: var(--text-primary);">Facebook Post</span>
-        <span class="fallback-subtitle" style="color: var(--text-muted);">Click to View</span>
-      </div>
-    `;
-  } else {
-    if (id) {
-      container.style.background = getInstagramFallbackGradient(id);
-    }
-    container.innerHTML = `
-      <div class="fallback-gradient">
-        <i class="app-icon icon-instagram fallback-icon"></i>
-        <span class="fallback-title">Instagram Post</span>
-        <span class="fallback-subtitle">Click to View</span>
-      </div>
-    `;
-  }
+  const displayName = platformLabel(platform, platformName);
+  const styles = {
+    instagram: { background: getInstagramFallbackGradient(id || 'instagram'), color: 'var(--platform-ig-solid)', subtitle: 'var(--text-muted)' },
+    x: { background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: '#f8fafc', subtitle: '#cbd5e1' },
+    threads: { background: 'linear-gradient(135deg, #262626 0%, #000000 100%)', color: '#f8fafc', subtitle: '#cbd5e1' },
+    reddit: { background: 'linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)', color: '#ff4500', subtitle: 'var(--text-muted)' },
+    facebook: { background: 'linear-gradient(135deg, #e7f3ff 0%, #cbd5e1 100%)', color: 'var(--platform-fb)', subtitle: 'var(--text-muted)' },
+    youtube: { background: 'linear-gradient(135deg, #fff1f1 0%, #ffffff 100%)', color: 'var(--platform-youtube)', subtitle: 'var(--text-muted)' },
+    browser: { background: 'linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)', color: 'var(--accent-purple)', subtitle: 'var(--text-muted)' }
+  };
+  const style = styles[platform] || { background: 'linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)', color: 'var(--accent-purple)', subtitle: 'var(--text-muted)' };
+  container.style.background = style.background;
+  container.innerHTML = `
+    <div class="fallback-gradient" style="color: ${style.color};">
+      ${platformIconMarkup(platform, 'fallback-inline-icon')}
+      <span class="fallback-title" style="color: ${['x', 'threads'].includes(platform) ? style.color : 'var(--text-primary)'};">${escapeHTML(displayName)} Post</span>
+      <span class="fallback-subtitle" style="color: ${style.subtitle};">Click to View</span>
+    </div>
+  `;
 }
 
 /**

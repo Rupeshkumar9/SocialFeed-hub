@@ -4,6 +4,7 @@ import { actions, registerActions } from '../../app/actions.js';
 const escapeHTML = (...args) => actions.escapeHTML(...args);
 const getCategoryCountsForContext = (...args) => actions.getCategoryCountsForContext(...args);
 const getLibraryCountGroup = (...args) => actions.getLibraryCountGroup(...args);
+const platformLabel = (...args) => actions.platformLabel(...args);
 const sortedCategoryItemsFromCounts = (...args) => actions.sortedCategoryItemsFromCounts(...args);
 
 function categoryRowsMarkup(counts = {}, source = "social") {
@@ -29,20 +30,27 @@ function updateStatsAnalytics() {
 
   const platformCounts = AppState.platformCounts || {};
   const socialTotal = Number(platformCounts.all) || 0;
-  const platformRows = [
+  const knownPlatformRows = [
     { key: "instagram", label: "Instagram", count: Number(platformCounts.instagram) || 0, barClass: "ig-bar" },
     { key: "x", label: "X / Twitter", count: Number(platformCounts.x) || 0, barClass: "x-bar" },
     { key: "threads", label: "Threads", count: Number(platformCounts.threads) || 0, barClass: "threads-bar" },
     { key: "reddit", label: "Reddit", count: Number(platformCounts.reddit) || 0, barClass: "reddit-bar" },
-    { key: "facebook", label: "Facebook", count: Number(platformCounts.facebook) || 0, barClass: "fb-bar" }
+    { key: "facebook", label: "Facebook", count: Number(platformCounts.facebook) || 0, barClass: "fb-bar" },
+    { key: "youtube", label: "YouTube", count: Number(platformCounts.youtube) || 0, barClass: "youtube-bar" }
   ];
+  const knownKeys = new Set(['all', ...knownPlatformRows.map(row => row.key)]);
+  const customPlatformRows = Object.entries(platformCounts)
+    .filter(([key, count]) => !knownKeys.has(key) && Number(count) > 0)
+    .map(([key, count]) => ({ key, label: platformLabel(key), count: Number(count), barClass: 'custom-platform-bar' }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const platformRows = [...knownPlatformRows, ...customPlatformRows];
 
   platformContainer.innerHTML = platformRows.map(row => {
     const pct = socialTotal > 0 ? Math.round((row.count / socialTotal) * 100) : 0;
     const isOpen = AppState.analyticsOpenPlatform === row.key;
     const collectionCounts = getLibraryCountGroup("collections", row.key) || { all: row.count, uncategorized: 0 };
     return '<div class="stats-platform-block' + (isOpen ? ' open' : '') + '">' +
-      '<button type="button" class="stats-metric-row stats-metric-button" data-analytics-platform="' + row.key + '">' +
+      '<button type="button" class="stats-metric-row stats-metric-button" data-analytics-platform="' + escapeHTML(row.key) + '">' +
         '<div class="metric-info"><span>' + escapeHTML(row.label) + '</span><span>' + row.count + ' (' + pct + '%)</span></div>' +
         '<div class="metric-bar-container"><div class="metric-bar ' + row.barClass + '" style="width:' + pct + '%;"></div></div>' +
       '</button>' +

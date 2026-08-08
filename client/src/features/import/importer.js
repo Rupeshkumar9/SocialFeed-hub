@@ -309,6 +309,7 @@ export const BookmarksImporter = {
     if (lowerUrl.includes('threads.net')) return 'threads';
     if (lowerUrl.includes('reddit.com') || lowerUrl.includes('redd.it')) return 'reddit';
     if (lowerUrl.includes('facebook.com') || lowerUrl.includes('fb.watch')) return 'facebook';
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return 'youtube';
     return null;
   },
 
@@ -378,4 +379,3 @@ export const BookmarksImporter = {
     }
   }
 };
-
