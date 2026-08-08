@@ -19,6 +19,62 @@ html[data-theme="dark"] .login-card {
   color: var(--text-primary);
 }
 
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .filter-select,
+html[data-theme="dark"] .card-menu-dropdown,
+html[data-theme="dark"] .card-category-popover,
+html[data-theme="dark"] .sidebar-context-menu {
+  background-color: var(--surface-soft);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .btn-secondary:hover,
+html[data-theme="dark"] .filter-select:hover,
+html[data-theme="dark"] .filter-select:focus {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .card-menu-dropdown button,
+html[data-theme="dark"] .card-category-popover strong,
+html[data-theme="dark"] .sidebar-context-menu button {
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .card-menu-dropdown button:hover,
+html[data-theme="dark"] .sidebar-context-menu button:hover {
+  background-color: var(--surface-hover);
+  color: var(--accent-blue);
+}
+
+html[data-theme="dark"] .card-category-popover span,
+html[data-theme="dark"] .manual-image-dropzone small {
+  color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .btn-card-category,
+html[data-theme="dark"] .btn-card-menu,
+html[data-theme="dark"] .manual-image-dropzone,
+html[data-theme="dark"] .infinite-scroll-spinner {
+  background-color: var(--surface-soft);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .manual-image-dropzone:hover,
+html[data-theme="dark"] .manual-image-dropzone.dragover,
+html[data-theme="dark"] .btn-card-category:hover,
+html[data-theme="dark"] .btn-card-category[aria-expanded="true"],
+html[data-theme="dark"] .btn-card-menu:hover {
+  background-color: var(--surface-hover);
+  color: var(--accent-blue);
+}
+
+html[data-theme="dark"] .infinite-scroll-end {
+  color: var(--text-secondary);
+}
+
 html[data-theme="dark"] .search-input,
 html[data-theme="dark"] .filter-select,
 html[data-theme="dark"] .login-card input,

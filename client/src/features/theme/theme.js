@@ -33,7 +33,7 @@ function initTheme() {
   const stored = localStorage.getItem(THEME_KEY);
   const preferred = stored === 'dark' || stored === 'light'
     ? stored
-    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    : 'dark';
   setTheme(preferred, false);
   DOM.themeToggle?.addEventListener('click', toggleTheme);
 }

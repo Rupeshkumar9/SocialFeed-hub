@@ -13,11 +13,16 @@
       const stored = localStorage.getItem('socialfeed_theme');
       const theme = stored === 'dark' || stored === 'light'
         ? stored
-        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        : 'dark';
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
     })();
   </script>
+  <style>
+    html body.auth-checking #app-layout,
+    html body.auth-checking .login-gate { display: none !important; }
+    html body.auth-checking #auth-loading { display: flex !important; }
+  </style>
 </head>
 
 <body class="auth-checking">

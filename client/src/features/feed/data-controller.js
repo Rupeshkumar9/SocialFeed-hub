@@ -52,6 +52,9 @@ async function loadData(options = {}) {
     setDatabaseStatus(true);
     onDataLoadedSuccess({ append });
     AppState.isLoadingMore = false;
+    // The render happened while loading was still true so overlapping loads
+    // stay blocked; refresh the sentinel after the final state is known.
+    renderInfiniteScrollSentinel();
     const more = document.getElementById('load-more-container');
     if (more) more.hidden = true;
     return data;
