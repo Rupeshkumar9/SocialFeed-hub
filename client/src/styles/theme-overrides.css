@@ -96,12 +96,27 @@ html[data-theme="dark"] .dropdown-menu {
   border-color: var(--border-color);
 }
 
+html[data-theme="dark"] .bulk-action-bar {
+  background-color: rgba(24, 27, 36, .97);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .bulk-info {
+  color: var(--text-primary);
+}
+
 html[data-theme="dark"] .settings-details div,
 html[data-theme="dark"] .link-preview-status,
 html[data-theme="dark"] .folder-select,
-html[data-theme="dark"] .stats-panel {
+html[data-theme="dark"] .stats-panel,
+html[data-theme="dark"] .roadmap-item {
   background-color: var(--surface-soft);
   color: var(--text-primary);
+}
+
+html[data-theme="dark"] .status-pill-soon {
+  color: #c4b5fd;
 }
 
 html[data-theme="dark"] .modal-overlay,

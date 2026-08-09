@@ -7,6 +7,7 @@ const buildCardElement = (...args) => actions.buildCardElement(...args);
 const escapeHTML = (...args) => actions.escapeHTML(...args);
 const loadData = (...args) => actions.loadData(...args);
 const processCollections = (...args) => actions.processCollections(...args);
+const updateFeedHeaders = (...args) => actions.updateFeedHeaders(...args);
 const processTags = (...args) => actions.processTags(...args);
 const showToast = (...args) => actions.showToast(...args);
 const updateCollectionsFilterDropdown = (...args) => actions.updateCollectionsFilterDropdown(...args);
@@ -34,6 +35,20 @@ function onDataLoadedSuccess({ append = false } = {}) {
     requestAnimationFrame(() => { scrollContainer.scrollTop = previousScrollTop; });
   }
   console.info("Bookmarks loaded successfully.");
+}
+
+function renderFeedLoadingState() {
+  if (!DOM.bookmarksGrid) return;
+  const existing = document.getElementById('infinite-scroll-sentinel');
+  if (existing) existing.remove();
+  DOM.bookmarksGrid.innerHTML = `
+    <div class="feed-loading-state" role="status" aria-live="polite">
+      <i class="app-icon icon-circle-notch icon-spin" aria-hidden="true"></i>
+      <span>Loading bookmarks…</span>
+    </div>
+  `;
+  updateFeedHeaders();
+  DOM.feedSubtitle.textContent = 'Loading bookmarks…';
 }
 
 /**
@@ -258,5 +273,5 @@ function initInfiniteScrollObserver() {
   AppState.scrollObserver.observe(sentinel);
 }
 
-registerActions('feed-view', { onDataLoadedSuccess, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver });
-export { onDataLoadedSuccess, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver };
+registerActions('feed-view', { onDataLoadedSuccess, renderFeedLoadingState, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver });
+export { onDataLoadedSuccess, renderFeedLoadingState, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver };

@@ -5,7 +5,9 @@ import { socialFeedApi } from '../../api/socialfeed-api.js';
 
 const onDataLoadedSuccess = (...args) => actions.onDataLoadedSuccess(...args);
 const renderInfiniteScrollSentinel = (...args) => actions.renderInfiniteScrollSentinel(...args);
+const renderFeedLoadingState = (...args) => actions.renderFeedLoadingState(...args);
 const setDatabaseStatus = (...args) => actions.setDatabaseStatus(...args);
+const setSidebarNavigationLoading = (...args) => actions.setSidebarNavigationLoading(...args);
 const showPrivateLogin = (...args) => actions.showPrivateLogin(...args);
 const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
 const updateStatsAnalytics = (...args) => actions.updateStatsAnalytics(...args);
@@ -55,6 +57,8 @@ function cancelActiveLoad() {
   }
   AppState.activeRequestId += 1;
   AppState.isLoadingMore = false;
+  AppState.isNavigationLoading = false;
+  setSidebarNavigationLoading(false);
 }
 
 async function checkDatabaseConnection() {
@@ -73,6 +77,7 @@ async function loadData(options = {}) {
   if (!AppState.isServerConnected) return null;
   const append = Boolean(options.append);
   const force = Boolean(options.force);
+  const navigation = Boolean(options.navigation);
   const requestContext = feedCacheKey();
 
   // A fresh navigation supersedes an in-flight request. Abort it instead of
@@ -88,6 +93,8 @@ async function loadData(options = {}) {
       AppState.nextCursor = cached.nextCursor;
       AppState.hasMore = cached.hasMore;
       AppState.isLoadingMore = false;
+      AppState.isNavigationLoading = false;
+      setSidebarNavigationLoading(false);
       setDatabaseStatus(true);
       onDataLoadedSuccess({ append: false, cached: true });
       renderInfiniteScrollSentinel();
@@ -105,6 +112,14 @@ async function loadData(options = {}) {
   }
 
   AppState.isLoadingMore = true;
+  if (navigation) {
+    AppState.isNavigationLoading = true;
+    setSidebarNavigationLoading(true);
+    AppState.bookmarks = [];
+    AppState.filteredBookmarks = [];
+    AppState.visibleCount = POSTS_PER_PAGE;
+    renderFeedLoadingState();
+  }
   const requestId = ++AppState.activeRequestId;
   const controller = new AbortController();
   AppState.activeLoadController = controller;
@@ -126,6 +141,8 @@ async function loadData(options = {}) {
     setDatabaseStatus(true);
     onDataLoadedSuccess({ append });
     AppState.isLoadingMore = false;
+    AppState.isNavigationLoading = false;
+    setSidebarNavigationLoading(false);
     AppState.activeLoadController = null;
     // The render happened while loading was still true so overlapping loads
     // stay blocked; refresh the sentinel after the final state is known.
@@ -139,6 +156,10 @@ async function loadData(options = {}) {
     if (requestId !== AppState.activeRequestId) return null;
     AppState.isLoadingMore = false;
     AppState.activeLoadController = null;
+    if (navigation) {
+      AppState.isNavigationLoading = false;
+      setSidebarNavigationLoading(false);
+    }
     if (error instanceof ApiError && error.status === 401) showPrivateLogin('Session expired; sign in again.');
     else {
       setDatabaseStatus(false);

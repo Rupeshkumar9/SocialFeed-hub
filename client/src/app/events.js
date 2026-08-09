@@ -130,6 +130,7 @@ function initEventListeners() {
   // Sidebar platform and category navigation
   if (DOM.sidebarPlatformList) {
     DOM.sidebarPlatformList.addEventListener('click', (e) => {
+      if (AppState.isNavigationLoading) return;
       const btn = e.target.closest('[data-platform]');
       if (!btn) return;
       closeSettings();
@@ -139,7 +140,8 @@ function initEventListeners() {
       AppState.activeCollection = "all";
       AppState.nextCursor = null;
       syncFilterSelects();
-      if (AppState.isServerConnected) loadData();
+      updateSidebarNavigation();
+      if (AppState.isServerConnected) loadData({ navigation: true });
       else applyFiltersAndSearch();
       const drawer = document.getElementById('mobile-drawer-overlay');
       if (drawer) drawer.classList.remove('active');
@@ -148,12 +150,14 @@ function initEventListeners() {
 
   if (DOM.sidebarCollectionList) {
     DOM.sidebarCollectionList.addEventListener('click', (e) => {
+      if (AppState.isNavigationLoading) return;
       const btn = e.target.closest('[data-collection]');
       if (!btn || btn.disabled || AppState.activeSource !== 'social') return;
       AppState.activeCollection = btn.dataset.collection;
       AppState.nextCursor = null;
       syncFilterSelects();
-      if (AppState.isServerConnected) loadData();
+      updateSidebarNavigation();
+      if (AppState.isServerConnected) loadData({ navigation: true });
       else applyFiltersAndSearch();
       const drawer = document.getElementById('mobile-drawer-overlay');
       if (drawer) drawer.classList.remove('active');
@@ -729,6 +733,7 @@ function checkMobileDrawerLayout() {
 function initPrivateEventListeners() {
   const browserButton = document.getElementById('btn-browser-bookmarks');
   if (browserButton) browserButton.addEventListener('click', () => {
+    if (AppState.isNavigationLoading) return;
     closeSettings();
     AppState.activeSource = 'browser';
     AppState.activePlatform = 'all';
@@ -736,7 +741,7 @@ function initPrivateEventListeners() {
     AppState.nextCursor = null;
     setRouteHash('#bookmarks');
     updateSidebarNavigation();
-    loadData();
+    loadData({ navigation: true });
   });
 
   const settingsButton = document.getElementById('btn-settings');

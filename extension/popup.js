@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const postCountEl = document.getElementById('post-count');
   const btnScan = document.getElementById('btn-scan');
   const btnDownload = document.getElementById('btn-download');
+  const btnCancelScan = document.getElementById('btn-cancel-scan');
   const btnSync = document.getElementById('btn-sync');
   const btnScanBrowser = document.getElementById('btn-scan-browser');
   const errorBox = document.getElementById('error-box');
@@ -17,12 +18,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const connectionStatus = document.getElementById('connection-status');
 
   const DEFAULT_API_URL = 'https://socialfeed-hub.onrender.com';
+  const PENDING_SCAN_KEY = 'pendingScan';
+  const PENDING_SCAN_TTL_MS = 30 * 60 * 1000;
 
   function normalizeApiUrl(value) {
     return String(value || '').trim().replace(/\/+$/, '') || DEFAULT_API_URL;
   }
 
   let activeTab = null;
+  let activePlatform = null;
   let detectedPlatform = null;
   let scrapedData = null;
   let isScanning = false;
@@ -52,6 +56,83 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function clearConnectionState() {
     return new Promise(resolve => chrome.storage.local.remove(['extensionDeviceToken', 'extensionSyncToken', 'pairingState'], resolve));
+  }
+
+  function persistPendingScan() {
+    if (!Array.isArray(scrapedData) || !scrapedData.length || !detectedPlatform) return Promise.resolve(false);
+    return new Promise(resolve => {
+      chrome.storage.local.set({
+        [PENDING_SCAN_KEY]: {
+          savedAt: Date.now(),
+          platform: detectedPlatform,
+          items: scrapedData
+        }
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('Unable to persist pending scan:', chrome.runtime.lastError.message);
+          resolve(false);
+          return;
+        }
+        resolve(true);
+      });
+    });
+  }
+
+  function clearPendingScan() {
+    return new Promise(resolve => chrome.storage.local.remove(PENDING_SCAN_KEY, resolve));
+  }
+
+  function loadPendingScan() {
+    return new Promise(resolve => {
+      chrome.storage.local.get(PENDING_SCAN_KEY, async result => {
+        if (chrome.runtime.lastError) {
+          console.warn('Unable to restore pending scan:', chrome.runtime.lastError.message);
+          resolve(false);
+          return;
+        }
+        const pending = result[PENDING_SCAN_KEY];
+        const isFresh = pending && Number.isFinite(pending.savedAt) && Date.now() - pending.savedAt <= PENDING_SCAN_TTL_MS;
+        if (!isFresh || !Array.isArray(pending.items) || !pending.items.length) {
+          if (pending) await clearPendingScan();
+          resolve(false);
+          return;
+        }
+        scrapedData = pending.items;
+        detectedPlatform = pending.platform || activePlatform || 'browser';
+        resolve(true);
+      });
+    });
+  }
+
+  function showPreparedActions() {
+    btnScan.style.display = 'none';
+    btnScanBrowser.style.display = 'none';
+    btnScan.disabled = true;
+    btnScanBrowser.disabled = true;
+    btnSync.style.display = 'block';
+    btnDownload.style.display = 'block';
+    btnCancelScan.style.display = 'block';
+    const itemLabel = detectedPlatform === 'browser' ? 'bookmarks' : 'posts';
+    postCountEl.textContent = `${scrapedData?.length || 0} ${itemLabel} ready`;
+  }
+
+  async function resetToHome({ clearPending = true } = {}) {
+    if (clearPending) await clearPendingScan();
+    scrapedData = null;
+    detectedPlatform = activePlatform;
+    isScanning = false;
+    btnScan.style.display = 'block';
+    btnScan.disabled = !activePlatform;
+    btnScan.textContent = 'Scan Platform Posts';
+    btnScan.style.background = 'var(--accent-color)';
+    btnScanBrowser.style.display = 'block';
+    btnScanBrowser.disabled = false;
+    btnSync.style.display = 'none';
+    btnDownload.style.display = 'none';
+    btnCancelScan.style.display = 'none';
+    postCountEl.textContent = '0';
+    errorBox.style.display = 'none';
+    successBox.style.display = 'none';
   }
 
   function setConnectionStatus(message, state = '') {
@@ -190,11 +271,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const url = activeTab.url || '';
 
     if (url.includes('instagram.com')) {
-      detectedPlatform = 'instagram';
+      activePlatform = 'instagram';
+      detectedPlatform = activePlatform;
       pageTypeEl.textContent = 'Instagram';
       btnScan.disabled = false;
     } else if (url.includes('x.com') || url.includes('twitter.com')) {
-      detectedPlatform = 'x';
+      activePlatform = 'x';
+      detectedPlatform = activePlatform;
       pageTypeEl.textContent = 'X / Twitter';
       btnScan.disabled = false;
     } else {
@@ -204,6 +287,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error(err);
     showError('Error initializing extension popup.');
+  }
+
+  if (await loadPendingScan()) {
+    showPreparedActions();
   }
 
   // 6. Listen for scroll progress messages from content.js
@@ -217,7 +304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (rawItems.length === 0) {
         showError('No bookmarks detected on this page.');
-        resetScanButton();
+        await resetToHome();
         return;
       }
 
@@ -260,10 +347,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
 
-      btnScan.style.display = 'none';
-      btnSync.style.display = 'block';
-      btnDownload.style.display = 'block';
-      postCountEl.textContent = `${scrapedData.length} posts ready`;
+      await persistPendingScan();
+      showPreparedActions();
     }
   });
 
@@ -283,6 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (response && response.status === "started") {
           isScanning = true;
+          btnScanBrowser.style.display = 'none';
           errorBox.style.display = 'none';
           successBox.style.display = 'none';
           btnScan.textContent = 'Stop & Export (0)';
@@ -303,9 +389,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (node.url) items.push({ id: 'browser_' + node.id, platform: 'browser', source: 'browser', url: node.url, authorName: new URL(node.url).hostname.replace(/^www\./, ''), authorUsername: 'browser', content: node.title || 'Saved browser bookmark', extensionScrapedAt: new Date(node.dateAdded || Date.now()).toISOString(), hashtags: [], folder: trail.filter(Boolean).join(' / ') });
         if (node.children) walk(node.children, nextTrail);
       });
-      walk(tree); scrapedData = items; detectedPlatform = 'browser'; postCountEl.textContent = items.length + ' browser bookmarks ready'; btnSync.style.display = 'block'; btnDownload.style.display = 'block'; showSuccess('Found ' + items.length + ' Chrome bookmarks. Existing links will be skipped.'); btnScanBrowser.disabled = false;
+      walk(tree);
+      scrapedData = items;
+      detectedPlatform = 'browser';
+      persistPendingScan();
+      showPreparedActions();
+      showSuccess('Found ' + items.length + ' Chrome bookmarks. Existing links will be skipped.');
     });
   });
+
+  btnCancelScan.addEventListener('click', () => resetToHome());
 
   // 9. Download button click handler
   btnDownload.addEventListener('click', () => {
@@ -419,10 +512,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     successBox.style.display = 'block';
   }
 
-  function resetScanButton() {
-    isScanning = false;
-    btnScan.disabled = false;
-    btnScan.textContent = 'Scan Page Bookmarks';
-    btnScan.style.background = 'var(--accent-color)';
-  }
 });

@@ -122,7 +122,7 @@ function initAuthEvents() {
     const loadingMessage = document.getElementById('auth-loading-message');
     if (loadingMessage) loadingMessage.textContent = 'Checking your session…';
     const session = await checkServerConnection();
-    if (session.authenticated) await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData()]);
+    if (session.authenticated) await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData({ navigation: true })]);
   });
 
   const setLoginSubmitting = (submitting) => {
@@ -149,7 +149,7 @@ function initAuthEvents() {
         AppState.activePlatform = 'all';
         AppState.activeCollection = 'all';
         applyRouteFromHash({ load: false });
-        await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData()]);
+        await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData({ navigation: true })]);
       }
     } catch (error) {
       loginError.textContent = error?.message || 'Unable to sign in.';

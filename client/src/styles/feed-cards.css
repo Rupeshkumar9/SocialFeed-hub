@@ -11,6 +11,21 @@
   align-items: center;
 }
 
+.feed-loading-state {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: .95rem;
+}
+
+.feed-loading-state i {
+  color: var(--accent-blue);
+  font-size: 1.15rem;
+}
+
 .feed-title-area h2 {
   font-size: 1.3rem;
   font-weight: 700;

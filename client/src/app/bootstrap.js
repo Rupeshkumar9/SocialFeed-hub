@@ -17,7 +17,7 @@ async function bootstrapApp() {
   checkMobileDrawerLayout();
   const session = await checkServerConnection();
   if (!session.authenticated) return;
-  await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData()]);
+  await Promise.allSettled([checkDatabaseConnection(), refreshPlatformCounts(), loadData({ navigation: true })]);
 }
 
 registerActions('bootstrap', { bootstrapApp });

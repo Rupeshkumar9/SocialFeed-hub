@@ -30,6 +30,7 @@ export const AppState = {
   nextCursor: null,
   hasMore: false,
   isLoadingMore: false,
+  isNavigationLoading: false,
   linkPreview: null,
   databaseConnected: null,
   activeRequestId: 0,

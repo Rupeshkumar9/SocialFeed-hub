@@ -252,6 +252,47 @@ body.auth-required .login-gate {
   color: #be123c;
 }
 
+.status-pill-soon {
+  background: rgba(124, 58, 237, .12);
+  color: #6d28d9;
+}
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.roadmap-item {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 150px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: rgba(244, 63, 94, .035);
+}
+
+.roadmap-item strong {
+  font-size: .9rem;
+}
+
+.roadmap-item span {
+  color: var(--text-muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.roadmap-item em {
+  color: var(--accent-purple);
+  font-size: .72rem;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
 .settings-inline-action {
   width: auto;
   flex: 0 0 auto;
@@ -338,6 +379,10 @@ body.auth-required .login-gate {
   }
 
   .settings-aside {
+    grid-template-columns: 1fr;
+  }
+
+  .roadmap-grid {
     grid-template-columns: 1fr;
   }
 }

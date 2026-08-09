@@ -8,6 +8,18 @@ const openSettings = (...args) => actions.openSettings(...args);
 const platformLabel = (...args) => actions.platformLabel(...args);
 const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
 
+function setSidebarNavigationLoading(loading) {
+  const isLoading = Boolean(loading);
+  AppState.isNavigationLoading = isLoading;
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.classList.toggle('is-navigating', isLoading);
+  document.querySelectorAll('.sidebar-menu [data-sidebar-route]').forEach(button => {
+    button.disabled = isLoading;
+    button.setAttribute('aria-disabled', String(isLoading));
+    button.setAttribute('aria-busy', String(isLoading));
+  });
+}
+
 function processCollections() {
   AppState.collections.clear();
   AppState.bookmarks.forEach(bm => {
@@ -298,6 +310,7 @@ function updateSidebarNavigation() {
       });
     }
     syncFilterSelects();
+    setSidebarNavigationLoading(AppState.isNavigationLoading);
     return;
   }
 
@@ -331,6 +344,7 @@ function updateSidebarNavigation() {
   }
 
   syncFilterSelects();
+  setSidebarNavigationLoading(AppState.isNavigationLoading);
 }
 /**
  * Apply both active platform and tag filters along with text search query
@@ -408,7 +422,7 @@ function applyRouteFromHash(options = {}) {
   if (matched) {
     syncFilterSelects();
     updateSidebarNavigation();
-    if (options.load && AppState.isServerConnected) loadData();
+    if (options.load && AppState.isServerConnected) loadData({ navigation: true });
   }
   return matched;
 }
@@ -421,5 +435,5 @@ function refreshLocalMetadataAndCounts() {
   refreshPlatformCounts();
 }
 
-registerActions('library-navigation', { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updateSidebarNavigation, setRouteHash, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts });
-export { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updateSidebarNavigation, setRouteHash, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts };
+registerActions('library-navigation', { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updateSidebarNavigation, setSidebarNavigationLoading, setRouteHash, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts });
+export { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updateSidebarNavigation, setSidebarNavigationLoading, setRouteHash, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts };
