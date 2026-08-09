@@ -11,7 +11,6 @@ node_modules/
 
 # Vite Build files
 dist/
-tasks.md
 
 # Log files
 npm-debug.log*

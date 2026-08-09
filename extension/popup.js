@@ -135,11 +135,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     successBox.style.display = 'none';
   }
 
-  function setConnectionStatus(message, state = '') {
+  function setConnectionStatus(message, state = '', options = {}) {
+    const hasCredential = Boolean(options.hasCredential);
+    const pairingPending = Boolean(options.pairingPending);
+    const connectionLocked = Boolean(options.connectionLocked ?? (hasCredential || pairingPending || state === 'connected'));
     connectionStatus.textContent = message;
     connectionStatus.className = `connection-status ${state}`.trim();
-    btnDisconnect.hidden = state !== 'connected';
-    btnConnectWebsite.textContent = state === 'connected' ? 'Reconnect extension' : 'Connect using SocialFeed login';
+    btnDisconnect.hidden = !(state === 'connected' || hasCredential);
+    btnConnectWebsite.hidden = state === 'connected';
+    btnConnectWebsite.disabled = connectionLocked;
+    btnConnectWebsite.textContent = state === 'connected'
+      ? 'Connected to SocialFeed'
+      : connectionLocked
+        ? 'Disconnect to reconnect'
+        : 'Connect using SocialFeed login';
   }
 
   async function connectionRequest(apiUrl, path, options = {}) {
@@ -154,20 +163,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function refreshConnectionStatus() {
     const settings = await getSettings();
-    if (!settings.extensionDeviceToken) {
-      setConnectionStatus(settings.pairingState ? 'Waiting for website confirmation…' : 'Not connected');
+    const credential = settings.extensionDeviceToken || settings.extensionSyncToken;
+    if (!credential) {
+      setConnectionStatus(
+        settings.pairingState ? 'Waiting for website confirmation…' : 'Not connected',
+        '',
+        { pairingPending: Boolean(settings.pairingState) }
+      );
       if (settings.pairingState) await checkPairing(settings);
       return;
     }
     try {
-      await connectionRequest(settings.apiUrl, '/api/extension/pair/check', { headers: { Authorization: `Bearer ${settings.extensionDeviceToken}` } });
-      setConnectionStatus('Connected to SocialFeed', 'connected');
+      const headers = settings.extensionDeviceToken
+        ? { Authorization: `Bearer ${settings.extensionDeviceToken}` }
+        : { 'X-Extension-Token': settings.extensionSyncToken };
+      await connectionRequest(settings.apiUrl, '/api/extension/pair/check', { cache: 'no-store', headers });
+      setConnectionStatus('Connected to SocialFeed', 'connected', { hasCredential: true });
     } catch (error) {
       if (/connect|token|credential|unauthorized/i.test(error.message)) {
         await clearConnectionState();
         setConnectionStatus('Connection expired. Reconnect required.', 'error');
       } else {
-        setConnectionStatus('Unable to check connection.', 'error');
+        // Keep the existing credential available for disconnect, but block a
+        // second pairing until the user explicitly disconnects this one.
+        setConnectionStatus('Unable to check connection.', 'error', { hasCredential: true });
       }
     }
   }
@@ -181,11 +200,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (result.status === 'authorized' && result.token) {
         await saveSettings(current.apiUrl, { extensionDeviceToken: result.token, pairingState: null });
         await new Promise(resolve => chrome.storage.local.remove(['extensionSyncToken'], resolve));
-        setConnectionStatus('Connected to SocialFeed', 'connected');
+        setConnectionStatus('Connected to SocialFeed', 'connected', { hasCredential: true });
         showSuccess('Extension connected successfully.');
         return true;
       }
-      setConnectionStatus('Waiting for website confirmation…');
+      setConnectionStatus('Waiting for website confirmation…', '', { pairingPending: true });
       return false;
     } catch (error) {
       await clearConnectionState();
@@ -225,9 +244,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     showError('');
     try {
       const settings = await getSettings();
+      if (settings.extensionDeviceToken || settings.extensionSyncToken) {
+        // A connection already belongs to this extension installation. Do not
+        // create another device just because the status check is temporarily
+        // unavailable; require an explicit disconnect first.
+        await refreshConnectionStatus();
+        return;
+      }
+      if (settings.pairingState) {
+        await checkPairing(settings);
+        return;
+      }
       const result = await connectionRequest(settings.apiUrl, '/api/extension/pair/start', { method: 'POST' });
       await saveSettings(settings.apiUrl, { pairingState: { pairingId: result.pairingId, secret: result.secret } });
-      setConnectionStatus('Waiting for website confirmation…');
+      setConnectionStatus('Waiting for website confirmation…', '', { pairingPending: true });
       chrome.tabs.create({ url: result.connectUrl, active: false });
       const deadline = Date.now() + 10 * 60 * 1000;
       const poll = async () => {
@@ -239,7 +269,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       showError(`Unable to start connection: ${error.message}`);
       setConnectionStatus('Not connected', 'error');
     } finally {
-      btnConnectWebsite.disabled = false;
+      const latest = await getSettings();
+      if (!latest.extensionDeviceToken && !latest.extensionSyncToken && !latest.pairingState) {
+        btnConnectWebsite.disabled = false;
+      }
     }
   });
 
@@ -247,8 +280,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settings = await getSettings();
     btnDisconnect.disabled = true;
     try {
-      if (settings.extensionDeviceToken) {
-        await connectionRequest(settings.apiUrl, '/api/extension/pair/revoke', { method: 'POST', headers: { Authorization: `Bearer ${settings.extensionDeviceToken}` } });
+      const credential = settings.extensionDeviceToken || settings.extensionSyncToken;
+      if (credential) {
+        const headers = settings.extensionDeviceToken
+          ? { Authorization: `Bearer ${settings.extensionDeviceToken}` }
+          : { 'X-Extension-Token': credential };
+        await connectionRequest(settings.apiUrl, '/api/extension/pair/revoke', { method: 'POST', headers });
       }
     } catch (error) {
       console.warn('Unable to revoke extension credential remotely:', error);
