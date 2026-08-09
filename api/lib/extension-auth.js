@@ -7,10 +7,20 @@ function isExtensionAuthorized(req) {
 }
 
 function setExtensionCors(req, res) {
-  const origin = req.headers.origin || '';
-  const configured = (process.env.EXTENSION_ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
-  const isBrowserExtension = origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://');
-  const allowed = configured.includes(origin) || (!configured.length && isBrowserExtension);
+  const origin = String(req.headers.origin || '').trim();
+  const normalizedOrigin = origin.replace(/\/+$/, '').toLowerCase();
+  const configured = (process.env.EXTENSION_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim().replace(/\/+$/, '').toLowerCase())
+    .filter(Boolean)
+    .flatMap(value => {
+      // Accept both the documented origin form and a pasted bare extension ID.
+      if (value.includes('://')) return [value];
+      return [`chrome-extension://${value}`, `moz-extension://${value}`];
+    });
+  const isBrowserExtension = normalizedOrigin.startsWith('chrome-extension://') || normalizedOrigin.startsWith('moz-extension://');
+  const allowed = configured.includes(normalizedOrigin) || (!configured.length && isBrowserExtension);
+  if (!allowed) console.warn(`[Extension CORS] denied origin: ${origin || '(missing)'}`);
   if (allowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
