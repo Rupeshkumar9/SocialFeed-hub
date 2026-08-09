@@ -104,6 +104,15 @@ export const DOM = {
   modalNoteTextarea: document.getElementById('modal-note-textarea'),
   modalNoteCharCount: document.getElementById('modal-note-char-count'),
 
+  // Raw Link View Modal Elements
+  linkViewModalOverlay: document.getElementById('link-view-modal-overlay'),
+  closeLinkViewModal: document.getElementById('close-link-view-modal'),
+  linkViewModalSubtitle: document.getElementById('link-view-modal-subtitle'),
+  linkViewCount: document.getElementById('link-view-count'),
+  linkViewList: document.getElementById('link-view-list'),
+  linkViewEmpty: document.getElementById('link-view-empty'),
+  btnCopyAllLinks: document.getElementById('btn-copy-all-links'),
+
   // Bulk Edit Elements
   bulkEditModalOverlay: document.getElementById('bulk-edit-modal-overlay'),
   closeBulkEditModal: document.getElementById('close-bulk-edit-modal'),

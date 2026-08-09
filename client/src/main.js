@@ -8,6 +8,7 @@ import './features/library/category-rename.js';
 import './features/feed/filters.js';
 import './features/feed/bookmark-card.js';
 import './features/feed/feed-view.js';
+import './features/feed/link-view.js';
 import './features/analytics/analytics.js';
 import './features/bookmarks/media.js';
 import './features/import/import-controller.js';

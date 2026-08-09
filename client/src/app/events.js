@@ -22,6 +22,7 @@ const invalidateFeedCache = (...args) => actions.invalidateFeedCache(...args);
 const initSidebarNewTabContextMenu = (...args) => actions.initSidebarNewTabContextMenu(...args);
 const loadData = (...args) => actions.loadData(...args);
 const openBulkEditModal = (...args) => actions.openBulkEditModal(...args);
+const openLinkViewModal = (...args) => actions.openLinkViewModal(...args);
 const openSettings = (...args) => actions.openSettings(...args);
 const populateModalCategorySelect = (...args) => actions.populateModalCategorySelect(...args);
 const previewBrowserLink = (...args) => actions.previewBrowserLink(...args);
@@ -242,6 +243,12 @@ function initEventListeners() {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const layout = item.getAttribute('data-layout');
+        if (layout === 'links') {
+          openLinkViewModal();
+          closeAllToolbarDropdowns();
+          layoutBtn.focus();
+          return;
+        }
         changeLayout(layout);
         closeAllToolbarDropdowns();
       });

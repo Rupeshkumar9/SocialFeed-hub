@@ -55,16 +55,12 @@
       transform: rotate(30deg);
     }
     .logo-icon {
-      background: var(--accent-color);
-      color: white;
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 18px;
+      display: block;
+      object-fit: contain;
+      flex: 0 0 32px;
     }
     .title-area h1 {
       font-size: 16px;
@@ -252,7 +248,7 @@
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="logo-icon">🌸</div>
+      <img class="logo-icon" src="favicon.svg" alt="SocialFeed">
       <div class="title-area">
         <h1>SocialFeed Exporter</h1>
         <span>Instagram, X & Browser Bookmarks Sync</span>

@@ -290,6 +290,10 @@
                     <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Compact View</span>
                   </button>
+                  <button class="dropdown-item" data-layout="links" type="button">
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
+                      class="btn-text">Link View</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -321,6 +325,32 @@
               <div class="stats-list" id="stat-browser-splits"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw Link View Modal Overlay -->
+    <div class="modal-overlay link-view-modal-overlay" id="link-view-modal-overlay" hidden>
+      <div class="modal-box link-view-modal-box" role="dialog" aria-modal="true" aria-labelledby="link-view-modal-title">
+        <div class="modal-header link-view-modal-header">
+          <div>
+            <h3 id="link-view-modal-title">Link View</h3>
+            <p id="link-view-modal-subtitle" class="link-view-modal-subtitle">Links from the current view</p>
+          </div>
+          <button class="close-btn" id="close-link-view-modal" type="button" aria-label="Close link view">&times;</button>
+        </div>
+        <div class="link-view-meta">
+          <span id="link-view-count">0 links</span>
+          <span class="link-view-scroll-hint">Scroll to browse the list</span>
+        </div>
+        <div class="modal-body link-view-modal-body">
+          <ol class="link-view-list" id="link-view-list" aria-label="Raw bookmark links"></ol>
+          <div class="link-view-empty" id="link-view-empty" hidden>No links are available in this view.</div>
+        </div>
+        <div class="modal-footer link-view-modal-footer">
+          <button class="btn-primary" id="btn-copy-all-links" type="button">
+            Copy All Links
+          </button>
         </div>
       </div>
     </div>

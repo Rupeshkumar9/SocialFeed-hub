@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
   "name": "SocialFeed Bookmarks Exporter",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Scrapes and exports saved bookmarks from Instagram and X with embedded Base64 thumbnails, using automated scroll scanning.",
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -35,6 +41,12 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "SocialFeed Exporter"
+    "default_title": "SocialFeed Exporter",
+    "default_icon": {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   }
 }
