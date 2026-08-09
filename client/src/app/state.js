@@ -39,6 +39,8 @@ export const AppState = {
 // DOM Cache
 export const DOM = {
   bookmarksGrid: document.getElementById('bookmarks-grid'),
+  searchBar: document.querySelector('.search-bar-container'),
+  searchToggle: document.getElementById('search-toggle'),
   searchInput: document.getElementById('search-input'),
   feedTitle: document.getElementById('feed-title'),
   feedSubtitle: document.getElementById('feed-subtitle'),

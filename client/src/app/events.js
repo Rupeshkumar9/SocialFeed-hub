@@ -65,6 +65,41 @@ function initEventListeners() {
     applyFiltersAndSearch();
   }, 150));
 
+  // On narrow screens search is represented by an icon so the sync controls
+  // always remain reachable. The full input opens below the sticky header.
+  if (DOM.searchBar && DOM.searchToggle) {
+    const closeMobileSearch = () => {
+      DOM.searchBar.classList.remove('is-open');
+      DOM.searchToggle.setAttribute('aria-expanded', 'false');
+      DOM.searchToggle.setAttribute('aria-label', 'Open search');
+    };
+
+    DOM.searchToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = DOM.searchBar.classList.toggle('is-open');
+      DOM.searchToggle.setAttribute('aria-expanded', String(isOpen));
+      DOM.searchToggle.setAttribute('aria-label', isOpen ? 'Close search' : 'Open search');
+      if (isOpen) requestAnimationFrame(() => DOM.searchInput.focus());
+    });
+
+    DOM.searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeMobileSearch();
+        DOM.searchToggle.focus();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (DOM.searchBar.classList.contains('is-open') && !DOM.searchBar.contains(event.target)) {
+        closeMobileSearch();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) closeMobileSearch();
+    });
+  }
+
   // Platform select in navbar change (hidden/backward compatibility)
   if (DOM.filterPlatform) {
     DOM.filterPlatform.addEventListener('change', (e) => {
