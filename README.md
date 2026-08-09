@@ -81,16 +81,21 @@ SESSION_SECRET=generate_a_long_random_secret
 # Optional session lifetime in seconds (default: 30 days)
 SESSION_MAX_AGE_SECONDS=2592000
 
-# Separate token used only by the Chrome extension to insert scanned bookmarks
+# Optional legacy token used only by older extension installs. New installs pair from the website.
 EXTENSION_SYNC_TOKEN=generate_a_different_long_random_token
+
+# Optional extension-device lifetime controls. Zero/unset keeps paired devices valid until revoked.
+# EXTENSION_DEVICE_IDLE_SECONDS=7776000
+# EXTENSION_DEVICE_MAX_AGE_SECONDS=0
 
 # Optional Settings profile details
 PROFILE_NAME=Your Name
 PROFILE_EMAIL=you@example.com
 MEMBER_SINCE=Jul 2026
 
-# Optional: comma-separated Chrome extension origins for production CORS
-# EXTENSION_ALLOWED_ORIGINS=chrome-extension://your_extension_id
+# Optional: comma-separated Chrome/Firefox extension origins for production CORS.
+# Leave unset to allow browser extension origins during private single-user use.
+# EXTENSION_ALLOWED_ORIGINS=chrome-extension://your_chrome_id,moz-extension://your_firefox_id
 ```
 
 ### Step 3: Start the Dev Server
@@ -99,6 +104,12 @@ Run the local unified runner script:
 node server.js
 ```
 The server will start at [**`http://localhost:3000`**](http://localhost:3000) and automatically open the dashboard in your default browser. Enter your `ADMIN_PASSWORD` in the **Admin Login** modal to unlock the editing features locally.
+
+### Connect the browser extension
+
+Load the `extension/` directory as an unpacked extension in Chrome or Firefox. Open the extension popup, expand the settings panel, and choose **Connect using SocialFeed login**. The extension opens the website pairing page; sign in if requested and approve the connection. A unique credential is generated for that browser and stored in extension-local storage. The master `EXTENSION_SYNC_TOKEN` is not exposed to the extension UI.
+
+The credential remains valid until the extension is disconnected, all extension devices are revoked from Profile Settings, or an optional lifetime configured by `EXTENSION_DEVICE_IDLE_SECONDS` / `EXTENSION_DEVICE_MAX_AGE_SECONDS` is reached. Normal website logout does not disconnect a paired extension.
 
 ---
 

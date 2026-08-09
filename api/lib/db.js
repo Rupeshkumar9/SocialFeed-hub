@@ -2,6 +2,7 @@ const { MongoClient } = require('mongodb');
 
 let cachedDb = null;
 let indexesPromise = null;
+let extensionIndexesPromise = null;
 
 async function connectToDatabase() {
   if (cachedDb) {
@@ -46,4 +47,23 @@ async function ensureBookmarkIndexes() {
   return indexesPromise;
 }
 
-module.exports = { connectToDatabase, ensureBookmarkIndexes };
+async function ensureExtensionIndexes() {
+  if (!extensionIndexesPromise) {
+    extensionIndexesPromise = connectToDatabase().then(db => Promise.all([
+      db.collection('extension_devices').createIndexes([
+        { key: { tokenHash: 1 }, name: 'extension_device_token_unique', unique: true },
+        { key: { status: 1, lastUsedAt: -1 }, name: 'extension_device_status' }
+      ]),
+      db.collection('extension_pairing_requests').createIndexes([
+        { key: { pairingId: 1 }, name: 'extension_pairing_id_unique', unique: true },
+        { key: { expiresAt: 1 }, name: 'extension_pairing_expiry', expireAfterSeconds: 0 }
+      ])
+    ])).catch(error => {
+      extensionIndexesPromise = null;
+      throw error;
+    });
+  }
+  return extensionIndexesPromise;
+}
+
+module.exports = { connectToDatabase, ensureBookmarkIndexes, ensureExtensionIndexes };

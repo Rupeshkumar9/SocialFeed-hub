@@ -8,6 +8,8 @@ export const socialFeedApi = {
   logout: () => requestJSON('/api/auth/logout', { method: 'POST' }),
   getDatabaseStatus: () => requestJSON('/api/database/status', { cache: 'no-store', timeoutMs: 8000 }),
   getCounts: () => requestJSON('/api/counts', { cache: 'no-store' }),
+  getExtensionDevices: () => requestJSON('/api/extension/devices', { cache: 'no-store' }),
+  revokeExtensionDevices: () => requestJSON('/api/extension/revoke-all', { method: 'POST' }),
   renameCategory: payload => requestJSON('/api/categories/rename', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
   getBookmarks: (params, options = {}) => requestJSON('/api/load?' + params.toString(), options),
 };

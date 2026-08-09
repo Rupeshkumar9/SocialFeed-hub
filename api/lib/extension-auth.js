@@ -9,12 +9,13 @@ function isExtensionAuthorized(req) {
 function setExtensionCors(req, res) {
   const origin = req.headers.origin || '';
   const configured = (process.env.EXTENSION_ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
-  const allowed = configured.includes(origin) || (!configured.length && origin.startsWith('chrome-extension://'));
+  const isBrowserExtension = origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://');
+  const allowed = configured.includes(origin) || (!configured.length && isBrowserExtension);
   if (allowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Extension-Token');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Extension-Token');
   }
   return allowed;
 }

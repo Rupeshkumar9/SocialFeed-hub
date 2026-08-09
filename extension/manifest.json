@@ -11,6 +11,9 @@
     "bookmarks"
   ],
   "host_permissions": [
+    "https://socialfeed-hub.onrender.com/*",
+    "http://localhost:3000/*",
+    "http://localhost:5173/*",
     "*://*.instagram.com/*",
     "*://*.x.com/*",
     "*://*.twitter.com/*",

@@ -38,6 +38,13 @@ const { setExtensionCors } = require('./api/lib/extension-auth');
 
 const apiAuthSession = require('./api/auth/session');
 const apiDatabaseStatus = require('./api/database/status');
+const apiPairStart = require('./api/extension/pair/start');
+const apiPairAuthorize = require('./api/extension/pair/authorize');
+const apiPairStatus = require('./api/extension/pair/status');
+const apiPairCheck = require('./api/extension/pair/check');
+const apiPairRevoke = require('./api/extension/pair/revoke');
+const apiExtensionDevices = require('./api/extension/devices');
+const apiExtensionRevokeAll = require('./api/extension/revoke-all');
 
 // Simple wrapper to run Vercel serverless functions in local HTTP server
 async function handleServerless(handler, req, res) {
@@ -159,7 +166,7 @@ const server = http.createServer((req, res) => {
   const cleanUrl = url.split('?')[0];
 
   if (method === 'OPTIONS') {
-    if (cleanUrl === '/api/import-scraped') {
+    if (['/api/import-scraped', '/api/extension/pair/start', '/api/extension/pair/status', '/api/extension/pair/check', '/api/extension/pair/revoke'].includes(cleanUrl)) {
       if (!setExtensionCors(req, res)) { res.writeHead(403); res.end(); return; }
     }
     res.writeHead(200);
@@ -207,6 +214,34 @@ const server = http.createServer((req, res) => {
   }
   if (cleanUrl === '/api/import-scraped') {
     handleServerless(apiImportScraped, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/pair/start') {
+    handleServerless(apiPairStart, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/pair/authorize') {
+    handleServerless(apiPairAuthorize, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/pair/status') {
+    handleServerless(apiPairStatus, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/pair/check') {
+    handleServerless(apiPairCheck, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/pair/revoke') {
+    handleServerless(apiPairRevoke, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/devices') {
+    handleServerless(apiExtensionDevices, req, res);
+    return;
+  }
+  if (cleanUrl === '/api/extension/revoke-all') {
+    handleServerless(apiExtensionRevokeAll, req, res);
     return;
   }
   if (cleanUrl === '/api/counts') {

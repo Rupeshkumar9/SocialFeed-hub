@@ -120,6 +120,30 @@
     .form-group input:focus {
       border-color: var(--accent-color);
     }
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .connection-status::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      flex: 0 0 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+    }
+    .connection-status.connected::before { background: #16a34a; }
+    .connection-status.error::before { background: #dc2626; }
+    .settings-help {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 10px;
+      line-height: 1.4;
+    }
     .btn-save-settings {
       background: var(--accent-color);
       color: white;
@@ -240,13 +264,13 @@
   <!-- Settings Panel -->
   <div class="settings-panel" id="settings-panel">
     <h3 class="settings-title">Connection Settings</h3>
+    <div class="connection-status" id="connection-status">Not connected</div>
+    <button class="btn-save-settings" id="btn-connect-website" type="button">Connect using SocialFeed login</button>
+    <button class="btn-secondary" id="btn-disconnect" type="button" hidden>Disconnect this extension</button>
+    <p class="settings-help">The website creates a private credential for this browser. Your master server token is never shown here.</p>
     <div class="form-group">
-      <label for="input-api-url">API Server URL</label>
-      <input type="text" id="input-api-url" placeholder="http://localhost:3000">
-    </div>
-    <div class="form-group">
-      <label for="input-extension-token">Extension Sync Token</label>
-      <input type="password" id="input-extension-token" placeholder="Extension sync token">
+      <label for="input-api-url">Server URL (advanced)</label>
+      <input type="text" id="input-api-url" placeholder="https://socialfeed-hub.onrender.com">
     </div>
     <button class="btn-save-settings" id="btn-save-settings">Save Settings</button>
   </div>

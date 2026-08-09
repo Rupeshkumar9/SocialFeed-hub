@@ -1,7 +1,8 @@
 const { connectToDatabase, ensureBookmarkIndexes } = require('./lib/db');
 const cloudinary = require('cloudinary').v2;
 const { identityFilter, normalizeBookmark } = require('./lib/bookmark-utils');
-const { isExtensionAuthorized, setExtensionCors } = require('./lib/extension-auth');
+const { setExtensionCors } = require('./lib/extension-auth');
+const { authorizeExtensionDevice } = require('./lib/extension-pairing');
 
 if (process.env.CLOUDINARY_URL) {
   // Cloudinary reads CLOUDINARY_URL automatically.
@@ -19,7 +20,14 @@ module.exports = async (req, res) => {
     if (!corsAllowed) return res.status(403).json({ error: 'Extension origin not allowed.' });
     return res.status(200).end();
   }
-  if (!isExtensionAuthorized(req)) return res.status(401).json({ error: 'Valid extension token required.' });
+  let extensionAuth;
+  try {
+    extensionAuth = await authorizeExtensionDevice(req);
+  } catch (error) {
+    console.error('Extension authorization failed:', error);
+    return res.status(503).json({ error: 'Extension authorization is temporarily unavailable.' });
+  }
+  if (!extensionAuth.authorized) return res.status(401).json({ error: 'Connect this extension to SocialFeed before syncing.' });
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed. Use POST.' });

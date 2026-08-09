@@ -11,8 +11,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSettingsToggle = document.getElementById('btn-settings-toggle');
   const settingsPanel = document.getElementById('settings-panel');
   const inputApiUrl = document.getElementById('input-api-url');
-  const inputExtensionToken = document.getElementById('input-extension-token');
   const btnSaveSettings = document.getElementById('btn-save-settings');
+  const btnConnectWebsite = document.getElementById('btn-connect-website');
+  const btnDisconnect = document.getElementById('btn-disconnect');
+  const connectionStatus = document.getElementById('connection-status');
+
+  const DEFAULT_API_URL = 'https://socialfeed-hub.onrender.com';
 
   let activeTab = null;
   let detectedPlatform = null;
@@ -22,28 +26,94 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Storage Helpers
   function getSettings() {
     return new Promise((resolve) => {
-      chrome.storage.local.get(['apiUrl', 'extensionSyncToken'], (res) => {
+      chrome.storage.local.get(['apiUrl', 'extensionDeviceToken', 'extensionSyncToken', 'pairingState'], (res) => {
         resolve({
-          apiUrl: res.apiUrl || 'http://localhost:3000',
-          extensionSyncToken: res.extensionSyncToken || ''
+          apiUrl: res.apiUrl || DEFAULT_API_URL,
+          extensionDeviceToken: res.extensionDeviceToken || '',
+          // Keep reading the old value so existing installations continue to work during migration.
+          extensionSyncToken: res.extensionSyncToken || '',
+          pairingState: res.pairingState || null
         });
       });
     });
   }
 
-  function saveSettings(apiUrl, extensionSyncToken) {
+  function saveSettings(apiUrl, extra = {}) {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ apiUrl, extensionSyncToken }, () => {
+      chrome.storage.local.set({ apiUrl, ...extra }, () => {
         resolve();
       });
     });
+  }
+
+  function clearConnectionState() {
+    return new Promise(resolve => chrome.storage.local.remove(['extensionDeviceToken', 'extensionSyncToken', 'pairingState'], resolve));
+  }
+
+  function setConnectionStatus(message, state = '') {
+    connectionStatus.textContent = message;
+    connectionStatus.className = `connection-status ${state}`.trim();
+    btnDisconnect.hidden = state !== 'connected';
+    btnConnectWebsite.textContent = state === 'connected' ? 'Reconnect extension' : 'Connect using SocialFeed login';
+  }
+
+  async function connectionRequest(apiUrl, path, options = {}) {
+    const response = await fetch(`${apiUrl}${path}`, {
+      ...options,
+      headers: { Accept: 'application/json', ...(options.headers || {}) }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Request failed (${response.status}).`);
+    return payload;
+  }
+
+  async function refreshConnectionStatus() {
+    const settings = await getSettings();
+    if (!settings.extensionDeviceToken) {
+      setConnectionStatus(settings.pairingState ? 'Waiting for website confirmation…' : 'Not connected');
+      if (settings.pairingState) await checkPairing(settings);
+      return;
+    }
+    try {
+      await connectionRequest(settings.apiUrl, '/api/extension/pair/check', { headers: { Authorization: `Bearer ${settings.extensionDeviceToken}` } });
+      setConnectionStatus('Connected to SocialFeed', 'connected');
+    } catch (error) {
+      if (/connect|token|credential|unauthorized/i.test(error.message)) {
+        await clearConnectionState();
+        setConnectionStatus('Connection expired. Reconnect required.', 'error');
+      } else {
+        setConnectionStatus('Unable to check connection.', 'error');
+      }
+    }
+  }
+
+  async function checkPairing(settings = null) {
+    const current = settings || await getSettings();
+    const state = current.pairingState;
+    if (!state?.pairingId || !state?.secret) return false;
+    try {
+      const result = await connectionRequest(current.apiUrl, `/api/extension/pair/status?pairingId=${encodeURIComponent(state.pairingId)}&secret=${encodeURIComponent(state.secret)}`);
+      if (result.status === 'authorized' && result.token) {
+        await saveSettings(current.apiUrl, { extensionDeviceToken: result.token, pairingState: null });
+        await new Promise(resolve => chrome.storage.local.remove(['extensionSyncToken'], resolve));
+        setConnectionStatus('Connected to SocialFeed', 'connected');
+        showSuccess('Extension connected successfully.');
+        return true;
+      }
+      setConnectionStatus('Waiting for website confirmation…');
+      return false;
+    } catch (error) {
+      await clearConnectionState();
+      setConnectionStatus(error.message || 'Pairing request expired.', 'error');
+      return false;
+    }
   }
 
   // 2. Initialize Settings
   try {
     const settings = await getSettings();
     inputApiUrl.value = settings.apiUrl;
-    inputExtensionToken.value = settings.extensionSyncToken;
+    await refreshConnectionStatus();
   } catch (err) {
     console.error('Error loading settings:', err);
   }
@@ -55,15 +125,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 4. Save Settings Button
   btnSaveSettings.addEventListener('click', async () => {
-    const urlVal = inputApiUrl.value.trim() || 'http://localhost:3000';
-    const passVal = inputExtensionToken.value.trim();
+    const urlVal = inputApiUrl.value.trim() || DEFAULT_API_URL;
     
-    await saveSettings(urlVal, passVal);
+    await saveSettings(urlVal);
     showSuccess('Settings saved!');
     setTimeout(() => {
       successBox.style.display = 'none';
       settingsPanel.classList.remove('active');
     }, 1000);
+  });
+
+  btnConnectWebsite.addEventListener('click', async () => {
+    btnConnectWebsite.disabled = true;
+    showError('');
+    try {
+      const settings = await getSettings();
+      const result = await connectionRequest(settings.apiUrl, '/api/extension/pair/start', { method: 'POST' });
+      await saveSettings(settings.apiUrl, { pairingState: { pairingId: result.pairingId, secret: result.secret } });
+      setConnectionStatus('Waiting for website confirmation…');
+      chrome.tabs.create({ url: result.connectUrl, active: false });
+      const deadline = Date.now() + 10 * 60 * 1000;
+      const poll = async () => {
+        const connected = await checkPairing(await getSettings());
+        if (!connected && Date.now() < deadline) setTimeout(poll, 2000);
+      };
+      setTimeout(poll, 1500);
+    } catch (error) {
+      showError(`Unable to start connection: ${error.message}`);
+      setConnectionStatus('Not connected', 'error');
+    } finally {
+      btnConnectWebsite.disabled = false;
+    }
+  });
+
+  btnDisconnect.addEventListener('click', async () => {
+    const settings = await getSettings();
+    btnDisconnect.disabled = true;
+    try {
+      if (settings.extensionDeviceToken) {
+        await connectionRequest(settings.apiUrl, '/api/extension/pair/revoke', { method: 'POST', headers: { Authorization: `Bearer ${settings.extensionDeviceToken}` } });
+      }
+    } catch (error) {
+      console.warn('Unable to revoke extension credential remotely:', error);
+    } finally {
+      await clearConnectionState();
+      setConnectionStatus('Disconnected');
+      btnDisconnect.disabled = false;
+      showSuccess('This extension was disconnected.');
+    }
   });
 
   // 5. Detect if we are on Instagram or X
@@ -221,8 +330,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     successBox.style.display = 'none';
 
     const currentSettings = await getSettings();
-    if (!currentSettings.extensionSyncToken) {
-      showError('Extension Sync Token is required to sync. Click ⚙️ to configure.');
+    const credential = currentSettings.extensionDeviceToken || currentSettings.extensionSyncToken;
+    if (!credential) {
+      showError('Connect this extension first. Click ⚙️ and choose Connect using SocialFeed login.');
       settingsPanel.classList.add('active');
       return;
     }
@@ -236,7 +346,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Extension-Token': currentSettings.extensionSyncToken
+          ...(currentSettings.extensionDeviceToken
+            ? { Authorization: `Bearer ${currentSettings.extensionDeviceToken}` }
+            : { 'X-Extension-Token': credential })
         },
         body: JSON.stringify(scrapedData)
       });
@@ -244,6 +356,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const resData = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401 && currentSettings.extensionDeviceToken) {
+          await clearConnectionState();
+          setConnectionStatus('Connection revoked. Reconnect required.', 'error');
+        }
         throw new Error(resData.error || `HTTP error! Status: ${response.status}`);
       }
 
