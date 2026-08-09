@@ -190,18 +190,54 @@
   display: none !important;
 }
 
-.sync-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--accent-green);
-  display: inline-block;
-  box-shadow: 0 0 8px var(--accent-green);
+.sync-status-icon {
+  --sync-status-color: #22c55e;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+  color: var(--sync-status-color);
+  filter: drop-shadow(0 0 4px var(--sync-status-color));
 }
 
-.sync-dot.offline {
-  background-color: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
+.sync-status-icon.offline {
+  --sync-status-color: #ef4444;
+}
+
+.sync-status-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sync-status-icon-circle {
+  fill: currentColor;
+  fill-opacity: 0.16;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.sync-status-icon-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.3;
+}
+
+.sync-status-icon-offline {
+  display: none;
+}
+
+.sync-status-icon.offline .sync-status-icon-connected {
+  display: none;
+}
+
+.sync-status-icon.offline .sync-status-icon-offline {
+  display: block;
 }
 
 /* Main Content Panel */

@@ -81,7 +81,13 @@
       <div class="header-right">
         <!-- read-only server/database status -->
         <button id="sync-btn" class="sync-status-btn" type="button" title="Checking server and database connection" aria-label="Checking server and database connection">
-          <span class="sync-dot" id="sync-dot"></span>
+          <span class="sync-status-icon" id="sync-dot" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <circle class="sync-status-icon-circle" cx="12" cy="12" r="9"></circle>
+              <path class="sync-status-icon-mark sync-status-icon-connected" d="M7.4 12.2 10.5 15.3 16.8 8.9"></path>
+              <path class="sync-status-icon-mark sync-status-icon-offline" d="M12 7.4v5.7M12 16.8h.01"></path>
+            </svg>
+          </span>
           <span id="sync-status-text" class="btn-text">Server Connected</span>
         </button>
 
