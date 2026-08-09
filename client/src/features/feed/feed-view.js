@@ -1,4 +1,4 @@
-import { AppState, DOM, POSTS_PER_PAGE } from '../../app/state.js';
+import { AppState, DOM, FEED_PAGE_SIZE, POSTS_PER_PAGE } from '../../app/state.js';
 import { actions, registerActions } from '../../app/actions.js';
 
 const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
@@ -237,6 +237,9 @@ function initInfiniteScrollObserver() {
   if (!sentinel || !scrollContainer) return;
   AppState.scrollObserver = new IntersectionObserver(entries => {
     if (!entries.some(entry => entry.isIntersecting) || isScrollLoading) return;
+    // Do not chain social API pages immediately after the first response.
+    // Wait for the user to begin scrolling so platform switches stay fast.
+    if (scrollContainer.scrollTop <= 0 && AppState.hasMore && AppState.bookmarks.length >= FEED_PAGE_SIZE) return;
     const total = AppState.filteredBookmarks.length;
     if (AppState.visibleCount < total) {
       isScrollLoading = true;
@@ -251,7 +254,7 @@ function initInfiniteScrollObserver() {
       return;
     }
     if (AppState.hasMore && !AppState.isLoadingMore) loadData({ append: true });
-  }, { root: scrollContainer, rootMargin: "500px 0px" });
+  }, { root: scrollContainer, rootMargin: "200px 0px" });
   AppState.scrollObserver.observe(sentinel);
 }
 

@@ -1,5 +1,6 @@
 // Application State
 export const POSTS_PER_PAGE = 50;
+export const FEED_PAGE_SIZE = 40;
 
 export const AppState = {
   bookmarks: [],
@@ -32,6 +33,8 @@ export const AppState = {
   linkPreview: null,
   databaseConnected: null,
   activeRequestId: 0,
+  activeLoadController: null,
+  feedCache: new Map(),
   scrollObserver: null,
   layoutInitialized: false
 };

@@ -6,6 +6,7 @@ import { socialFeedApi } from '../../api/socialfeed-api.js';
 const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
 const applyRouteFromHash = (...args) => actions.applyRouteFromHash(...args);
 const checkDatabaseConnection = (...args) => actions.checkDatabaseConnection(...args);
+const invalidateFeedCache = (...args) => actions.invalidateFeedCache(...args);
 const loadData = (...args) => actions.loadData(...args);
 const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
 const showToast = (...args) => actions.showToast(...args);
@@ -160,6 +161,7 @@ function initAuthEvents() {
 
   const logout = async () => {
     try { await socialFeedApi.logout(); } catch { /* Session is cleared locally either way. */ }
+    invalidateFeedCache();
     AppState.bookmarks = [];
     AppState.nextCursor = null;
     AppState.databaseConnected = null;

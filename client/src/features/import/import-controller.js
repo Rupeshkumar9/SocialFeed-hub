@@ -3,6 +3,7 @@ import { actions, registerActions } from '../../app/actions.js';
 import { BookmarksImporter } from './importer.js';
 
 const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
+const invalidateFeedCache = (...args) => actions.invalidateFeedCache(...args);
 const processCollections = (...args) => actions.processCollections(...args);
 const processTags = (...args) => actions.processTags(...args);
 const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
@@ -33,6 +34,7 @@ function saveDataToServer() {
     })
     .then(() => {
       AppState.pendingDeletedIds.clear();
+      invalidateFeedCache();
       showToast('Synchronized successfully with server!', 'success');
       updateSyncStatusUI(true);
       refreshPlatformCounts();

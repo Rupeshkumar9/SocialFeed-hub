@@ -4,6 +4,7 @@ import { socialFeedApi } from '../../api/socialfeed-api.js';
 
 const showToast = (...args) => actions.showToast(...args);
 const loadData = (...args) => actions.loadData(...args);
+const invalidateFeedCache = (...args) => actions.invalidateFeedCache(...args);
 const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
 const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
 const updateStatsAnalytics = (...args) => actions.updateStatsAnalytics(...args);
@@ -64,6 +65,7 @@ async function submitRename(event) {
     AppState.activeCollection = source === 'social' ? newName : 'all';
     AppState.nextCursor = null;
     closeDialog();
+    invalidateFeedCache();
     await Promise.allSettled([refreshPlatformCounts(), loadData()]);
     updateSidebarNavigation();
     updateStatsAnalytics();

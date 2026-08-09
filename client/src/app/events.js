@@ -18,6 +18,7 @@ const handleAdminLoginSubmit = (...args) => actions.handleAdminLoginSubmit(...ar
 const handleBulkEditSubmit = (...args) => actions.handleBulkEditSubmit(...args);
 const handleFileImport = (...args) => actions.handleFileImport(...args);
 const handleManualBookmarkSubmit = (...args) => actions.handleManualBookmarkSubmit(...args);
+const invalidateFeedCache = (...args) => actions.invalidateFeedCache(...args);
 const initSidebarNewTabContextMenu = (...args) => actions.initSidebarNewTabContextMenu(...args);
 const loadData = (...args) => actions.loadData(...args);
 const openBulkEditModal = (...args) => actions.openBulkEditModal(...args);
@@ -307,7 +308,8 @@ function initEventListeners() {
         throw new Error('Your session is no longer available.');
       }
 
-      const bookmarks = await loadData();
+      invalidateFeedCache();
+      const bookmarks = await loadData({ force: true });
       if (!bookmarks) throw new Error('The server could not return the latest bookmarks.');
 
       const counts = await refreshPlatformCounts();
