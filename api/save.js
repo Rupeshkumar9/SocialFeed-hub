@@ -1,7 +1,7 @@
-const { connectToDatabase, ensureBookmarkIndexes } = require('./_lib/db');
+const { connectToDatabase, ensureBookmarkIndexes } = require('./lib/db');
 const cloudinary = require('cloudinary').v2;
-const { normalizeBookmark } = require('./_lib/bookmark-utils');
-const { requireSession } = require('./_lib/auth');
+const { normalizeBookmark } = require('./lib/bookmark-utils');
+const { requireSession } = require('./lib/auth');
 
 // Configure Cloudinary
 if (process.env.CLOUDINARY_URL) {

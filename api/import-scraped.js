@@ -1,7 +1,7 @@
-const { connectToDatabase, ensureBookmarkIndexes } = require('./_lib/db');
+const { connectToDatabase, ensureBookmarkIndexes } = require('./lib/db');
 const cloudinary = require('cloudinary').v2;
-const { identityFilter, normalizeBookmark } = require('./_lib/bookmark-utils');
-const { isExtensionAuthorized, setExtensionCors } = require('./_lib/extension-auth');
+const { identityFilter, normalizeBookmark } = require('./lib/bookmark-utils');
+const { isExtensionAuthorized, setExtensionCors } = require('./lib/extension-auth');
 
 if (process.env.CLOUDINARY_URL) {
   // Cloudinary reads CLOUDINARY_URL automatically.

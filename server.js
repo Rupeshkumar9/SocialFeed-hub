@@ -1,5 +1,25 @@
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const PORT = process.env.PORT || 3000;
+const DIST_DIR = path.join(__dirname, 'dist');
+
+const MIME_TYPES = {
+  '.css': 'text/css; charset=utf-8',
+  '.gif': 'image/gif',
+  '.html': 'text/html; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.txt': 'text/plain; charset=utf-8',
+  '.webp': 'image/webp',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2'
+};
 
 // Load environment variables from .env file into process.env
 require('dotenv').config();
@@ -14,7 +34,7 @@ const apiAuthLogout = require('./api/auth/logout');
 const apiBookmarkPreview = require('./api/bookmark-preview');
 const apiCounts = require('./api/counts');
 const apiRenameCategory = require('./api/categories/rename');
-const { setExtensionCors } = require('./api/_lib/extension-auth');
+const { setExtensionCors } = require('./api/lib/extension-auth');
 
 const apiAuthSession = require('./api/auth/session');
 const apiDatabaseStatus = require('./api/database/status');
@@ -69,6 +89,69 @@ async function handleServerless(handler, req, res) {
   }
 }
 
+function sendStaticFile(res, filePath, requestPath, method = 'GET') {
+  fs.stat(filePath, (error, stats) => {
+    if (error || !stats.isFile()) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Not found');
+      return;
+    }
+
+    const extension = path.extname(filePath).toLowerCase();
+    const headers = {
+      'Content-Type': MIME_TYPES[extension] || 'application/octet-stream',
+      'Cache-Control': requestPath.startsWith('/assets/')
+        ? 'public, max-age=31536000, immutable'
+        : 'no-cache'
+    };
+    res.writeHead(200, headers);
+    if (method === 'HEAD') {
+      res.end();
+      return;
+    }
+    fs.createReadStream(filePath).on('error', () => {
+      if (!res.writableEnded) res.end();
+    }).pipe(res);
+  });
+}
+
+function serveFrontend(req, res) {
+  if (!['GET', 'HEAD'].includes(req.method)) {
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Method not allowed.' }));
+    return;
+  }
+
+  let requestPath;
+  try {
+    requestPath = decodeURIComponent(new URL(req.url, `http://${req.headers.host || 'localhost'}`).pathname);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Invalid URL');
+    return;
+  }
+
+  const relativePath = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
+  const candidate = path.resolve(DIST_DIR, relativePath);
+  const distRoot = path.resolve(DIST_DIR) + path.sep;
+  const isInsideDist = candidate === path.resolve(DIST_DIR) || candidate.startsWith(distRoot);
+  if (!isInsideDist) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Invalid path');
+    return;
+  }
+
+  fs.stat(candidate, (error, stats) => {
+    if (!error && stats.isFile()) {
+      sendStaticFile(res, candidate, requestPath, req.method);
+      return;
+    }
+
+    // Hash-based frontend routes still benefit from a normal SPA fallback.
+    sendStaticFile(res, path.join(DIST_DIR, 'index.html'), '/', req.method);
+  });
+}
+
 // Start the server
 const server = http.createServer((req, res) => {
   const url = req.url;
@@ -85,6 +168,13 @@ const server = http.createServer((req, res) => {
   }
 
   console.log(`[${new Date().toLocaleTimeString()}] ${method} ${url}`);
+
+  if (cleanUrl === '/healthz' && (method === 'GET' || method === 'HEAD')) {
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    if (method === 'HEAD') res.end();
+    else res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
 
   // Route API requests to Serverless functions
   if (cleanUrl === '/api/status') {
@@ -132,12 +222,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Non-API route fallback
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'API endpoint not found. Use Vite server at http://localhost:5173 for web app UI.' }));
+  if (cleanUrl === '/api' || cleanUrl.startsWith('/api/')) {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'API endpoint not found.' }));
+    return;
+  }
+
+  serveFrontend(req, res);
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('\n======================================================');
   console.log('✨  SOCIAL BOOKMARKS FEED - UNIFIED BACKEND RUNNER  ✨');
   console.log('======================================================');

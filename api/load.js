@@ -1,5 +1,5 @@
-const { requireSession } = require('./_lib/auth');
-const { loadBookmarks } = require('./_lib/load-bookmarks');
+const { requireSession } = require('./lib/auth');
+const { loadBookmarks } = require('./lib/load-bookmarks');
 
 module.exports = async (req, res) => {
   if (!requireSession(req, res)) return;

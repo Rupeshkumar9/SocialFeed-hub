@@ -1,4 +1,4 @@
-const { createSessionToken, hasValidEmail, hasValidPassword, sessionCookie } = require('../_lib/auth');
+const { createSessionToken, hasValidEmail, hasValidPassword, sessionCookie } = require('../lib/auth');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });

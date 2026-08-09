@@ -1,5 +1,5 @@
-const { connectToDatabase } = require('../_lib/db');
-const { requireSession } = require('../_lib/auth');
+const { connectToDatabase } = require('../lib/db');
+const { requireSession } = require('../lib/auth');
 
 const PROTECTED_NAMES = new Set([
   'all',
