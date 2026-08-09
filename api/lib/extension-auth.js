@@ -21,9 +21,10 @@ function setExtensionCors(req, res) {
       .toLowerCase())
     .filter(Boolean)
     .flatMap(value => {
-      // Accept both the documented origin form and a pasted bare extension ID.
-      if (value.includes('://')) return [value];
-      return [`chrome-extension://${value}`, `moz-extension://${value}`];
+      // Accept both full origins and pasted bare extension IDs. Always retain
+      // the original value, then add canonical forms for either ID format.
+      const bareId = value.replace(/^(?:chrome|moz)-extension:\/\//i, '');
+      return [value, `chrome-extension://${bareId}`, `moz-extension://${bareId}`];
     });
   const isBrowserExtension = normalizedOrigin.startsWith('chrome-extension://') || normalizedOrigin.startsWith('moz-extension://');
   const allowed = configured.includes(normalizedOrigin) || (!configured.length && isBrowserExtension);

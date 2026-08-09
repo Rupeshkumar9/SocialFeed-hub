@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const DEFAULT_API_URL = 'https://socialfeed-hub.onrender.com';
 
+  function normalizeApiUrl(value) {
+    return String(value || '').trim().replace(/\/+$/, '') || DEFAULT_API_URL;
+  }
+
   let activeTab = null;
   let detectedPlatform = null;
   let scrapedData = null;
@@ -28,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return new Promise((resolve) => {
       chrome.storage.local.get(['apiUrl', 'extensionDeviceToken', 'extensionSyncToken', 'pairingState'], (res) => {
         resolve({
-          apiUrl: res.apiUrl || DEFAULT_API_URL,
+          apiUrl: normalizeApiUrl(res.apiUrl),
           extensionDeviceToken: res.extensionDeviceToken || '',
           // Keep reading the old value so existing installations continue to work during migration.
           extensionSyncToken: res.extensionSyncToken || '',
@@ -40,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function saveSettings(apiUrl, extra = {}) {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ apiUrl, ...extra }, () => {
+      chrome.storage.local.set({ apiUrl: normalizeApiUrl(apiUrl), ...extra }, () => {
         resolve();
       });
     });
@@ -58,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function connectionRequest(apiUrl, path, options = {}) {
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await fetch(`${normalizeApiUrl(apiUrl)}${path}`, {
       ...options,
       headers: { Accept: 'application/json', ...(options.headers || {}) }
     });
