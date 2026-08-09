@@ -147,6 +147,14 @@
     display: inline-flex !important;
     visibility: visible;
     opacity: 1;
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    border-radius: 50%;
+  }
+
+  .sync-status-btn.offline {
+    border-color: rgba(239, 68, 68, 0.45);
+    background-color: rgba(239, 68, 68, 0.08);
   }
 
   .sync-status-btn .sync-dot {
