@@ -114,6 +114,26 @@ html[data-theme="dark"] .settings-logout {
   color: #fb7185;
 }
 
+/* Toasts use light-theme backgrounds by default; override both surface and
+   text colors so feedback remains readable in the dark theme. */
+html[data-theme="dark"] .toast {
+  background-color: var(--surface-solid);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .toast-success {
+  background-color: #17332d;
+  color: #d1fae5;
+  border-color: #34d399;
+}
+
+html[data-theme="dark"] .toast-error {
+  background-color: #3a2029;
+  color: #fecdd3;
+  border-color: #fb7185;
+}
+
 .theme-toggle-btn {
   width: 38px;
   height: 38px;

@@ -101,6 +101,7 @@ async function checkServerConnection() {
     if (member) member.textContent = profile.memberSince || 'Private account';
     return { authenticated: true, data };
   } catch (error) {
+    updateSyncStatusUI(false, error instanceof ApiError && error.status === 401 ? 'Session Required' : 'Server Offline');
     if (error instanceof ApiError && error.status === 401) showPrivateLogin();
     else showAuthStartupError();
     return { authenticated: false, error };

@@ -79,8 +79,8 @@
       </div>
 
       <div class="header-right">
-        <!-- server synchronised -->
-        <button id="sync-btn" class="sync-status-btn" title="Sync status">
+        <!-- read-only server/database status -->
+        <button id="sync-btn" class="sync-status-btn" type="button" title="Checking server and database connection" aria-label="Checking server and database connection">
           <span class="sync-dot" id="sync-dot"></span>
           <span id="sync-status-text" class="btn-text">Server Connected</span>
         </button>
@@ -91,7 +91,7 @@
         </button>
 
         <!-- sync -->
-        <button class="btn-primary" id="btn-sync-now" title="Force sync from server">
+        <button class="btn-primary" id="btn-sync-now" type="button" title="Refresh the latest bookmarks and counts from the server" aria-label="Refresh the latest bookmarks and counts from the server">
           <i class="app-icon icon-rotate"></i> <span class="btn-text">Sync</span>
         </button>
 

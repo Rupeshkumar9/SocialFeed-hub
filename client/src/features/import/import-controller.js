@@ -17,9 +17,6 @@ function saveDataToServer() {
     return Promise.resolve(false);
   }
 
-  DOM.syncBtn.classList.add('saving');
-  DOM.syncStatusText.textContent = 'Syncing...';
-
   const headers = { 'Content-Type': 'application/json' };
 
   return fetch('/api/save', {

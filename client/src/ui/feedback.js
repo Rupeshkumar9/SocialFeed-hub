@@ -8,15 +8,18 @@ const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args
 function updateSyncStatusUI(connected, label) {
   if (!DOM.syncBtn || !DOM.syncDot || !DOM.syncStatusText) return;
   DOM.syncBtn.classList.remove('saving', 'offline');
+  DOM.syncBtn.dataset.status = connected ? 'connected' : 'offline';
   if (connected) {
     DOM.syncDot.className = 'sync-dot';
     DOM.syncStatusText.textContent = label || 'Server Connected';
-    DOM.syncBtn.title = 'Server connected. Click to save local edits.';
+    DOM.syncBtn.title = 'Server and database connected. Click for status details.';
+    DOM.syncBtn.setAttribute('aria-label', 'Server and database connected. Click for status details.');
     DOM.syncDot.title = 'connected';
   } else {
     DOM.syncDot.className = 'sync-dot offline';
     DOM.syncStatusText.textContent = label || 'Server Offline';
-    DOM.syncBtn.title = 'Server disconnected. Click Sync to retry.';
+    DOM.syncBtn.title = 'Server or database unavailable. Click for status details.';
+    DOM.syncBtn.setAttribute('aria-label', 'Server or database unavailable. Click for status details.');
     DOM.syncDot.title = 'disconnected';
     DOM.syncBtn.classList.add('offline');
   }

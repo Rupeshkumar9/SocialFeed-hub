@@ -27,8 +27,8 @@ const previewBrowserLink = (...args) => actions.previewBrowserLink(...args);
 const isKnownSocialPlatform = (...args) => actions.isKnownSocialPlatform(...args);
 const platformLabel = (...args) => actions.platformLabel(...args);
 const renderFeedGrid = (...args) => actions.renderFeedGrid(...args);
+const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
 const saveBookmarkNotes = (...args) => actions.saveBookmarkNotes(...args);
-const saveDataToServer = (...args) => actions.saveDataToServer(...args);
 const saveModalNoteAndClose = (...args) => actions.saveModalNoteAndClose(...args);
 const setManualImageFieldVisible = (...args) => actions.setManualImageFieldVisible(...args);
 const setManualImageFromFile = (...args) => actions.setManualImageFromFile(...args);
@@ -280,22 +280,52 @@ function initEventListeners() {
     }
   });
 
-  // Sync Actions listeners
+  // The status indicator is read-only. Clicking it only explains the current
+  // state; saving and refreshing are separate, explicit operations.
   DOM.syncBtn.addEventListener('click', () => {
-    if (AppState.isServerConnected) {
-      saveDataToServer();
-    } else {
-      checkServerConnection().then(loadData).catch(() => {
-        showToast('Server is offline. Please check the dev server or Vercel API.', 'error');
-      });
-    }
+    const connected = DOM.syncBtn.dataset.status === 'connected';
+    showToast(
+      connected ? 'Server and database are connected.' : 'Server or database is unavailable.',
+      connected ? 'success' : 'error'
+    );
   });
-  DOM.btnSyncNow.addEventListener('click', () => {
+
+  // Refresh the current view from the server. A full refresh intentionally
+  // starts at the first page and also updates sidebar/analytics counts.
+  DOM.btnSyncNow.addEventListener('click', async () => {
+    if (DOM.btnSyncNow.disabled) return;
+    const icon = DOM.btnSyncNow.querySelector('.app-icon');
+    DOM.btnSyncNow.disabled = true;
     DOM.btnSyncNow.classList.add('saving');
-    checkServerConnection()
-      .then(loadData)
-      .catch(() => showToast('Could not reach the server.', 'error'))
-      .finally(() => DOM.btnSyncNow.classList.remove('saving'));
+    DOM.btnSyncNow.setAttribute('aria-busy', 'true');
+    DOM.btnSyncNow.title = 'Refreshing the latest bookmarks and counts...';
+    icon?.classList.add('icon-spin');
+
+    try {
+      const session = await checkServerConnection();
+      if (!session?.authenticated || !AppState.isServerConnected) {
+        throw new Error('Your session is no longer available.');
+      }
+
+      const bookmarks = await loadData();
+      if (!bookmarks) throw new Error('The server could not return the latest bookmarks.');
+
+      const counts = await refreshPlatformCounts();
+      if (!counts) {
+        showToast('Bookmarks refreshed, but counts could not be updated.', 'error');
+      } else {
+        showToast('Latest bookmarks and counts loaded from the server.', 'success');
+      }
+    } catch (error) {
+      console.error('Server refresh failed:', error);
+      showToast(error?.message || 'Could not refresh data from the server.', 'error');
+    } finally {
+      DOM.btnSyncNow.disabled = false;
+      DOM.btnSyncNow.classList.remove('saving');
+      DOM.btnSyncNow.removeAttribute('aria-busy');
+      DOM.btnSyncNow.title = 'Refresh the latest bookmarks and counts from the server';
+      icon?.classList.remove('icon-spin');
+    }
   });
   DOM.btnExportJson.addEventListener('click', triggerManualDownload);
 
