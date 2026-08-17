@@ -1,30 +1,17 @@
-const http = require('http');
-const fs = require('fs');
+const express = require('express');
 const path = require('path');
-const PORT = process.env.PORT || 3000;
-const DIST_DIR = path.join(__dirname, 'dist');
 
-const MIME_TYPES = {
-  '.css': 'text/css; charset=utf-8',
-  '.gif': 'image/gif',
-  '.html': 'text/html; charset=utf-8',
-  '.ico': 'image/x-icon',
-  '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg',
-  '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.txt': 'text/plain; charset=utf-8',
-  '.webp': 'image/webp',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2'
-};
-
-// Load environment variables from .env file into process.env
+// Load environment variables before reading the port for local development.
 require('dotenv').config();
 
-// Import serverless functions
+const PORT = process.env.PORT || 3000;
+const DIST_DIR = path.join(__dirname, 'dist');
+const app = express();
+
+app.disable('x-powered-by');
+
+// Existing imports are CommonJS request handlers. They intentionally remain
+// unchanged; Express is only replacing the old HTTP transport wrapper.
 const apiStatus = require('./api/status');
 const apiLoad = require('./api/load');
 const apiSave = require('./api/save');
@@ -45,236 +32,151 @@ const apiPairCheck = require('./api/extension/pair/check');
 const apiPairRevoke = require('./api/extension/pair/revoke');
 const apiExtensionDevices = require('./api/extension/devices');
 const apiExtensionRevokeAll = require('./api/extension/revoke-all');
+const apiPublicProfile = require('./api/public-profile');
+const apiPublicBookmarks = require('./api/public-bookmarks');
+const apiPublicProfileSettings = require('./api/public-profile-settings');
+const apiBookmarkVisibility = require('./api/bookmark-visibility');
 
-// Simple wrapper to run Vercel serverless functions in local HTTP server
-async function handleServerless(handler, req, res) {
-  res.status = function(code) {
-    this.statusCode = code;
-    return this;
-  };
-  
-  res.json = function(data) {
-    this.setHeader('Content-Type', 'application/json');
-    this.end(JSON.stringify(data));
-    return this;
-  };
+const extensionCorsRoutes = new Set([
+  '/api/import-scraped',
+  '/api/extension/pair/start',
+  '/api/extension/pair/status',
+  '/api/extension/pair/check',
+  '/api/extension/pair/revoke'
+]);
 
-  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  req.query = Object.fromEntries(parsedUrl.searchParams);
+// Import and extension payloads can be larger than ordinary profile JSON.
+// Keep one explicit, bounded parser until route-specific parsers are added.
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '25mb' }));
 
-  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-    let bodyData = '';
-    req.on('data', chunk => {
-      bodyData += chunk.toString();
-    });
-    
-    await new Promise((resolve) => {
-      req.on('end', () => {
-        if (bodyData && req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
-          try {
-            req.body = JSON.parse(bodyData);
-          } catch (e) {
-            console.error('Failed to parse body JSON:', e);
-            req.body = null;
-          }
-        } else {
-          req.body = bodyData;
-        }
-        resolve();
-      });
-    });
+// Preserve the old preflight behavior. Extension handlers still apply their
+// own narrow allowlist and response headers for non-preflight requests.
+app.use((req, res, next) => {
+  if (req.method !== 'OPTIONS') return next();
+  if (extensionCorsRoutes.has(req.path) && !setExtensionCors(req, res)) {
+    return res.status(403).end();
   }
+  return res.status(200).end();
+});
 
-  try {
-    await handler(req, res);
-  } catch (err) {
-    console.error('Serverless execution error:', err);
-    if (!res.writableEnded) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Internal Server Error', details: err.message }));
+function mount(method, route, handler) {
+  app[method](route, async (req, res, next) => {
+    try {
+      await handler(req, res);
+    } catch (error) {
+      next(error);
     }
-  }
-}
-
-function sendStaticFile(res, filePath, requestPath, method = 'GET') {
-  fs.stat(filePath, (error, stats) => {
-    if (error || !stats.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Not found');
-      return;
-    }
-
-    const extension = path.extname(filePath).toLowerCase();
-    const headers = {
-      'Content-Type': MIME_TYPES[extension] || 'application/octet-stream',
-      'Cache-Control': requestPath.startsWith('/assets/')
-        ? 'public, max-age=31536000, immutable'
-        : 'no-cache'
-    };
-    res.writeHead(200, headers);
-    if (method === 'HEAD') {
-      res.end();
-      return;
-    }
-    fs.createReadStream(filePath).on('error', () => {
-      if (!res.writableEnded) res.end();
-    }).pipe(res);
   });
 }
 
-function serveFrontend(req, res) {
-  if (!['GET', 'HEAD'].includes(req.method)) {
-    res.writeHead(405, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Method not allowed.' }));
-    return;
+// Health check stays outside the API namespace for Render.
+app.get('/healthz', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (req.method === 'HEAD') return res.status(200).end();
+  return res.status(200).json({ status: 'ok' });
+});
+
+// Existing route contract. Keep aliases used by older frontend/extension
+// versions during the transport migration.
+mount('get', '/api/status', apiStatus);
+mount('get', '/api/database/status', apiDatabaseStatus);
+mount('get', '/api/auth/session', apiAuthSession);
+mount('post', '/api/auth/login', apiAuthLogin);
+mount('post', '/api/auth-login', apiAuthLogin);
+mount('post', '/api/auth/logout', apiAuthLogout);
+mount('post', '/api/auth-logout', apiAuthLogout);
+mount('get', '/api/load', apiLoad);
+mount('post', '/api/save', apiSave);
+mount('post', '/api/import-scraped', apiImportScraped);
+mount('get', '/api/counts', apiCounts);
+mount('post', '/api/categories/rename', apiRenameCategory);
+mount('post', '/api/bookmark-preview', apiBookmarkPreview);
+mount('get', '/api/extension/devices', apiExtensionDevices);
+mount('post', '/api/extension/revoke-all', apiExtensionRevokeAll);
+mount('post', '/api/extension/pair/start', apiPairStart);
+mount('post', '/api/extension/pair/authorize', apiPairAuthorize);
+mount('get', '/api/extension/pair/status', apiPairStatus);
+mount('get', '/api/extension/pair/check', apiPairCheck);
+mount('post', '/api/extension/pair/revoke', apiPairRevoke);
+
+// Public-profile and sharing routes use the same Express transport while
+// keeping their validation/data work in dedicated handler modules.
+mount('get', '/api/public-profile', apiPublicProfile);
+mount('get', '/api/public-bookmarks', apiPublicBookmarks);
+mount('get', '/api/public-profile-settings', apiPublicProfileSettings);
+mount('put', '/api/public-profile-settings', apiPublicProfileSettings);
+mount('patch', '/api/bookmark-visibility', apiBookmarkVisibility);
+
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found.' });
+});
+
+function staticHeaders(res, filePath) {
+  if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  } else {
+    res.set('Cache-Control', 'no-cache');
   }
+}
 
-  let requestPath;
-  try {
-    requestPath = decodeURIComponent(new URL(req.url, `http://${req.headers.host || 'localhost'}`).pathname);
-  } catch {
-    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Invalid URL');
-    return;
-  }
+app.use(express.static(DIST_DIR, { setHeaders: staticHeaders }));
 
-  const relativePath = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
-  const candidate = path.resolve(DIST_DIR, relativePath);
-  const distRoot = path.resolve(DIST_DIR) + path.sep;
-  const isInsideDist = candidate === path.resolve(DIST_DIR) || candidate.startsWith(distRoot);
-  if (!isInsideDist) {
-    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Invalid path');
-    return;
-  }
+const RESERVED_TOP_LEVEL_PATHS = new Set([
+  'api', 'assets', 'auth', 'login', 'logout', 'settings', 'admin',
+  'extension-connect', 'healthz', 'favicon', 'index', 'public-profile'
+]);
+const USERNAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{2,29}$/;
 
-  fs.stat(candidate, (error, stats) => {
-    if (!error && stats.isFile()) {
-      sendStaticFile(res, candidate, requestPath, req.method);
-      return;
-    }
+function isPublicProfilePath(value) {
+  const slug = String(value || '');
+  return USERNAME_PATTERN.test(slug) && !RESERVED_TOP_LEVEL_PATHS.has(slug.toLowerCase());
+}
 
-    // Hash-based frontend routes still benefit from a normal SPA fallback.
-    sendStaticFile(res, path.join(DIST_DIR, 'index.html'), '/', req.method);
+function sendHtmlEntry(res, fileName, next) {
+  const filePath = path.join(DIST_DIR, fileName);
+  return res.sendFile(filePath, { headers: { 'Cache-Control': 'no-cache' } }, error => {
+    if (error) next(error);
   });
 }
 
-// Start the server
-const server = http.createServer((req, res) => {
-  const url = req.url;
-  const method = req.method;
-  const cleanUrl = url.split('?')[0];
-
-  if (method === 'OPTIONS') {
-    if (['/api/import-scraped', '/api/extension/pair/start', '/api/extension/pair/status', '/api/extension/pair/check', '/api/extension/pair/revoke'].includes(cleanUrl)) {
-      if (!setExtensionCors(req, res)) { res.writeHead(403); res.end(); return; }
-    }
-    res.writeHead(200);
-    res.end();
-    return;
-  }
-
-  console.log(`[${new Date().toLocaleTimeString()}] ${method} ${url}`);
-
-  if (cleanUrl === '/healthz' && (method === 'GET' || method === 'HEAD')) {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-    if (method === 'HEAD') res.end();
-    else res.end(JSON.stringify({ status: 'ok' }));
-    return;
-  }
-
-  // Route API requests to Serverless functions
-  if (cleanUrl === '/api/status') {
-    handleServerless(apiStatus, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/database/status') {
-    handleServerless(apiDatabaseStatus, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/auth/session') {
-    handleServerless(apiAuthSession, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/auth/login' || cleanUrl === '/api/auth-login') {
-    handleServerless(apiAuthLogin, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/auth/logout' || cleanUrl === '/api/auth-logout') {
-    handleServerless(apiAuthLogout, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/load') {
-    handleServerless(apiLoad, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/save') {
-    handleServerless(apiSave, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/import-scraped') {
-    handleServerless(apiImportScraped, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/pair/start') {
-    handleServerless(apiPairStart, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/pair/authorize') {
-    handleServerless(apiPairAuthorize, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/pair/status') {
-    handleServerless(apiPairStatus, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/pair/check') {
-    handleServerless(apiPairCheck, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/pair/revoke') {
-    handleServerless(apiPairRevoke, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/devices') {
-    handleServerless(apiExtensionDevices, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/extension/revoke-all') {
-    handleServerless(apiExtensionRevokeAll, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/counts') {
-    handleServerless(apiCounts, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/categories/rename') {
-    handleServerless(apiRenameCategory, req, res);
-    return;
-  }
-  if (cleanUrl === '/api/bookmark-preview') {
-    handleServerless(apiBookmarkPreview, req, res);
-    return;
-  }
-
-  if (cleanUrl === '/api' || cleanUrl.startsWith('/api/')) {
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'API endpoint not found.' }));
-    return;
-  }
-
-  serveFrontend(req, res);
+// A valid one-segment username is served by the public entry. The public
+// client fetches profile data anonymously and returns its own 404 state.
+app.get('/:username', (req, res, next) => {
+  if (!isPublicProfilePath(req.params.username)) return sendHtmlEntry(res, 'index.html', next);
+  return sendHtmlEntry(res, 'public-profile.html', next);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('\n======================================================');
-  console.log('✨  SOCIAL BOOKMARKS FEED - UNIFIED BACKEND RUNNER  ✨');
-  console.log('======================================================');
-  console.log(`\n🚀 API Dev Server running at: \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
-  console.log('⚡ Handling /api/* requests for local dev and Vite proxying.');
-  console.log('🔌 Running your deployment APIs locally connected to MongoDB Atlas & Cloudinary!');
-  console.log('\n------------------------------------------------------');
-  console.log('🔒 Security protection is active locally. Enter the');
-  console.log('   ADMIN_PASSWORD defined in your .env to save/edit.');
-  console.log('======================================================\n');
+// Preserve the dashboard SPA fallback for hash routes and future frontend
+// paths. API paths have already been terminated above.
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method)) return next();
+  return sendHtmlEntry(res, 'index.html', next);
 });
+
+app.use((req, res) => {
+  res.status(404).type('text').send('Not found');
+});
+
+// Express catches parser errors and rejected handler promises here. Do not
+// expose stack traces or database details to clients in production.
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error?.type === 'entity.parse.failed' || error instanceof SyntaxError) {
+    return res.status(400).json({ error: 'Invalid JSON request body.' });
+  }
+  console.error('Unhandled server error:', error);
+  return res.status(500).json({ error: 'Internal Server Error' });
+});
+
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('\n======================================================');
+    console.log('✨  SOCIAL BOOKMARKS FEED - EXPRESS SERVER  ✨');
+    console.log('======================================================');
+    console.log(`\n🚀 Persistent Node server running on port ${PORT}`);
+    console.log('⚡ Serving Express API routes and the built frontend.');
+    console.log('🔌 Connected API handlers remain backed by MongoDB Atlas & Cloudinary.');
+  });
+}
+
+module.exports = app;

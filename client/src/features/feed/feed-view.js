@@ -1,5 +1,6 @@
 import { AppState, DOM, FEED_PAGE_SIZE, POSTS_PER_PAGE } from '../../app/state.js';
 import { actions, registerActions } from '../../app/actions.js';
+import { buildBrowserLinkRow } from '../bookmarks/browser-link-row.js';
 
 const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
 const browserCategoryLabel = (...args) => actions.browserCategoryLabel(...args);
@@ -22,12 +23,12 @@ function onDataLoadedSuccess({ append = false } = {}) {
   updateCollectionsFilterDropdown();
   processTags();
 
-  // Set layout from localStorage
-  if (!AppState.layoutInitialized) {
-    const savedLayout = localStorage.getItem('bookmarks_layout') || 'grid';
-    changeLayout(savedLayout, false); // false to avoid toast notifications on initial load
-    AppState.layoutInitialized = true;
-  }
+  const browserLayout = localStorage.getItem('browser_bookmarks_layout') || 'dense';
+  const socialLayout = localStorage.getItem('social_bookmarks_layout') || localStorage.getItem('bookmarks_layout') || 'grid';
+  AppState.browserLayout = browserLayout;
+  AppState.socialLayout = socialLayout;
+  changeLayout(AppState.activeSource === 'browser' ? browserLayout : socialLayout, false);
+  AppState.layoutInitialized = true;
 
   applyFiltersAndSearch({ resetPagination: !append });
   if (previousScrollTop !== null && scrollContainer) {
@@ -69,6 +70,29 @@ function browserCategorySortKey(label) {
   return label === "General Links" ? "" : label.toLowerCase();
 }
 
+function updateBrowserCategoryMenu() {
+  const menu = document.getElementById('toolbar-category-menu');
+  if (!menu) return;
+  menu.replaceChildren();
+  document.querySelectorAll('.browser-category-section').forEach((section, index) => {
+    const heading = section.querySelector('h3');
+    const label = heading?.textContent?.replace('Rename category', '').trim() || `Category ${index + 1}`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'dropdown-item browser-category-jump-item';
+    button.dataset.categoryIndex = String(index);
+    button.setAttribute('role', 'menuitem');
+    button.innerHTML = `<i class="app-icon icon-folder"></i><span class="btn-text">${escapeHTML(label)}</span>`;
+    menu.appendChild(button);
+  });
+  if (!menu.children.length) {
+    const empty = document.createElement('span');
+    empty.className = 'dropdown-empty';
+    empty.textContent = 'No categories in this view';
+    menu.appendChild(empty);
+  }
+}
+
 function renderBrowserGroupedFeed(visibleSlice) {
   DOM.bookmarksGrid.classList.add("browser-grouped-feed");
   const groups = new Map();
@@ -99,10 +123,11 @@ function renderBrowserGroupedFeed(visibleSlice) {
       <div class="browser-category-grid"></div>
     `;
     const grid = section.querySelector(".browser-category-grid");
-    items.forEach(bm => grid.appendChild(buildCardElement(bm)));
+    items.forEach(bm => grid.appendChild(buildBrowserLinkRow(bm)));
     fragment.appendChild(section);
   });
   DOM.bookmarksGrid.appendChild(fragment);
+  updateBrowserCategoryMenu();
 }
 
 function renderFeedGrid() {
@@ -140,6 +165,7 @@ function renderFeedGrid() {
 
   const visibleSlice = AppState.filteredBookmarks.slice(0, AppState.visibleCount);
 
+  AppState.activeLayout = AppState.activeSource === 'browser' ? AppState.browserLayout : AppState.socialLayout;
   if (AppState.activeSource === "browser") {
     renderBrowserGroupedFeed(visibleSlice);
   } else if (AppState.activeLayout === "list" || AppState.activeLayout === "compact") {
@@ -175,12 +201,22 @@ function renderFeedGrid() {
  */
 
 function changeLayout(layout, showFeedbackToast = true) {
+  if (AppState.activeSource === 'browser' && layout !== 'dense') layout = 'dense';
   AppState.activeLayout = layout;
-  localStorage.setItem('bookmarks_layout', layout);
+  if (AppState.activeSource === 'browser') {
+    AppState.browserLayout = layout;
+    localStorage.setItem('browser_bookmarks_layout', layout);
+  } else {
+    AppState.socialLayout = layout;
+    localStorage.setItem('social_bookmarks_layout', layout);
+  }
 
   const menu = document.getElementById('toolbar-layout-menu');
   if (menu) {
     menu.querySelectorAll('.dropdown-item').forEach(item => {
+      const browserOnly = item.classList.contains('browser-layout-item');
+      const socialOnly = item.classList.contains('social-layout-item');
+      item.hidden = (AppState.activeSource === 'browser' && socialOnly) || (AppState.activeSource === 'social' && browserOnly);
       const isMatch = item.getAttribute('data-layout') === layout;
       item.classList.toggle('active', isMatch);
       const checkIcon = item.querySelector('.check-icon');
@@ -190,26 +226,31 @@ function changeLayout(layout, showFeedbackToast = true) {
     });
   }
 
+  const categoryToolbar = document.getElementById('toolbar-category-dropdown');
+  if (categoryToolbar) categoryToolbar.hidden = AppState.activeSource !== 'browser';
+
   const activeIcon = document.getElementById('layout-active-icon');
   const activeLabel = document.getElementById('layout-active-label');
   if (activeIcon) {
     activeIcon.className = (() => {
-      if (layout === 'grid') return 'app-icon icon-grip';
+      if (layout === 'grid' || layout === 'dense') return 'app-icon icon-grip';
       if (layout === 'list') return 'app-icon icon-list';
       if (layout === 'compact') return 'app-icon icon-bars';
       return 'app-icon icon-grip';
     })();
   }
   if (activeLabel) {
-    activeLabel.textContent = layout.charAt(0).toUpperCase() + layout.slice(1) + ' View';
+    activeLabel.textContent = layout === 'dense' ? 'Dense Links' : layout === 'comfortable' ? 'Comfortable Links' : layout.charAt(0).toUpperCase() + layout.slice(1) + ' View';
   }
 
   if (DOM.bookmarksGrid) {
-    DOM.bookmarksGrid.classList.remove('list-view', 'compact-view');
+    DOM.bookmarksGrid.classList.remove('list-view', 'compact-view', 'browser-density-dense', 'browser-density-comfortable');
     if (layout === 'list') {
       DOM.bookmarksGrid.classList.add('list-view');
     } else if (layout === 'compact') {
       DOM.bookmarksGrid.classList.add('compact-view');
+    } else if (layout === 'dense') {
+      DOM.bookmarksGrid.classList.add('browser-density-dense');
     }
   }
 
@@ -273,5 +314,5 @@ function initInfiniteScrollObserver() {
   AppState.scrollObserver.observe(sentinel);
 }
 
-registerActions('feed-view', { onDataLoadedSuccess, renderFeedLoadingState, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver });
-export { onDataLoadedSuccess, renderFeedLoadingState, getGridColumnCount, renderBrowserGroupedFeed, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver };
+registerActions('feed-view', { onDataLoadedSuccess, renderFeedLoadingState, getGridColumnCount, renderBrowserGroupedFeed, updateBrowserCategoryMenu, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver });
+export { onDataLoadedSuccess, renderFeedLoadingState, getGridColumnCount, renderBrowserGroupedFeed, updateBrowserCategoryMenu, renderFeedGrid, browserCategorySortKey, changeLayout, renderInfiniteScrollSentinel, initInfiniteScrollObserver };

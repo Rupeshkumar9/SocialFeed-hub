@@ -200,6 +200,10 @@
                 title="Export Bookmarks as JSON">
                 <i class="app-icon icon-download"></i><span>Export JSON</span>
               </button>
+              <button type="button" class="sidebar-action" id="btn-visit-profile"
+                title="Open your public profile">
+                <i class="app-icon icon-globe"></i><span>Visit Profile</span>
+              </button>
               <button type="button" class="sidebar-action" id="btn-settings" title="Profile Settings" data-sidebar-route="#settings">
                 <i class="app-icon icon-gear"></i><span>Settings</span>
               </button>
@@ -214,6 +218,7 @@
           <div class="settings-layout">
             <div class="settings-main-column">
               <article class="settings-card"><h3><i class="app-icon icon-user"></i> Personal Information</h3><p>Your account details</p><div class="settings-details"><div><span>Profile name</span><strong id="settings-profile-name">SocialFeed Owner</strong></div><div><span>Email address</span><strong id="settings-profile-email">Private account</strong></div><div><span>Account access</span><strong>Private dashboard</strong></div><div><span>Member since</span><strong id="settings-member-since">—</strong></div></div></article>
+              <article class="settings-card public-profile-card"><div class="settings-card-heading"><div><h3><i class="app-icon icon-globe"></i> Public Profile</h3><p>Choose which links and saved posts can be discovered at your public URL.</p></div><label class="toggle-control"><input type="checkbox" id="public-profile-published"><span></span><b>Published</b></label></div><form id="public-profile-form"><div class="public-profile-fields"><label>Username<input id="public-profile-username" name="username" pattern="[a-z0-9-]{3,30}" required><small>Your profile URL: <span id="public-profile-url">/socialfeed</span></small></label><label>Display name<input id="public-profile-display-name" name="displayName" maxlength="80"></label><label>Avatar URL<input id="public-profile-avatar" name="avatar" type="url" placeholder="https://…"></label><label>Default section<select id="public-profile-default-tab"><option value="links">Links</option><option value="posts">Saved Posts</option></select></label><label>Theme preset<select id="public-profile-theme"><option value="default">Clean</option><option value="paper">Paper</option><option value="midnight">Midnight</option></select></label><label class="full-width">Bio<textarea id="public-profile-bio" name="bio" maxlength="280" rows="3" placeholder="A short introduction…"></textarea></label></div><div class="public-profile-social"><div class="settings-card-heading"><strong>Social links</strong><button type="button" class="settings-inline-action" id="public-profile-add-social">Add link</button></div><div id="public-profile-social-links"></div></div><div class="public-profile-actions"><span id="public-profile-status" role="status"></span><span class="public-profile-counts" id="public-profile-counts"></span><button type="button" class="btn-secondary" id="public-profile-preview">Preview</button><button type="button" class="btn-secondary" id="public-profile-copy">Copy URL</button><button type="submit" class="btn-primary" id="public-profile-save">Save profile</button></div></form></article>
               <article class="settings-card"><h3><i class="app-icon icon-plug"></i> Integrations</h3><p>Bookmark sources connected to your private library.</p><div class="integration-row"><div><strong>Instagram & X scanner extension</strong><small id="extension-devices-status">Checking connected browsers…</small></div><button type="button" id="btn-revoke-extension-devices" class="settings-inline-action" hidden>Disconnect extensions</button></div><div class="integration-row"><span>Chrome Browser Bookmarks scanner</span><span class="status-pill">Ready</span></div><div class="integration-row"><div><strong>MCP service connectors</strong><small>Notion, Google Drive, Slack, Airtable and more</small></div><span class="status-pill status-pill-soon">Coming soon</span></div></article>
               <article class="settings-card"><h3><i class="app-icon icon-circle-nodes"></i> Future Features</h3><p>Planned tools to make SocialFeed smarter and easier to explore.</p><div class="roadmap-grid"><div class="roadmap-item"><strong>AI categorization</strong><span>Automatically organize bookmarks by topic, intent and platform.</span><em>Coming soon</em></div><div class="roadmap-item"><strong>Visual bookmark explorer</strong><span>Discover saved content through images, themes and visual similarity.</span><em>Coming soon</em></div><div class="roadmap-item"><strong>Smart summaries and search</strong><span>Ask questions across your saved posts and browser links.</span><em>Coming soon</em></div></div></article>
               <article class="settings-card"><h3><i class="app-icon icon-credit-card"></i> Manage Your Subscription</h3><p class="coming-soon">Coming soon</p></article>
@@ -279,22 +284,34 @@
                   <span class="btn-label" id="layout-active-label">Grid View</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-right" id="toolbar-layout-menu">
-                  <button class="dropdown-item active" data-layout="grid" type="button">
+                  <button class="dropdown-item active social-layout-item" data-layout="grid" type="button">
                     <i class="app-icon icon-check check-icon"></i> <span class="btn-text">Grid View</span>
                   </button>
-                  <button class="dropdown-item" data-layout="list" type="button">
+                  <button class="dropdown-item social-layout-item" data-layout="list" type="button">
                     <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">List
                       View</span>
                   </button>
-                  <button class="dropdown-item" data-layout="compact" type="button">
+                  <button class="dropdown-item social-layout-item" data-layout="compact" type="button">
                     <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Compact View</span>
+                  </button>
+                  <button class="dropdown-item browser-layout-item" data-layout="dense" type="button">
+                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">Dense Links</span>
                   </button>
                   <button class="dropdown-item" data-layout="links" type="button">
                     <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
                       class="btn-text">Link View</span>
                   </button>
                 </div>
+              </div>
+
+              <div class="toolbar-dropdown browser-only-toolbar" id="toolbar-category-dropdown" style="position: relative;">
+                <button class="toolbar-btn dropdown-toggle" id="toolbar-category-btn" aria-label="Jump to category"
+                  title="Jump to category" aria-expanded="false" type="button">
+                  <i class="app-icon icon-folder-tree"></i>
+                  <span class="btn-label">Categories</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right" id="toolbar-category-menu" role="menu"></div>
               </div>
             </div>
           </div>
@@ -441,7 +458,7 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-author-name"
+              <label id="add-author-label" for="add-author-name"
                 style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Author Name
                 (Optional)</label>
               <input type="text" id="add-author-name" class="search-input" style="padding-left: 14px;"
@@ -469,7 +486,7 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label for="add-content"
+              <label id="add-content-label" for="add-content"
                 style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Caption / Post
                 Content</label>
               <textarea id="add-content" class="notes-textarea" style="min-height: 80px;"

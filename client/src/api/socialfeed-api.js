@@ -12,4 +12,12 @@ export const socialFeedApi = {
   revokeExtensionDevices: () => requestJSON('/api/extension/revoke-all', { method: 'POST' }),
   renameCategory: payload => requestJSON('/api/categories/rename', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
   getBookmarks: (params, options = {}) => requestJSON('/api/load?' + params.toString(), options),
+  getPublicProfile: username => requestJSON('/api/public-profile?username=' + encodeURIComponent(username), { cache: 'no-store' }),
+  getPublicBookmarks: (username, params = {}) => {
+    const query = new URLSearchParams({ username, ...params });
+    return requestJSON('/api/public-bookmarks?' + query.toString(), { cache: 'no-store' });
+  },
+  getPublicProfileSettings: () => requestJSON('/api/public-profile-settings', { cache: 'no-store' }),
+  savePublicProfileSettings: payload => requestJSON('/api/public-profile-settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  updateBookmarkVisibility: payload => requestJSON('/api/bookmark-visibility', { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
 };

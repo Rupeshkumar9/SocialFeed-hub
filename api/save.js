@@ -63,7 +63,21 @@ module.exports = async (req, res) => {
     const db = await connectToDatabase();
     const collection = db.collection('bookmarks');
     const operations = normalizedBookmarks.map(bookmark => {
-      const { _id, firstSavedAt, createdAt, extensionScrapedAt, sourceSavedAt, timestamp, ...mutableFields } = bookmark;
+      const {
+        _id,
+        firstSavedAt,
+        createdAt,
+        extensionScrapedAt,
+        sourceSavedAt,
+        timestamp,
+        visibility,
+        featured,
+        publicOrder,
+        publicTitle,
+        publicDescription,
+        visibilityUpdatedAt,
+        ...mutableFields
+      } = bookmark;
       return {
         updateOne: {
           filter: { id: bookmark.id },
@@ -74,7 +88,13 @@ module.exports = async (req, res) => {
               createdAt,
               extensionScrapedAt,
               sourceSavedAt,
-              timestamp
+              timestamp,
+              visibility: visibility || 'private',
+              featured: featured === true,
+              publicOrder: Number.isFinite(Number(publicOrder)) ? Number(publicOrder) : null,
+              publicTitle: publicTitle || '',
+              publicDescription: publicDescription || '',
+              visibilityUpdatedAt: visibilityUpdatedAt || null
             }
           },
           upsert: true

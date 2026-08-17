@@ -157,6 +157,7 @@ function normalizeBookmark(item = {}, options = {}) {
   
   const rawContent = item.content || (platform === 'instagram' ? 'Saved Instagram Post' : `Saved ${platform.toUpperCase()} post`);
   const cleanedContent = cleanPostContent(rawContent, platform);
+  const publicOrder = Number.isFinite(Number(item.publicOrder)) ? Number(item.publicOrder) : null;
 
   return {
     ...item,
@@ -183,7 +184,16 @@ function normalizeBookmark(item = {}, options = {}) {
     notes: item.notes || '',
     thumbnail: item.thumbnail || item.imageUrl || "",
     favicon: item.favicon || '',
-    folder: normalizeFolderValue(item.folder)
+    folder: normalizeFolderValue(item.folder),
+    // Sharing metadata is private by default. Normal save/import operations
+    // preserve existing values in their upsert layer; these defaults are only
+    // used when a bookmark is first inserted or explicitly shared.
+    visibility: item.visibility === 'public' ? 'public' : 'private',
+    featured: item.featured === true,
+    publicOrder,
+    publicTitle: String(item.publicTitle || '').trim().slice(0, 160),
+    publicDescription: String(item.publicDescription || '').trim().slice(0, 280),
+    visibilityUpdatedAt: toISOStringOrNull(item.visibilityUpdatedAt)
   };
 }
 

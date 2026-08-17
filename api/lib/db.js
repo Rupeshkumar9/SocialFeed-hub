@@ -3,6 +3,7 @@ const { MongoClient } = require('mongodb');
 let cachedDb = null;
 let indexesPromise = null;
 let extensionIndexesPromise = null;
+let publicProfileIndexesPromise = null;
 
 async function connectToDatabase() {
   if (cachedDb) {
@@ -66,4 +67,22 @@ async function ensureExtensionIndexes() {
   return extensionIndexesPromise;
 }
 
-module.exports = { connectToDatabase, ensureBookmarkIndexes, ensureExtensionIndexes };
+async function ensurePublicProfileIndexes() {
+  if (!publicProfileIndexesPromise) {
+    publicProfileIndexesPromise = connectToDatabase().then(db => Promise.all([
+      db.collection('public_profiles').createIndexes([
+        { key: { usernameLower: 1 }, name: 'public_profile_username_unique', unique: true }
+      ]),
+      db.collection('bookmarks').createIndexes([
+        { key: { visibility: 1, source: 1, firstSavedAt: -1, _id: -1 }, name: 'public_source_feed' },
+        { key: { visibility: 1, platform: 1, firstSavedAt: -1, _id: -1 }, name: 'public_platform_feed' }
+      ])
+    ])).catch(error => {
+      publicProfileIndexesPromise = null;
+      throw error;
+    });
+  }
+  return publicProfileIndexesPromise;
+}
+
+module.exports = { connectToDatabase, ensureBookmarkIndexes, ensureExtensionIndexes, ensurePublicProfileIndexes };

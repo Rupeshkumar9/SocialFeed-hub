@@ -1,5 +1,6 @@
 import { AppState, DOM, POSTS_PER_PAGE } from '../../app/state.js';
 import { actions, registerActions } from '../../app/actions.js';
+import { socialFeedApi } from '../../api/socialfeed-api.js';
 
 const browserCategoryLabel = (...args) => actions.browserCategoryLabel(...args);
 const cleanPostContent = (...args) => actions.cleanPostContent(...args);
@@ -12,6 +13,7 @@ const platformIconMarkup = (...args) => actions.platformIconMarkup(...args);
 const platformLabel = (...args) => actions.platformLabel(...args);
 const socialCategoryLabel = (...args) => actions.socialCategoryLabel(...args);
 const toggleSelectBookmark = (...args) => actions.toggleSelectBookmark(...args);
+const renderFeedGrid = (...args) => actions.renderFeedGrid(...args);
 const browserFaviconRequests = new Map();
 
 function requestBrowserFavicon(bookmark) {
@@ -253,6 +255,7 @@ function buildCardElement(bm) {
             <i class="app-icon icon-ellipsis-vertical"></i>
           </button>
           <div class="card-menu-dropdown">
+            <button class="menu-item-visibility"><i class="app-icon icon-globe"></i> ${bm.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
             <button class="menu-item-edit"><i class="app-icon icon-pen"></i> Edit</button>
             <button class="menu-item-delete"><i class="app-icon icon-trash"></i> Delete</button>
           </div>
@@ -362,6 +365,19 @@ function buildCardElement(bm) {
         openEditBookmarkModal(bm);
       });
     }
+
+    const visibilityBtn = card.querySelector('.menu-item-visibility');
+    visibilityBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation(); dropdown.classList.remove('active');
+      const visibility = bm.visibility === 'public' ? 'private' : 'public';
+      try {
+        await socialFeedApi.updateBookmarkVisibility({ ids: [bm.id], visibility });
+        bm.visibility = visibility;
+        visibilityBtn.textContent = visibility === 'public' ? 'Make private' : 'Publish to profile';
+        actions.showToast(visibility === 'public' ? 'Post published to your profile.' : 'Post made private.', 'success');
+        renderFeedGrid();
+      } catch (error) { actions.showToast(error?.message || 'Unable to update post visibility.', 'error'); }
+    });
 
     const deleteBtn = card.querySelector('.menu-item-delete');
     if (deleteBtn) {

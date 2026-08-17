@@ -45,6 +45,7 @@ const updateManualModalPlatformUI = (...args) => actions.updateManualModalPlatfo
 const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
 const updateStatsAnalytics = (...args) => actions.updateStatsAnalytics(...args);
 const openCategoryRenameDialog = (...args) => actions.openCategoryRenameDialog(...args);
+const visitPublicProfile = (...args) => actions.visitPublicProfile(...args);
 
 function initEventListeners() {
   DOM.feedTitle?.addEventListener('click', event => {
@@ -172,6 +173,8 @@ function initEventListeners() {
   const layoutMenu = document.getElementById('toolbar-layout-menu');
   const dataBtn = document.getElementById('toolbar-data-btn');
   const dataMenu = document.getElementById('toolbar-data-menu');
+  const categoryBtn = document.getElementById('toolbar-category-btn');
+  const categoryMenu = document.getElementById('toolbar-category-menu');
 
   const closeAllToolbarDropdowns = () => {
     if (sortMenu) sortMenu.classList.remove('active');
@@ -180,6 +183,8 @@ function initEventListeners() {
     if (layoutBtn) layoutBtn.setAttribute('aria-expanded', 'false');
     if (dataMenu) dataMenu.classList.remove('active');
     if (dataBtn) dataBtn.setAttribute('aria-expanded', 'false');
+    if (categoryMenu) categoryMenu.classList.remove('active');
+    if (categoryBtn) categoryBtn.setAttribute('aria-expanded', 'false');
   };
 
   // Sort dropdown menu event listeners
@@ -227,6 +232,26 @@ function initEventListeners() {
     });
   }
 
+  if (categoryBtn && categoryMenu) {
+    categoryBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      const isOpen = categoryMenu.classList.contains('active');
+      closeAllToolbarDropdowns();
+      if (!isOpen) {
+        categoryMenu.classList.add('active');
+        categoryBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+    categoryMenu.addEventListener('click', event => {
+      const item = event.target.closest('[data-category-index]');
+      if (!item) return;
+      const section = document.querySelectorAll('.browser-category-section')[Number(item.dataset.categoryIndex)];
+      section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      closeAllToolbarDropdowns();
+      document.getElementById('main-panel')?.focus?.({ preventScroll: true });
+    });
+  }
+
   // Layout Dropdown Switcher bindings
   if (layoutBtn && layoutMenu) {
     layoutBtn.addEventListener('click', (e) => {
@@ -262,6 +287,9 @@ function initEventListeners() {
     closeAllToolbarDropdowns();
     document.querySelectorAll('.card-menu-dropdown.active').forEach(el => {
       el.classList.remove('active');
+      const row = el.closest('.browser-link-row');
+      row?.classList.remove('menu-open');
+      row?.querySelector('.browser-row-menu')?.setAttribute('aria-expanded', 'false');
     });
     document.querySelectorAll('.card-category-popover.active').forEach(el => {
       el.classList.remove('active');
@@ -281,8 +309,8 @@ function initEventListeners() {
         return;
       }
 
-      const activeMenu = [sortMenu, layoutMenu, dataMenu].find(m => m && m.classList.contains('active'));
-      const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : null;
+      const activeMenu = [sortMenu, layoutMenu, dataMenu, categoryMenu].find(m => m && m.classList.contains('active'));
+      const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : activeMenu === categoryMenu ? categoryBtn : null;
 
       closeAllToolbarDropdowns();
 
@@ -753,6 +781,8 @@ function initPrivateEventListeners() {
 
   const settingsButton = document.getElementById('btn-settings');
   if (settingsButton) settingsButton.addEventListener('click', () => { setRouteHash('#settings'); openSettings(); });
+  const visitProfileButton = document.getElementById('btn-visit-profile');
+  if (visitProfileButton) visitProfileButton.addEventListener('click', () => visitPublicProfile());
   const backButton = document.getElementById('btn-back-to-bookmarks');
   if (backButton) backButton.addEventListener('click', () => { setRouteHash('#bookmarks'); closeSettings(); });
   const more = document.getElementById('btn-load-more');

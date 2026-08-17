@@ -57,7 +57,13 @@ function setManualImageFieldVisible(visible) {
 function updateManualModalPlatformUI(platformValue = '') {
   const isBrowser = platformValue === 'browser';
   const isCustom = platformValue === '__custom__';
-  if (DOM.addUrlLabel) DOM.addUrlLabel.textContent = isBrowser ? 'Site Link' : 'Post URL';
+  if (DOM.addUrlLabel) DOM.addUrlLabel.textContent = isBrowser ? 'Website URL' : 'Post URL';
+  const authorLabel = document.getElementById('add-author-label');
+  const contentLabel = document.getElementById('add-content-label');
+  if (authorLabel) authorLabel.textContent = isBrowser ? 'Site name (Optional)' : 'Author name (Optional)';
+  if (contentLabel) contentLabel.textContent = isBrowser ? 'Description' : 'Caption / Post Content';
+  if (DOM.addAuthorName) DOM.addAuthorName.placeholder = isBrowser ? 'Google, NASA, National Geographic…' : 'NASA or National Geographic';
+  if (DOM.addContent) DOM.addContent.placeholder = isBrowser ? 'What is this link about?' : 'Enter tweet content or post description here...';
   if (DOM.addTagsGroup) DOM.addTagsGroup.hidden = isBrowser;
   if (isBrowser && DOM.addTags) DOM.addTags.value = '';
   if (DOM.addCustomPlatformGroup) DOM.addCustomPlatformGroup.hidden = !isCustom;

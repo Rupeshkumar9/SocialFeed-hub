@@ -5,6 +5,7 @@ import { socialFeedApi } from '../../api/socialfeed-api.js';
 const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...args);
 const cancelActiveLoad = (...args) => actions.cancelActiveLoad(...args);
 const showToast = (...args) => actions.showToast(...args);
+const loadPublicProfileSettings = (...args) => actions.loadPublicProfileSettings(...args);
 
 async function refreshExtensionDevices() {
   const status = document.getElementById('extension-devices-status');
@@ -25,12 +26,14 @@ async function refreshExtensionDevices() {
 
 function openSettings() {
   cancelActiveLoad();
+  document.getElementById('mobile-drawer-overlay')?.classList.remove('active');
   AppState.isSettingsOpen = true;
   document.getElementById("feed-content").hidden = true;
   document.getElementById("settings-view").hidden = false;
   document.getElementById("settings-view").scrollTop = 0;
   updateSidebarNavigation();
   refreshExtensionDevices();
+  loadPublicProfileSettings();
 }
 
 function closeSettings() {

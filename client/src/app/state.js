@@ -11,6 +11,8 @@ export const AppState = {
   activeTag: 'all',
   activeCollection: 'all',
   activeLayout: 'grid',
+  browserLayout: 'dense',
+  socialLayout: 'grid',
   activeSort: 'recent-desc',
   searchQuery: '',
   activeBookmark: null,

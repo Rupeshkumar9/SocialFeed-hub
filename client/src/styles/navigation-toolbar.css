@@ -264,6 +264,10 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.toolbar-dropdown .dropdown-item[hidden] {
+  display: none !important;
+}
+
 .toolbar-dropdown .dropdown-item.active {
   background-color: rgba(244, 63, 94, 0.08);
   color: var(--accent-blue);

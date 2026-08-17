@@ -15,6 +15,7 @@ import './features/import/import-controller.js';
 import './features/bookmarks/editor.js';
 import './features/bookmarks/selection.js';
 import './features/settings/settings.js';
+import './features/settings/public-profile-settings.js';
 import './features/theme/theme.js';
 import './app/events.js';
 import './features/auth/auth.js';
