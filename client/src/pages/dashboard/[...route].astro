@@ -1,0 +1,18 @@
+---
+import ComingSoon from "../../components/ComingSoon.astro";
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+const route = Astro.params.route || "workspace";
+---
+
+<DashboardLayout title={`${route} · SocialFeed Hub`}
+    ><ComingSoon
+        eyebrow="Private dashboard area"
+        title="This workspace area is coming soon."
+        description={`The ${route.replaceAll("-", " ")} route is connected to the authenticated Astro dashboard pipeline and will receive its final interface after the prototype pass.`}
+        icon="◇"
+        primaryLabel="Dashboard home"
+        primaryHref="/dashboard"
+        secondaryLabel="Public site"
+        secondaryHref="/"
+    /></DashboardLayout
+>

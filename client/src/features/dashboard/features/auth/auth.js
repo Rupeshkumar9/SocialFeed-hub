@@ -145,6 +145,14 @@ function initAuthEvents() {
       loginPassword.value = '';
       const session = await checkServerConnection();
       if (session.authenticated) {
+        if (window.location.pathname === '/login') {
+          const requestedPath = new URLSearchParams(window.location.search).get('returnTo') || '/dashboard';
+          const destination = requestedPath.startsWith('/') && !requestedPath.startsWith('//')
+            ? requestedPath
+            : '/dashboard';
+          window.location.assign(destination);
+          return;
+        }
         AppState.activeSource = 'browser';
         AppState.activePlatform = 'all';
         AppState.activeCollection = 'all';

@@ -1,0 +1,31 @@
+---
+import SeoHead from '../components/SeoHead.astro';
+import '../styles/site.css';
+export interface Props { title?: string; description?: string; }
+const { title = 'Dashboard · SocialFeed Hub', description = 'Private SocialFeed Hub workspace.' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.svg" />
+    <SeoHead title={title} description={description} robots="noindex, nofollow" />
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem('socialfeed_theme');
+        const theme = stored === 'dark' || stored === 'light' ? stored : 'dark';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+    <style is:global>
+      html body.auth-checking #app-layout,
+      html body.auth-checking .login-gate { display: none !important; }
+      html body.auth-checking #auth-loading { display: flex !important; }
+    </style>
+  </head>
+  <body class="auth-checking">
+    <slot />
+  </body>
+</html>

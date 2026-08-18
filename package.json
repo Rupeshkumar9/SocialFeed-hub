@@ -4,11 +4,12 @@
   "description": "Premium Social Feed Bookmarks Dashboard backed by MongoDB Atlas and Cloudinary on Render Persistent Webservice.",
   "main": "server.js",
   "scripts": {
-    "dev": "concurrently -k -n api,web \"npm:dev:api\" \"npm:dev:web\"",
+    "dev": "concurrently -k -n api,astro \"npm:dev:api\" \"npm:dev:astro\"",
     "dev:api": "node server.js",
-    "dev:web": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev:astro": "cross-env ASTRO_TELEMETRY_DISABLED=1 astro dev --host 0.0.0.0",
+    "build:astro": "cross-env ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "build": "npm run build:astro",
+    "preview": "astro preview",
     "start": "node server.js"
   },
   "dependencies": {
@@ -18,7 +19,11 @@
     "mongodb": "^6.5.0"
   },
   "devDependencies": {
+    "@astrojs/node": "^9.4.3",
+    "@astrojs/rss": "^4.0.9",
+    "@astrojs/sitemap": "^3.5.1",
+    "astro": "^5.13.5",
     "concurrently": "^10.0.4",
-    "vite": "^8.2.0"
+    "cross-env": "^10.0.0"
   }
 }

@@ -15,7 +15,11 @@ async function connectToDatabase() {
     throw new Error('Please define the MONGODB_URI environment variable inside your Vercel project settings.');
   }
 
-  const client = await MongoClient.connect(uri);
+  const timeoutMs = Number.parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || '5000', 10);
+  const connectOptions = Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? { serverSelectionTimeoutMS: timeoutMs, connectTimeoutMS: timeoutMs }
+    : undefined;
+  const client = await MongoClient.connect(uri, connectOptions);
 
   // Extract database name from the Atlas connection string path (e.g. cluster0.mongodb.net/dbname)
   let dbName = 'bookmarks_db';

@@ -1,0 +1,138 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const publicProfileModule = path.resolve(
+  process.cwd(),
+  "api/lib/public-profile.js",
+);
+const require = createRequire(pathToFileURL(publicProfileModule).href);
+const {
+  buildPublicProfile,
+  getPublicCounts,
+  getPublicProfileByUsername,
+  loadPublicBookmarks,
+} = require(publicProfileModule);
+
+export const prerender = false;
+const username = Astro.params.username || "";
+let profile = null;
+let bookmarks = [];
+let counts = {};
+try {
+  const result = await getPublicProfileByUsername(username);
+  if (result.profile) {
+    counts = await getPublicCounts(result.db);
+    profile = buildPublicProfile(result.profile, counts);
+    const bookmarkResult = await loadPublicBookmarks({
+      profile: result.profile,
+      source: "browser",
+      limit: 12,
+    });
+    bookmarks = bookmarkResult.bookmarks || [];
+  }
+} catch (error) {
+  console.error("Public profile SSR failed:", error);
+}
+if (!profile) {
+  Astro.response.status = 404;
+}
+const displayName = profile?.displayName || username;
+const description =
+  profile?.bio || `Public links and collections curated by ${displayName}.`;
+const canonical = new URL(
+  `/u/${encodeURIComponent(username)}/`,
+  Astro.site || Astro.url,
+).href;
+const jsonLd = profile
+  ? {
+      "@context": "https://schema.org",
+      "@type": "ProfilePage",
+      name: displayName,
+      description,
+      url: canonical,
+      mainEntity: {
+        "@type": "Person",
+        name: displayName,
+        alternateName: profile.username,
+      },
+    }
+  : undefined;
+---
+
+<PublicLayout
+  title={profile
+    ? `${displayName} · SocialFeed Hub`
+    : "Profile not found · SocialFeed Hub"}
+  description={description}
+  canonical={canonical}
+  robots={profile ? "index, follow" : "noindex, nofollow"}
+  jsonLd={jsonLd}
+>
+  {
+    profile ? (
+      <section class="section">
+        <div class="section-heading" style="margin-top: 40px">
+          <>
+            <div>
+              <>
+                <div class="eyebrow">Curated links</div>
+                <h2>{counts.browser || 0} public saves</h2>
+              </>
+            </div>
+            <p>Selected links from this profile's public library.</p>
+          </>
+        </div>
+        {bookmarks.length > 0 ? (
+          <div class="feature-grid">
+            {bookmarks.map((bookmark) => (
+              <a
+                class="glass-card feature-card"
+                href={bookmark.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <div class="eyebrow">{bookmark.folder || "Bookmark"}</div>
+                <h3>
+                  {bookmark.publicTitle || bookmark.authorName || bookmark.url}
+                </h3>
+                <p>
+                  {bookmark.publicDescription ||
+                    bookmark.content ||
+                    bookmark.url}
+                </p>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div class="glass-card feature-card">
+            <h3>No public links yet</h3>
+            <p class="muted">This profile has not published any links.</p>
+          </div>
+        )}
+      </section>
+    ) : (
+      <section class="coming-soon-wrap">
+        <article class="glass-card coming-soon-card">
+          <div class="coming-soon-content">
+            <>
+              <div class="coming-soon-icon" aria-hidden="true">
+                ?
+              </div>
+              <div class="eyebrow">404</div>
+              <h1>Profile not found.</h1>
+              <p>This profile is unavailable or private.</p>
+              <div class="coming-soon-actions">
+                <a class="button primary" href="/">
+                  Back home
+                </a>
+              </div>
+            </>
+          </div>
+        </article>
+      </section>
+    )
+  }
+</PublicLayout>

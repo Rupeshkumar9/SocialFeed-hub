@@ -1,0 +1,85 @@
+---
+import PublicLayout from "../layouts/PublicLayout.astro";
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "SocialFeed Hub",
+  applicationCategory: "ProductivityApplication",
+  operatingSystem: "Web browser",
+  description:
+    "A private home for browser bookmarks, social saves, and curated public collections.",
+  url: Astro.site?.href || Astro.url.origin,
+};
+---
+
+<PublicLayout
+  title="SocialFeed Hub · Save the web you want to remember"
+  description="Organize browser bookmarks and social saves in one calm, searchable workspace, then publish selected collections as a personal profile."
+  jsonLd={jsonLd}
+>
+  <section class="hero">
+    <div>
+      <div class="eyebrow">A calmer way to collect the web</div>
+      <h1>Your internet, organized around what matters.</h1>
+      <p class="lede">
+        SocialFeed Hub brings browser bookmarks, social saves, and curated
+        public collections into one focused workspace. Keep everything private
+        until you choose to share.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="/dashboard">Open your workspace</a><a
+          class="button ghost"
+          href="/blog">Explore the journal</a>
+      </div>
+    </div>
+    <div
+      class="hero-card"
+      aria-label="Preview of an organized bookmark workspace"
+    >
+      <div class="hero-card-inner">
+        <div class="mini-window">
+          <div class="mini-window-top">
+            <span>My library</span><span>All saves</span>
+          </div><div class="mini-line"></div><div class="mini-line short">
+          </div><div class="mini-links">
+            <div class="mini-link"></div><div class="mini-link"></div><div
+              class="mini-link"
+            >
+            </div><div class="mini-link"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section" aria-labelledby="why-title">
+    <div class="section-heading">
+      <div>
+        <div class="eyebrow">Built for thoughtful curation</div><h2
+          id="why-title"
+        >
+          A useful system for the links you keep.
+        </h2>
+      </div><p>
+        Capture quickly, find things later, and share only the parts of your
+        library that deserve a public home.
+      </p>
+    </div><div class="feature-grid">
+      <article class="glass-card feature-card">
+        <h3>One focused library</h3><p>
+          Bring browser links and social saves together while keeping their
+          context, source, and metadata intact.
+        </p>
+      </article><article class="glass-card feature-card">
+        <h3>Private by default</h3><p>
+          Your workspace stays protected. Publish a profile or individual
+          collection only when you are ready.
+        </p>
+      </article><article class="glass-card feature-card">
+        <h3>A profile that feels yours</h3><p>
+          Turn selected links into a lightweight public profile with social
+          links, collections, and a clear visual identity.
+        </p>
+      </article>
+    </div>
+  </section>
+</PublicLayout>

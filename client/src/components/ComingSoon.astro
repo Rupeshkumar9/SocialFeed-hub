@@ -1,0 +1,27 @@
+---
+export interface Props {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  icon?: string;
+  primaryLabel?: string;
+  primaryHref?: string;
+  secondaryLabel?: string;
+  secondaryHref?: string;
+}
+const { eyebrow = 'In the works', title, description, icon = '✦', primaryLabel, primaryHref, secondaryLabel, secondaryHref } = Astro.props;
+---
+<section class="coming-soon-wrap" aria-labelledby="coming-soon-title">
+  <article class="glass-card coming-soon-card">
+    <div class="coming-soon-content">
+      <div class="coming-soon-icon" aria-hidden="true">{icon}</div>
+      <div class="eyebrow">{eyebrow}</div>
+      <h1 id="coming-soon-title">{title}</h1>
+      <p>{description}</p>
+      {(primaryLabel || secondaryLabel) && <div class="coming-soon-actions">
+        {primaryLabel && primaryHref && <a class="button primary" href={primaryHref}>{primaryLabel}</a>}
+        {secondaryLabel && secondaryHref && <a class="button ghost" href={secondaryHref}>{secondaryLabel}</a>}
+      </div>}
+    </div>
+  </article>
+</section>

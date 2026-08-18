@@ -23,20 +23,15 @@ SocialFeed-hub/
 ├── .env                  # Local environment credentials (Git-ignored)
 ├── .gitignore            # Excludes dependencies, secrets, and caches
 ├── README.md             # Documentation
-├── server.js             # Local Dev Runner (delegates to api/ & serves client/)
-├── vercel.json           # Vercel serverless routing and subdirectory rewrites
+├── server.js             # Persistent Express server, API transport, and Astro mount
+├── astro.config.mjs      # Astro SSR, Node adapter, sitemap, and internal Vite integration
+├── client/               # Astro frontend workspace
+│   ├── src/              # Astro pages, layouts, SEO components, dashboard, and blog content
+│   └── public/           # Shared favicon and public media assets
 ├── package.json          # Node dependencies (mongodb, cloudinary, dotenv)
 ├── package-lock.json
 │
-├── client/               # FRONTEND Website (Served relative to base URL)
-│   ├── index.html        # Main dashboard website interface
-│   ├── css/
-│   │   └── styles.css    # Premium CSS styling
-│   └── js/
-│       ├── app.js        # Core client controller and state manager
-│       └── importer.js   # Client-side JSON file uploader & parser
-│
-├── api/                  # SERVERLESS BACKEND (Vercel endpoints)
+├── api/                  # Existing Node.js/Express backend handlers and services
 │   ├── status.js         # Backend status, DB check, and token verify
 │   ├── load.js           # Reads bookmarks from MongoDB Atlas (public read)
 │   ├── save.js           # Writes bookmarks & handles Cloudinary uploads (private write)
@@ -98,12 +93,15 @@ MEMBER_SINCE=Jul 2026
 # EXTENSION_ALLOWED_ORIGINS=chrome-extension://your_chrome_id,moz-extension://your_firefox_id
 ```
 
-### Step 3: Start the Dev Server
+### Step 3: Start the Dev Servers
 Run the local unified runner script:
 ```bash
-node server.js
+npm run dev
 ```
-The server will start at [**`http://localhost:3000`**](http://localhost:3000) and automatically open the dashboard in your default browser. Enter your `ADMIN_PASSWORD` in the **Admin Login** modal to unlock the editing features locally.
+
+This starts the persistent Express API on `http://localhost:3000` and the Astro development server on `http://localhost:4321`. Astro now owns the landing page, sign-in route, dashboard, public profiles, extension pairing page, and other frontend routes. API calls are proxied to Express and use the same localhost cookies.
+
+For a production-style local check, run `npm run build` and then `npm start`. Express loads the built Astro middleware and continues to serve the existing API routes.
 
 ### Connect the browser extension
 
@@ -113,27 +111,19 @@ The credential remains valid until the extension is disconnected, all extension 
 
 ---
 
-## 🚀 Deployment Options
+## 🚀 Render deployment
 
-You can deploy this application to any cloud platform of your choice. Ensure you configure your environment variables (`MONGODB_URI`, `CLOUDINARY_URL`, and `ADMIN_PASSWORD`) on your hosting dashboard.
+The production target is one Render **Web Service** running the persistent Express server. The old `vercel.json` is legacy and is not part of the deployment pipeline.
 
-### Option A: Vercel (Serverless - Recommended)
-Since the app features a Vercel-ready serverless configuration inside [`vercel.json`](file:///C:/Users/Rupes/Documents/code_hobby/02_Projects/SocialFeed-hub/vercel.json) and `/api`, Vercel will host it for free:
-1. Push your codebase to a **GitHub** repository.
-2. Import the repository in your [Vercel Dashboard](https://vercel.com).
-3. Set your environment variables in the project settings.
-4. Click **Deploy**. Vercel will automatically host the static files in `client/` and compile the API functions in `api/`.
+Configure:
 
-### Option B: Render or Railway (Persistent Node.js Server)
-If you prefer to run a traditional, persistent Node.js server instead of serverless functions:
-1. Connect your GitHub repository to [Render](https://render.com) or [Railway](https://railway.app).
-2. Set the build command to:
-   ```bash
-   npm install
-   ```
-3. Set the start command to execute [`server.js`](file:///C:/Users/Rupes/Documents/code_hobby/02_Projects/SocialFeed-hub/server.js):
-   ```bash
-   npm start
-   ```
-4. Define your environment variables in the platform's service settings. The server will run continuously and handle routing automatically.
+```text
+Build command: npm install && npm run build
+Start command: npm start
+Health check: /healthz
+```
+
+Required environment variables include `MONGODB_URI`, `CLOUDINARY_URL`, `ADMIN_PASSWORD`, `SESSION_SECRET`, and `PUBLIC_SITE_URL` (the canonical HTTPS site origin). Optional SEO rollout flags are `PUBLIC_PRICING_INDEXABLE=true` and `PUBLIC_BLOG_INDEXABLE=true`; leave them unset while those pages are only Coming Soon placeholders. `MONGODB_SERVER_SELECTION_TIMEOUT_MS` can be used to bound database connection failures during server-rendered public-profile requests.
+
+Express remains the public HTTP server. It serves `/api/*`, enforces dashboard authentication, serves Astro's generated client assets, and loads `dist/astro/server/entry.mjs` as Astro middleware. Do not configure the service as a Vercel deployment or as a static-only site.
 

@@ -1,0 +1,20 @@
+---
+import ComingSoon from "../components/ComingSoon.astro";
+import PublicLayout from "../layouts/PublicLayout.astro";
+---
+
+<PublicLayout
+    title="Page not found · SocialFeed Hub"
+    description="The requested SocialFeed Hub page could not be found."
+    robots="noindex, nofollow"
+    ><ComingSoon
+        eyebrow="404"
+        title="That page is not here."
+        description="The link may be old, private, or still being prepared. Let us get you back to a useful place."
+        icon="?"
+        primaryLabel="Back home"
+        primaryHref="/"
+        secondaryLabel="Sign in"
+        secondaryHref="/login"
+    /></PublicLayout
+>

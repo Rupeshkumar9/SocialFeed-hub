@@ -1,0 +1,38 @@
+---
+import SeoHead from '../components/SeoHead.astro';
+import '../styles/site.css';
+
+export interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  robots?: string;
+  type?: string;
+  image?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+const { title, description, canonical, robots, type, image, jsonLd } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.svg" />
+    <SeoHead title={title} description={description} canonical={canonical} robots={robots} type={type} image={image} jsonLd={jsonLd} />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-container site-nav">
+        <a class="brand" href="/" aria-label="SocialFeed Hub home"><img class="brand-logo-image" src="/favicon.svg" alt="" /><span>SocialFeed Hub</span></a>
+        <nav class="nav-links" aria-label="Primary navigation">
+          <a href="/pricing">Pricing</a>
+          <a href="/blog">Blog</a>
+        </nav>
+        <div class="nav-actions"><a class="button ghost" href="/login">Sign in</a><a class="button primary" href="/dashboard">Open dashboard</a></div>
+      </header>
+      <main class="site-container page-main"><slot /></main>
+      <footer class="site-container site-footer"><div class="site-footer-inner"><span>Organize the web you want to remember.</span><span>© {new Date().getFullYear()} SocialFeed Hub</span></div></footer>
+    </div>
+  </body>
+</html>

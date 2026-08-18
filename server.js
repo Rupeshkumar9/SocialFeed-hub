@@ -1,12 +1,18 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 // Load environment variables before reading the port for local development.
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
 const DIST_DIR = path.join(__dirname, 'dist');
+const ASTRO_DIST_DIR = path.join(DIST_DIR, 'astro');
+const ASTRO_CLIENT_DIR = path.join(ASTRO_DIST_DIR, 'client');
+const ASTRO_SERVER_ENTRY = path.join(ASTRO_DIST_DIR, 'server', 'entry.mjs');
 const app = express();
+let astroHandler = null;
 
 app.disable('x-powered-by');
 
@@ -36,6 +42,7 @@ const apiPublicProfile = require('./api/public-profile');
 const apiPublicBookmarks = require('./api/public-bookmarks');
 const apiPublicProfileSettings = require('./api/public-profile-settings');
 const apiBookmarkVisibility = require('./api/bookmark-visibility');
+const { isAuthenticated } = require('./api/lib/auth');
 
 const extensionCorsRoutes = new Set([
   '/api/import-scraped',
@@ -111,19 +118,40 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found.' });
 });
 
+const PRIVATE_PAGE_PATH = /^\/dashboard(?:\/|$)/;
+const NOINDEX_PAGE_PATH = /^(?:\/dashboard|\/login|\/signup)(?:\/|$)/;
+
+// Page-level authorization is enforced before Astro renders any private
+// dashboard HTML. API authorization remains independently enforced by the
+// existing handlers above.
+app.use((req, res, next) => {
+  if (NOINDEX_PAGE_PATH.test(req.path)) {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+  if (!PRIVATE_PAGE_PATH.test(req.path) || !['GET', 'HEAD'].includes(req.method)) return next();
+  if (isAuthenticated(req)) return next();
+  const returnTo = `${req.path}${req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : ''}`;
+  return res.redirect(302, `/login?returnTo=${encodeURIComponent(returnTo)}`);
+});
+
 function staticHeaders(res, filePath) {
-  if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+  if (filePath.includes(`${path.sep}assets${path.sep}`) || filePath.includes(`${path.sep}_astro${path.sep}`)) {
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
   } else {
     res.set('Cache-Control', 'no-cache');
   }
 }
 
-app.use(express.static(DIST_DIR, { setHeaders: staticHeaders }));
+// Astro's generated client assets are mounted before the SSR handler so
+// hashed scripts, styles, sitemap files, and public assets are cacheable.
+if (fs.existsSync(ASTRO_CLIENT_DIR)) {
+  app.use(express.static(ASTRO_CLIENT_DIR, { index: false, setHeaders: staticHeaders }));
+}
 
 const RESERVED_TOP_LEVEL_PATHS = new Set([
   'api', 'assets', 'auth', 'login', 'logout', 'settings', 'admin',
-  'extension-connect', 'healthz', 'favicon', 'index', 'public-profile'
+  'extension-connect', 'healthz', 'favicon', 'index', 'public-profile',
+  'pricing', 'blog', 'dashboard', 'signup', 'u'
 ]);
 const USERNAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{2,29}$/;
 
@@ -132,29 +160,21 @@ function isPublicProfilePath(value) {
   return USERNAME_PATTERN.test(slug) && !RESERVED_TOP_LEVEL_PATHS.has(slug.toLowerCase());
 }
 
-function sendHtmlEntry(res, fileName, next) {
-  const filePath = path.join(DIST_DIR, fileName);
-  return res.sendFile(filePath, { headers: { 'Cache-Control': 'no-cache' } }, error => {
-    if (error) next(error);
-  });
-}
-
-// A valid one-segment username is served by the public entry. The public
-// client fetches profile data anonymously and returns its own 404 state.
+// Keep old public-profile links working while giving Astro a collision-safe
+// canonical route at /u/:username.
 app.get('/:username', (req, res, next) => {
-  if (!isPublicProfilePath(req.params.username)) return sendHtmlEntry(res, 'index.html', next);
-  return sendHtmlEntry(res, 'public-profile.html', next);
+  if (!isPublicProfilePath(req.params.username)) return next();
+  return res.redirect(301, `/u/${encodeURIComponent(req.params.username)}`);
 });
 
-// Preserve the dashboard SPA fallback for hash routes and future frontend
-// paths. API paths have already been terminated above.
+// Astro is loaded asynchronously before the production listener starts. The
+// middleware slot owns all frontend page routes after API and auth guards.
 app.use((req, res, next) => {
-  if (!['GET', 'HEAD'].includes(req.method)) return next();
-  return sendHtmlEntry(res, 'index.html', next);
+  if (!astroHandler) return next();
+  return Promise.resolve(astroHandler(req, res, next)).catch(next);
 });
 
 app.use((req, res) => {
-  res.status(404).type('text').send('Not found');
 });
 
 // Express catches parser errors and rejected handler promises here. Do not
@@ -168,15 +188,32 @@ app.use((error, req, res, next) => {
   return res.status(500).json({ error: 'Internal Server Error' });
 });
 
+async function loadAstroHandler() {
+  if (!fs.existsSync(ASTRO_SERVER_ENTRY)) {
+    console.warn('Astro build not found; frontend page routes will return 404. Run npm run build before production start.');
+    return false;
+  }
+  try {
+    const module = await import(pathToFileURL(ASTRO_SERVER_ENTRY).href);
+    astroHandler = module.handler || module.default || null;
+    if (typeof astroHandler !== 'function') throw new Error('Astro server entry did not export a handler.');
+    console.log('Astro SSR middleware loaded.');
+    return true;
+  } catch (error) {
+    console.error('Unable to load Astro SSR middleware:', error);
+    return false;
+  }
+}
+
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
+  loadAstroHandler().finally(() => app.listen(PORT, '0.0.0.0', () => {
     console.log('\n======================================================');
     console.log('✨  SOCIAL BOOKMARKS FEED - EXPRESS SERVER  ✨');
     console.log('======================================================');
     console.log(`\n🚀 Persistent Node server running on port ${PORT}`);
     console.log('⚡ Serving Express API routes and the built frontend.');
     console.log('🔌 Connected API handlers remain backed by MongoDB Atlas & Cloudinary.');
-  });
+  }));
 }
 
 module.exports = app;

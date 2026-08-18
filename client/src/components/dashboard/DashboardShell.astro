@@ -1,31 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SocialFeed Hub | Dashboard </title>
-  <meta name="description"
-    content="A premium, elegant bookmarks manager dashboard to organize and preview your saved bookmarks from X and Instagram.">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <script>
-    (() => {
-      const stored = localStorage.getItem('socialfeed_theme');
-      const theme = stored === 'dark' || stored === 'light'
-        ? stored
-        : 'dark';
-      document.documentElement.dataset.theme = theme;
-      document.documentElement.style.colorScheme = theme;
-    })();
-  </script>
-  <style>
-    html body.auth-checking #app-layout,
-    html body.auth-checking .login-gate { display: none !important; }
-    html body.auth-checking #auth-loading { display: flex !important; }
-  </style>
-</head>
-
-<body class="auth-checking">
+---
+---
   <div id="auth-loading" class="auth-loading" role="status">
     <span id="auth-loading-message">Checking your session…</span>
     <button id="auth-retry" class="btn-secondary" type="button" hidden>Retry</button>
@@ -43,7 +17,6 @@
       <button id="private-login-submit" class="btn-primary login-submit" type="submit" aria-busy="false">
         <span>Sign in</span>
       </button>
-      <button id="private-signup-button" class="btn-secondary login-signup" type="button" disabled>Sign up - (coming soon)</button>
     </form>
   </div>
 
@@ -664,11 +637,3 @@
 
   <!-- Social Widgets Embed Scripts (will be control loaded on demand by embeds.js) -->
   <!-- We do NOT pre-load the scripts synchronously to prevent visual lag; scripts are dynamically fetched -->
-
-  <!-- Application ES Module Entry -->
-  <script type="module" src="/src/main.js"></script>
-
-
-</body>
-
-</html>

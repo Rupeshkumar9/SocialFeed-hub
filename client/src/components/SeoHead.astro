@@ -1,0 +1,40 @@
+---
+export interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  robots?: string;
+  type?: string;
+  image?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description,
+  canonical = Astro.url.href,
+  robots = 'index, follow',
+  type = 'website',
+  image = `${Astro.site || Astro.url.origin}/social-preview.svg`,
+  jsonLd
+} = Astro.props;
+const siteName = 'SocialFeed Hub';
+const absoluteImage = image.startsWith('http') ? image : new URL(image, Astro.url).href;
+const structuredData = Array.isArray(jsonLd) ? jsonLd : (jsonLd ? [jsonLd] : []);
+const safeJsonLd = (value: Record<string, unknown>) => JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+---
+<title>{title}</title>
+<meta name="description" content={description} />
+<meta name="robots" content={robots} />
+<link rel="canonical" href={canonical} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={absoluteImage} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={absoluteImage} />
+{structuredData.map(item => <script type="application/ld+json" set:html={safeJsonLd(item)} />)}

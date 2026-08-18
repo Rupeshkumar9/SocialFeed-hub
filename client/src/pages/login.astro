@@ -1,0 +1,14 @@
+---
+import DashboardShell from "../components/dashboard/DashboardShell.astro";
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+---
+
+<DashboardLayout
+  title="Sign in · SocialFeed Hub"
+  description="Sign in to your private SocialFeed Hub workspace."
+>
+  <DashboardShell />
+  <script>
+    import "../features/dashboard/main.js";
+  </script>
+</DashboardLayout>

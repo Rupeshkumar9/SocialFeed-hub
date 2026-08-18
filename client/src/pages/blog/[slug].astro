@@ -1,0 +1,42 @@
+---
+import { getCollection, render } from "astro:content";
+import PublicLayout from "../../layouts/PublicLayout.astro";
+export const prerender = true;
+export async function getStaticPaths() {
+  const posts = await getCollection("blog", ({ data }) => !data.draft);
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+const canonical =
+  post.data.canonicalUrl ||
+  new URL(`/blog/${post.id}/`, Astro.site || Astro.url).href;
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.publishDate.toISOString(),
+  dateModified: (post.data.updatedDate || post.data.publishDate).toISOString(),
+  author: { "@type": "Person", name: post.data.author },
+  mainEntityOfPage: canonical,
+};
+---
+
+<PublicLayout
+  title={`${post.data.title} · SocialFeed Hub`}
+  description={post.data.description}
+  canonical={canonical}
+  type="article"
+  jsonLd={jsonLd}
+>
+  <article class="section">
+    <div class="eyebrow">
+      {post.data.publishDate.toLocaleDateString()} · {post.data.author}
+    </div><h1>{post.data.title}</h1><p class="lede">
+      {post.data.description}
+    </p><div class="glass-card feature-card" style="margin-top: 28px">
+      <Content />
+    </div>
+  </article>
+</PublicLayout>
