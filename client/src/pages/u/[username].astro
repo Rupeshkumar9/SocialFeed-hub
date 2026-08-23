@@ -1,37 +1,30 @@
 ---
 import PublicLayout from "../../layouts/PublicLayout.astro";
-import { createRequire } from "node:module";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-
-const publicProfileModule = path.resolve(
-  process.cwd(),
-  "api/lib/public-profile.js",
-);
-const require = createRequire(pathToFileURL(publicProfileModule).href);
-const {
-  buildPublicProfile,
-  getPublicCounts,
-  getPublicProfileByUsername,
-  loadPublicBookmarks,
-} = require(publicProfileModule);
+import PublicProfile from "../../components/profile/PublicProfile.astro";
 
 export const prerender = false;
 const username = Astro.params.username || "";
 let profile = null;
-let bookmarks = [];
+let browserBookmarks = [];
+let socialBookmarks = [];
 let counts = {};
 try {
-  const result = await getPublicProfileByUsername(username);
-  if (result.profile) {
-    counts = await getPublicCounts(result.db);
-    profile = buildPublicProfile(result.profile, counts);
-    const bookmarkResult = await loadPublicBookmarks({
-      profile: result.profile,
-      source: "browser",
-      limit: 12,
+  const apiJson = async (path) => {
+    const response = await fetch(new URL(path, Astro.url), {
+      headers: { accept: "application/json" },
+      cache: "no-store",
     });
-    bookmarks = bookmarkResult.bookmarks || [];
+    if (!response.ok) return null;
+    return response.json();
+  };
+  const profileResult = await apiJson(`/api/public-profile?username=${encodeURIComponent(username)}`);
+  if (profileResult?.profile) {
+    profile = profileResult.profile;
+    counts = profile.counts || {};
+    const browserResult = await apiJson(`/api/public-bookmarks?username=${encodeURIComponent(username)}&source=browser&limit=12`);
+    const socialResult = await apiJson(`/api/public-bookmarks?username=${encodeURIComponent(username)}&source=social&limit=12`);
+    browserBookmarks = browserResult?.bookmarks || [];
+    socialBookmarks = socialResult?.bookmarks || [];
   }
 } catch (error) {
   console.error("Public profile SSR failed:", error);
@@ -72,47 +65,8 @@ const jsonLd = profile
   jsonLd={jsonLd}
 >
   {
-    profile ? (
-      <section class="section">
-        <div class="section-heading" style="margin-top: 40px">
-          <>
-            <div>
-              <>
-                <div class="eyebrow">Curated links</div>
-                <h2>{counts.browser || 0} public saves</h2>
-              </>
-            </div>
-            <p>Selected links from this profile's public library.</p>
-          </>
-        </div>
-        {bookmarks.length > 0 ? (
-          <div class="feature-grid">
-            {bookmarks.map((bookmark) => (
-              <a
-                class="glass-card feature-card"
-                href={bookmark.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <div class="eyebrow">{bookmark.folder || "Bookmark"}</div>
-                <h3>
-                  {bookmark.publicTitle || bookmark.authorName || bookmark.url}
-                </h3>
-                <p>
-                  {bookmark.publicDescription ||
-                    bookmark.content ||
-                    bookmark.url}
-                </p>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <div class="glass-card feature-card">
-            <h3>No public links yet</h3>
-            <p class="muted">This profile has not published any links.</p>
-          </div>
-        )}
-      </section>
+  profile ? (
+      <PublicProfile profile={profile} browserBookmarks={browserBookmarks} socialBookmarks={socialBookmarks} />
     ) : (
       <section class="coming-soon-wrap">
         <article class="glass-card coming-soon-card">

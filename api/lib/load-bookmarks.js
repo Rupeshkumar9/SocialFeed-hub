@@ -20,9 +20,9 @@ function encodeCursor(bookmark) {
   return Buffer.from(JSON.stringify({ date: bookmark.firstSavedAt || bookmark.createdAt || bookmark.extensionScrapedAt, id: bookmark._id.toString() })).toString('base64url');
 }
 
-async function loadBookmarks(query = {}) {
+async function loadBookmarks(query = {}, userId) {
   const db = await connectToDatabase();
-  const filter = {};
+  const filter = { userId };
   const source = query.source || 'browser';
   if (source === 'browser') filter.source = 'browser';
   if (source === 'social') filter.source = { $ne: 'browser' };

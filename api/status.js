@@ -1,5 +1,6 @@
 const { connectToDatabase } = require('./lib/db');
 const { requireSession } = require('./lib/auth');
+const { getUserById, publicUser } = require('./lib/users');
 
 module.exports = async (req, res) => {
   if (!requireSession(req, res)) return;
@@ -9,16 +10,14 @@ module.exports = async (req, res) => {
     // Test a basic ping command
     await db.command({ ping: 1 });
 
+    const user = await getUserById(req.auth.userId);
+    if (!user) return res.status(401).json({ error: 'Session expired.' });
     res.status(200).json({
       status: 'ok',
       serverless: true,
       database: 'connected',
       isAdmin: true,
-      profile: {
-        name: process.env.PROFILE_NAME || 'SocialFeed Owner',
-        email: process.env.PROFILE_EMAIL || 'Private account',
-        memberSince: process.env.MEMBER_SINCE || 'Private account'
-      },
+      profile: { ...publicUser(user), name: user.displayName },
       time: new Date()
     });
   } catch (err) {

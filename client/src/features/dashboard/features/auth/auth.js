@@ -30,6 +30,41 @@ function updateAdminLoginUI(isAdmin) {
   }
 }
 
+function updateDashboardAccount(profile = {}) {
+  const name = document.getElementById('dashboard-account-name');
+  const username = document.getElementById('dashboard-account-username');
+  const avatar = document.getElementById('dashboard-account-avatar');
+  const displayName = profile.displayName || profile.name || 'SocialFeed Owner';
+  const handle = String(profile.username || 'socialfeed').trim().toLowerCase();
+  if (name) name.textContent = displayName;
+  if (username) username.textContent = `@${handle}`;
+  if (avatar) {
+    const image = avatar.querySelector('img');
+    const fallback = avatar.querySelector('.public-account-avatar-fallback');
+    const hasAvatar = Boolean(profile.avatarUrl);
+    if (image) {
+      image.src = profile.avatarUrl || '/favicon.svg';
+      image.alt = profile.displayName ? `${displayName} profile` : '';
+      image.hidden = !hasAvatar;
+    }
+    if (fallback) {
+      fallback.textContent = displayName.trim().charAt(0).toUpperCase() || 'S';
+      fallback.hidden = hasAvatar;
+    }
+  }
+  const visitProfile = document.getElementById('btn-dashboard-visit-profile');
+  if (visitProfile) visitProfile.href = `/u/${encodeURIComponent(handle)}`;
+}
+
+async function logout() {
+  try { await socialFeedApi.logout(); } catch { /* Session is cleared locally either way. */ }
+  invalidateFeedCache();
+  AppState.bookmarks = [];
+  AppState.nextCursor = null;
+  AppState.databaseConnected = null;
+  showPrivateLogin();
+}
+
 /**
  * Handle Admin authentication form submission
  */
@@ -96,10 +131,17 @@ async function checkServerConnection() {
     const profile = data?.profile || {};
     const name = document.getElementById('settings-profile-name');
     const email = document.getElementById('settings-profile-email');
+    const nameInput = document.getElementById('settings-profile-name-input');
+    const emailInput = document.getElementById('settings-profile-email-input');
     const member = document.getElementById('settings-member-since');
     if (name) name.textContent = profile.name || 'SocialFeed Owner';
     if (email) email.textContent = profile.email || 'Private account';
+    if (nameInput) nameInput.value = profile.name || 'SocialFeed Owner';
+    if (emailInput) emailInput.value = profile.email || '';
     if (member) member.textContent = profile.memberSince || 'Private account';
+    const username = String(profile.username || '').trim().toLowerCase();
+    updateDashboardAccount(profile);
+    if (username) AppState.publicProfileUsername = username;
     return { authenticated: true, data };
   } catch (error) {
     updateSyncStatusUI(false, error instanceof ApiError && error.status === 401 ? 'Session Required' : 'Server Offline');
@@ -116,6 +158,37 @@ function initAuthEvents() {
   const loginError = document.getElementById('private-login-error');
   const loginSubmit = document.getElementById('private-login-submit');
   const retry = document.getElementById('auth-retry');
+  const authForm = loginForm;
+  const authTitle = document.getElementById('auth-form-title');
+  const authDescription = document.getElementById('auth-form-description');
+  const modeLogin = document.getElementById('auth-mode-login');
+  const modeSignup = document.getElementById('auth-mode-signup');
+  const displayNameInput = document.getElementById('private-login-display-name');
+  const displayNameLabel = document.getElementById('private-login-display-name-label');
+  const usernameInput = document.getElementById('private-login-username');
+  const usernameLabel = document.getElementById('private-login-username-label');
+  let authMode = 'login';
+
+  const setAuthMode = (mode) => {
+    authMode = mode === 'signup' ? 'signup' : 'login';
+    const signup = authMode === 'signup';
+    authForm?.setAttribute('data-auth-mode', authMode);
+    modeLogin?.classList.toggle('active', !signup);
+    modeSignup?.classList.toggle('active', signup);
+    if (authTitle) authTitle.textContent = signup ? 'Create your workspace' : 'Welcome back';
+    if (authDescription) authDescription.textContent = signup ? 'Create an account to save and organize your own web.' : 'Sign in to open your SocialFeed Hub workspace.';
+    if (displayNameInput) displayNameInput.hidden = !signup;
+    if (displayNameLabel) displayNameLabel.hidden = !signup;
+    if (usernameInput) usernameInput.hidden = !signup;
+    if (usernameLabel) usernameLabel.hidden = !signup;
+    if (displayNameInput) displayNameInput.required = signup;
+    if (usernameInput) usernameInput.required = signup;
+    if (loginPassword) loginPassword.autocomplete = signup ? 'new-password' : 'current-password';
+    if (loginSubmit) loginSubmit.querySelector('span').textContent = signup ? 'Create account' : 'Sign in';
+  };
+  modeLogin?.addEventListener('click', () => setAuthMode('login'));
+  modeSignup?.addEventListener('click', () => setAuthMode('signup'));
+  setAuthMode('login');
 
   retry?.addEventListener('click', async () => {
     retry.hidden = true;
@@ -131,7 +204,7 @@ function initAuthEvents() {
     loginSubmit.setAttribute('aria-busy', String(submitting));
     loginSubmit.innerHTML = submitting
       ? '<i class="app-icon icon-circle-notch icon-spin" aria-hidden="true"></i><span>Signing in...</span>'
-      : '<span>Sign in</span>';
+      : `<span>${authMode === 'signup' ? 'Create account' : 'Sign in'}</span>`;
   };
 
   if (loginForm) loginForm.addEventListener('submit', async event => {
@@ -140,7 +213,11 @@ function initAuthEvents() {
     loginError.hidden = true;
     setLoginSubmitting(true);
     try {
-      await socialFeedApi.login(loginEmail.value, loginPassword.value);
+      if (authMode === 'signup') {
+        await socialFeedApi.signup({ email: loginEmail.value, password: loginPassword.value, displayName: displayNameInput.value, username: usernameInput.value });
+      } else {
+        await socialFeedApi.login(loginEmail.value, loginPassword.value);
+      }
       loginEmail.value = '';
       loginPassword.value = '';
       const session = await checkServerConnection();
@@ -167,16 +244,9 @@ function initAuthEvents() {
     }
   });
 
-  const logout = async () => {
-    try { await socialFeedApi.logout(); } catch { /* Session is cleared locally either way. */ }
-    invalidateFeedCache();
-    AppState.bookmarks = [];
-    AppState.nextCursor = null;
-    AppState.databaseConnected = null;
-    showPrivateLogin();
-  };
   document.getElementById('btn-settings-logout')?.addEventListener('click', logout);
+  document.getElementById('btn-dashboard-logout')?.addEventListener('click', logout);
 }
 
-registerActions('auth', { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, showAuthStartupError, checkServerConnection, initAuthEvents });
-export { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, showAuthStartupError, checkServerConnection, initAuthEvents };
+registerActions('auth', { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, showAuthStartupError, checkServerConnection, initAuthEvents, logout });
+export { updateAdminLoginUI, handleAdminLoginSubmit, showPrivateLogin, showAuthStartupError, checkServerConnection, initAuthEvents, logout, updateDashboardAccount };

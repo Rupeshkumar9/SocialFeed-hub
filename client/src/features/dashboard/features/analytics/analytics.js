@@ -14,7 +14,7 @@ function categoryRowsMarkup(counts = {}, source = "social") {
   return items.map(item => {
     const pct = Math.round((Number(item.count || 0) / total) * 100);
     return '<div class="stats-category-row">' +
-      '<div class="metric-info"><span>' + escapeHTML(item.label) + '</span><span>' + item.count + '</span></div>' +
+      '<div class="metric-info"><span>' + escapeHTML(item.label) + '</span><span>' + item.count + ' (' + pct + '%)</span></div>' +
       '<div class="metric-bar-container tiny"><div class="metric-bar" style="width:' + pct + '%;"></div></div>' +
     '</div>';
   }).join('');
@@ -68,8 +68,7 @@ function updateStatsAnalytics() {
 
   const sources = AppState.libraryCounts && AppState.libraryCounts.sources ? AppState.libraryCounts.sources : {};
   const browserTotal = Number(sources.browser) || 0;
-  const grandTotal = (Number(sources.social) || socialTotal) + browserTotal;
-  const browserPct = grandTotal > 0 ? Math.round((browserTotal / grandTotal) * 100) : 0;
+  const browserPct = browserTotal > 0 ? 100 : 0;
   const browserCollections = getCategoryCountsForContext({ source: "browser", platform: "browser" });
   browserContainer.innerHTML = '<div class="stats-platform-block open">' +
     '<div class="stats-metric-row">' +
@@ -77,8 +76,23 @@ function updateStatsAnalytics() {
       '<div class="metric-bar-container"><div class="metric-bar browser-bar" style="width:' + browserPct + '%;"></div></div>' +
     '</div>' +
     '<div class="stats-category-breakdown">' + categoryRowsMarkup(browserCollections, "browser") + '</div>' +
-  '</div>';
+    '</div>';
 }
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-analytics-source]');
+  if (!button) return;
+  AppState.analyticsSource = button.dataset.analyticsSource === 'browser' ? 'browser' : 'platforms';
+  document.querySelectorAll('[data-analytics-source]').forEach(tab => {
+    const active = tab.dataset.analyticsSource === AppState.analyticsSource;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
+  const platformCard = document.getElementById('stat-platform-card');
+  const browserCard = document.getElementById('stat-browser-card');
+  if (platformCard) platformCard.hidden = AppState.analyticsSource !== 'platforms';
+  if (browserCard) browserCard.hidden = AppState.analyticsSource !== 'browser';
+});
 
 registerActions('analytics', { categoryRowsMarkup, updateStatsAnalytics });
 export { categoryRowsMarkup, updateStatsAnalytics };

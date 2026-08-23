@@ -20,7 +20,7 @@ function currentLinks() {
 
 function currentViewLabel() {
   const title = DOM.feedTitle?.textContent?.trim();
-  return title || (AppState.activeSource === 'browser' ? 'Browser Bookmarks' : 'All Social Bookmarks');
+  return title || (AppState.activeSource === 'browser' ? 'Links' : 'All Posts');
 }
 
 async function copyText(value) {

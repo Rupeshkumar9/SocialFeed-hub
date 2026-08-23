@@ -19,6 +19,14 @@ const { title, description, canonical, robots, type, image, jsonLd } = Astro.pro
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" href="/favicon.svg" />
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem('socialfeed_theme');
+        const theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <SeoHead title={title} description={description} canonical={canonical} robots={robots} type={type} image={image} jsonLd={jsonLd} />
   </head>
   <body>
@@ -29,10 +37,123 @@ const { title, description, canonical, robots, type, image, jsonLd } = Astro.pro
           <a href="/pricing">Pricing</a>
           <a href="/blog">Blog</a>
         </nav>
-        <div class="nav-actions"><a class="button ghost" href="/login">Sign in</a><a class="button primary" href="/dashboard">Open dashboard</a></div>
+        <div class="nav-actions">
+          <button class="theme-toggle" type="button" data-public-theme-toggle aria-label="Switch to light theme" title="Switch to light theme">
+            <span class="theme-toggle-icon" aria-hidden="true">☼</span><span class="theme-toggle-label">Theme</span>
+          </button>
+          <div class="public-auth" data-public-auth>
+            <a class="button primary public-sign-in" href="/login">Sign in</a>
+            <div class="public-account" data-public-account hidden>
+              <button class="public-account-trigger" type="button" data-public-account-trigger aria-expanded="false" aria-haspopup="menu">
+                <span class="public-account-avatar" data-public-account-avatar aria-hidden="true"><span class="public-account-avatar-fallback">S</span><img src="/favicon.svg" alt="" hidden /></span>
+                <span class="public-account-copy"><strong data-public-account-name>SocialFeed Owner</strong><small data-public-account-username>@socialfeed</small></span>
+                <span class="public-account-chevron" aria-hidden="true">⌄</span>
+              </button>
+              <div class="public-account-menu" data-public-account-menu role="menu" hidden>
+                <a href="/dashboard" role="menuitem">Open dashboard</a>
+                <a href="/u/socialfeed" data-public-profile-link role="menuitem">Visit profile</a>
+                <a href="/dashboard#settings" role="menuitem">Settings</a>
+                <button type="button" data-public-logout role="menuitem">Logout</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
       <main class="site-container page-main"><slot /></main>
       <footer class="site-container site-footer"><div class="site-footer-inner"><span>Organize the web you want to remember.</span><span>© {new Date().getFullYear()} SocialFeed Hub</span></div></footer>
     </div>
   </body>
 </html>
+
+<script is:inline>
+  (() => {
+    const root = document.documentElement;
+    const themeButton = document.querySelector('[data-public-theme-toggle]');
+    const updateThemeButton = () => {
+      const theme = root.dataset.theme === 'light' ? 'light' : 'dark';
+      if (!themeButton) return;
+      themeButton.setAttribute('aria-label', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+      themeButton.setAttribute('title', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+      const icon = themeButton.querySelector('.theme-toggle-icon');
+      if (icon) icon.textContent = theme === 'light' ? '☾' : '☼';
+    };
+    themeButton?.addEventListener('click', () => {
+      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      root.style.colorScheme = next;
+      localStorage.setItem('socialfeed_theme', next);
+      updateThemeButton();
+    });
+    updateThemeButton();
+
+    const auth = document.querySelector('[data-public-auth]');
+    const signIn = auth?.querySelector('.public-sign-in');
+    const account = auth?.querySelector('[data-public-account]');
+    const trigger = auth?.querySelector('[data-public-account-trigger]');
+    const menu = auth?.querySelector('[data-public-account-menu]');
+    const name = auth?.querySelector('[data-public-account-name]');
+    const username = auth?.querySelector('[data-public-account-username]');
+    const avatar = auth?.querySelector('[data-public-account-avatar]');
+    const profileLink = auth?.querySelector('[data-public-profile-link]');
+    const logout = auth?.querySelector('[data-public-logout]');
+    const setSignedOut = () => {
+      if (signIn) signIn.hidden = false;
+      if (account) account.hidden = true;
+      if (menu) menu.hidden = true;
+      trigger?.setAttribute('aria-expanded', 'false');
+      auth?.classList.remove('is-authenticated');
+    };
+    const setSignedIn = (profile = {}) => {
+      if (signIn) signIn.hidden = true;
+      if (account) account.hidden = false;
+      auth?.classList.add('is-authenticated');
+      if (name) name.textContent = profile.displayName || profile.name || 'SocialFeed Owner';
+      const handle = profile.username || 'socialfeed';
+      if (username) username.textContent = `@${handle}`;
+      if (profileLink) profileLink.href = `/u/${encodeURIComponent(handle)}`;
+      if (avatar) {
+        const image = avatar.querySelector('img');
+        const fallback = avatar.querySelector('.public-account-avatar-fallback');
+        if (image) {
+          const hasAvatar = Boolean(profile.avatarUrl);
+          image.src = profile.avatarUrl || '/favicon.svg';
+          image.alt = profile.displayName ? `${profile.displayName} profile` : '';
+          image.hidden = !hasAvatar;
+          if (fallback) {
+            fallback.textContent = (profile.displayName || profile.name || 'S').trim().charAt(0).toUpperCase() || 'S';
+            fallback.hidden = hasAvatar;
+          }
+        }
+      }
+    };
+    const closeMenu = () => {
+      if (menu) menu.hidden = true;
+      trigger?.setAttribute('aria-expanded', 'false');
+      account?.classList.remove('is-open');
+    };
+    trigger?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const open = menu?.hidden;
+      if (menu) menu.hidden = !open;
+      trigger.setAttribute('aria-expanded', String(Boolean(open)));
+      account?.classList.toggle('is-open', Boolean(open));
+    });
+    document.addEventListener('click', (event) => {
+      if (account && !account.contains(event.target)) closeMenu();
+    });
+    logout?.addEventListener('click', async () => {
+      logout.disabled = true;
+      try {
+        const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        if (response.ok) setSignedOut();
+      } finally {
+        logout.disabled = false;
+        closeMenu();
+      }
+    });
+    fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => data?.authenticated ? setSignedIn(data.profile) : setSignedOut())
+      .catch(() => setSignedOut());
+  })();
+</script>

@@ -18,6 +18,7 @@
   height: calc(100dvh - 74px);
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 /* Sidebar Styling */
@@ -31,6 +32,56 @@
   flex-shrink: 0;
   z-index: 10;
   transition: var(--transition-smooth);
+}
+
+.sidebar-collapse-toggle {
+  position: absolute;
+  top: 16px;
+  left: calc(var(--sidebar-width) - 14px);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--bg-sidebar);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: left 0.22s ease, background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.sidebar-collapse-toggle:hover,
+.sidebar-collapse-toggle:focus-visible {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+.sidebar-collapse-toggle i {
+  transition: transform 0.22s ease;
+}
+
+body.sidebar-collapsed #sidebar {
+  width: 0;
+  border-right-width: 0;
+}
+
+body.sidebar-collapsed #sidebar .sidebar-menu {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.sidebar-collapsed .sidebar-collapse-toggle {
+  left: 8px;
+}
+
+body.sidebar-collapsed .sidebar-collapse-toggle i {
+  transform: rotate(180deg);
 }
 
 .sidebar-header {
@@ -62,7 +113,9 @@
 }
 
 .logo-text h1 {
+  margin: 0;
   font-size: 1.15rem;
+  line-height: 1;
   font-weight: 700;
   letter-spacing: -0.5px;
   background: linear-gradient(to right, var(--text-primary), var(--accent-blue));

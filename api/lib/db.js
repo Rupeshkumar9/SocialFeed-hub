@@ -4,6 +4,7 @@ let cachedDb = null;
 let indexesPromise = null;
 let extensionIndexesPromise = null;
 let publicProfileIndexesPromise = null;
+let userIndexesPromise = null;
 
 async function connectToDatabase() {
   if (cachedDb) {
@@ -40,11 +41,16 @@ async function connectToDatabase() {
 
 async function ensureBookmarkIndexes() {
   if (!indexesPromise) {
-    indexesPromise = connectToDatabase().then(db => db.collection('bookmarks').createIndexes([
-      { key: { identityKey: 1 }, name: 'bookmark_identity_unique', unique: true, partialFilterExpression: { identityKey: { $exists: true } } },
+    indexesPromise = connectToDatabase().then(async db => {
+      const bookmarks = db.collection('bookmarks');
+      try { await bookmarks.dropIndex('bookmark_identity_unique'); } catch (error) { if (error.codeName !== 'IndexNotFound') throw error; }
+      return bookmarks.createIndexes([
+      { key: { userId: 1, identityKey: 1 }, name: 'bookmark_user_identity_unique', unique: true, partialFilterExpression: { identityKey: { $exists: true }, userId: { $exists: true } } },
       { key: { source: 1, firstSavedAt: -1, _id: -1 }, name: 'bookmark_source_feed' },
-      { key: { platform: 1, firstSavedAt: -1, _id: -1 }, name: 'bookmark_platform_feed' }
-    ])).catch(error => {
+      { key: { platform: 1, firstSavedAt: -1, _id: -1 }, name: 'bookmark_platform_feed' },
+      { key: { userId: 1, source: 1, firstSavedAt: -1, _id: -1 }, name: 'bookmark_user_source_feed' }
+    ]);
+    }).catch(error => {
       indexesPromise = null;
       throw error;
     });
@@ -52,12 +58,22 @@ async function ensureBookmarkIndexes() {
   return indexesPromise;
 }
 
+async function ensureUserIndexes() {
+  if (!userIndexesPromise) {
+    userIndexesPromise = connectToDatabase().then(db => db.collection('users').createIndexes([
+      { key: { emailLower: 1 }, name: 'user_email_unique', unique: true },
+      { key: { usernameLower: 1 }, name: 'user_username_unique', unique: true }
+    ])).catch(error => { userIndexesPromise = null; throw error; });
+  }
+  return userIndexesPromise;
+}
+
 async function ensureExtensionIndexes() {
   if (!extensionIndexesPromise) {
     extensionIndexesPromise = connectToDatabase().then(db => Promise.all([
       db.collection('extension_devices').createIndexes([
         { key: { tokenHash: 1 }, name: 'extension_device_token_unique', unique: true },
-        { key: { status: 1, lastUsedAt: -1 }, name: 'extension_device_status' }
+        { key: { userId: 1, status: 1, lastUsedAt: -1 }, name: 'extension_device_user_status' }
       ]),
       db.collection('extension_pairing_requests').createIndexes([
         { key: { pairingId: 1 }, name: 'extension_pairing_id_unique', unique: true },
@@ -79,7 +95,8 @@ async function ensurePublicProfileIndexes() {
       ]),
       db.collection('bookmarks').createIndexes([
         { key: { visibility: 1, source: 1, firstSavedAt: -1, _id: -1 }, name: 'public_source_feed' },
-        { key: { visibility: 1, platform: 1, firstSavedAt: -1, _id: -1 }, name: 'public_platform_feed' }
+        { key: { visibility: 1, platform: 1, firstSavedAt: -1, _id: -1 }, name: 'public_platform_feed' },
+        { key: { userId: 1, visibility: 1, source: 1, firstSavedAt: -1, _id: -1 }, name: 'public_user_source_feed' }
       ])
     ])).catch(error => {
       publicProfileIndexesPromise = null;
@@ -89,4 +106,4 @@ async function ensurePublicProfileIndexes() {
   return publicProfileIndexesPromise;
 }
 
-module.exports = { connectToDatabase, ensureBookmarkIndexes, ensureExtensionIndexes, ensurePublicProfileIndexes };
+module.exports = { connectToDatabase, ensureBookmarkIndexes, ensureExtensionIndexes, ensurePublicProfileIndexes, ensureUserIndexes };

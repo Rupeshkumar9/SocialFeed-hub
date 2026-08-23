@@ -61,8 +61,8 @@ module.exports = async (req, res) => {
 
   try {
     const collection = (await connectToDatabase()).collection('bookmarks');
-    const oldFilter = scopedFilter(source, platform, oldName);
-    const newFilter = scopedFilter(source, platform, new RegExp(`^${escapeRegex(newName)}$`, 'i'));
+    const oldFilter = { userId: req.auth.userId, ...scopedFilter(source, platform, oldName) };
+    const newFilter = { userId: req.auth.userId, ...scopedFilter(source, platform, new RegExp(`^${escapeRegex(newName)}$`, 'i')) };
     const [oldCount, newCount] = await Promise.all([
       collection.countDocuments(oldFilter),
       collection.countDocuments(newFilter)

@@ -83,10 +83,8 @@ EXTENSION_SYNC_TOKEN=generate_a_different_long_random_token
 # EXTENSION_DEVICE_IDLE_SECONDS=7776000
 # EXTENSION_DEVICE_MAX_AGE_SECONDS=0
 
-# Optional Settings profile details
-PROFILE_NAME=Your Name
-PROFILE_EMAIL=you@example.com
-MEMBER_SINCE=Jul 2026
+# Account/profile details are created per user by the signup form and stored
+# in MongoDB. They are not configured through environment variables.
 
 # Optional: comma-separated Chrome/Firefox extension origins for production CORS.
 # Leave unset to allow browser extension origins during private single-user use.

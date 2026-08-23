@@ -3,7 +3,11 @@ import { actions, registerActions } from '../../app/actions.js';
 
 const applyFiltersAndSearch = (...args) => actions.applyFiltersAndSearch(...args);
 const closeSettings = (...args) => actions.closeSettings(...args);
+const closeProfileEdit = (...args) => actions.closeProfileEdit(...args);
+const closeExtension = (...args) => actions.closeExtension(...args);
 const loadData = (...args) => actions.loadData(...args);
+const openExtension = (...args) => actions.openExtension(...args);
+const openProfileEdit = (...args) => actions.openProfileEdit(...args);
 const openSettings = (...args) => actions.openSettings(...args);
 const platformLabel = (...args) => actions.platformLabel(...args);
 const refreshPlatformCounts = (...args) => actions.refreshPlatformCounts(...args);
@@ -219,6 +223,92 @@ function getLoadedTagCounts() {
   return counts;
 }
 
+function updatePlatformFilterMenu(platformCounts) {
+  const menu = DOM.platformFilterMenu;
+  if (!menu) return;
+
+  menu.querySelectorAll('[data-dynamic-platform]').forEach(item => item.remove());
+  const knownPlatforms = new Set(['all', 'instagram', 'x', 'threads', 'reddit', 'facebook', 'youtube']);
+  const customPlatforms = Object.entries(platformCounts)
+    .filter(([platform, count]) => !knownPlatforms.has(platform) && (Number(count) > 0 || platform === AppState.activePlatform))
+    .sort(([platformA], [platformB]) => platformLabel(platformA).localeCompare(platformLabel(platformB)));
+
+  customPlatforms.forEach(([platform, count]) => {
+    const button = document.createElement('button');
+    button.className = 'dropdown-item';
+    button.type = 'button';
+    button.dataset.platform = platform;
+    button.dataset.sidebarRoute = '#platform=' + encodeURIComponent(platform);
+    button.dataset.dynamicPlatform = 'true';
+    button.setAttribute('role', 'menuitem');
+    button.innerHTML = '<i class="app-icon icon-check check-icon" style="visibility: hidden;"></i>';
+    button.insertAdjacentHTML('beforeend', platformIconMarkup(platform));
+
+    const label = document.createElement('span');
+    label.className = 'btn-text';
+    label.textContent = platformLabel(platform);
+    const countElement = document.createElement('span');
+    countElement.className = 'menu-count';
+    countElement.textContent = count;
+    button.append(label, countElement);
+    menu.appendChild(button);
+  });
+
+  const activePlatform = AppState.activePlatform || 'all';
+  menu.querySelectorAll('[data-platform]').forEach(item => {
+    const isActive = item.dataset.platform === activePlatform;
+    item.classList.toggle('active', isActive);
+    item.setAttribute('aria-current', isActive ? 'true' : 'false');
+    const check = item.querySelector('.check-icon');
+    if (check) check.style.visibility = isActive ? 'visible' : 'hidden';
+  });
+  if (DOM.platformFilterLabel) {
+    DOM.platformFilterLabel.textContent = activePlatform === 'all' ? 'All Posts' : platformLabel(activePlatform);
+  }
+}
+
+function updateSocialCategoryMenu() {
+  const menu = DOM.socialCategoryMenu;
+  if (!menu) return;
+
+  const counts = getCategoryCountsForContext({
+    source: 'social',
+    platform: AppState.activePlatform || 'all'
+  });
+  const items = [
+    { value: 'all', label: 'All Categories', count: counts.all || 0, icon: 'app-icon icon-folder-tree' },
+    ...sortedCategoryItemsFromCounts(counts, 'social')
+  ];
+  if (!items.some(item => item.value === 'uncategorized')) {
+    items.push({ value: 'uncategorized', label: 'Others', count: 0, icon: 'app-icon icon-folder' });
+  }
+
+  menu.replaceChildren();
+  items.forEach(item => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'dropdown-item';
+    button.dataset.collection = item.value;
+    button.setAttribute('role', 'menuitem');
+    button.classList.toggle('active', AppState.activeCollection === item.value);
+    button.innerHTML = `<i class="app-icon icon-check check-icon" style="visibility: ${AppState.activeCollection === item.value ? 'visible' : 'hidden'};"></i><i class="${item.icon}"></i>`;
+
+    const label = document.createElement('span');
+    label.className = 'btn-text';
+    label.textContent = item.label;
+    const count = document.createElement('span');
+    count.className = 'menu-count';
+    count.textContent = item.count || 0;
+    button.append(label, count);
+    menu.appendChild(button);
+  });
+
+  if (DOM.socialCategoryLabel) {
+    const active = items.find(item => item.value === AppState.activeCollection);
+    DOM.socialCategoryLabel.textContent = active?.label || 'All Categories';
+  }
+}
+
 function updateSidebarNavigation() {
   const platformCounts = AppState.platformCounts ? { ...AppState.platformCounts } : { all: 0, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0, youtube: 0 };
   if (!AppState.platformCounts) {
@@ -231,58 +321,69 @@ function updateSidebarNavigation() {
     });
   }
 
-  if (DOM.sidebarPlatformList) {
-    DOM.sidebarPlatformList.querySelectorAll('[data-dynamic-platform]').forEach(item => item.remove());
-    const knownPlatforms = new Set(['all', 'instagram', 'x', 'threads', 'reddit', 'facebook', 'youtube']);
-    Object.entries(platformCounts)
-      .filter(([platform, count]) => !knownPlatforms.has(platform) && Number(count) > 0)
-      .sort(([platformA], [platformB]) => platformLabel(platformA).localeCompare(platformLabel(platformB)))
-      .forEach(([platform, count]) => {
-        const li = document.createElement('li');
-        li.className = 'menu-item';
-        li.dataset.dynamicPlatform = 'true';
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.platform = platform;
-        button.dataset.sidebarRoute = '#platform=' + encodeURIComponent(platform);
-        button.insertAdjacentHTML('afterbegin', platformIconMarkup(platform));
-        const label = document.createElement('span');
-        label.textContent = platformLabel(platform);
-        const countElement = document.createElement('span');
-        countElement.className = 'menu-count';
-        countElement.textContent = count;
-        button.append(label, countElement);
-        button.addEventListener('contextmenu', event => showSidebarContextMenu(event, button.dataset.sidebarRoute));
-        li.appendChild(button);
-        DOM.sidebarPlatformList.appendChild(li);
-      });
+  updatePlatformFilterMenu(platformCounts);
+  updateSocialCategoryMenu();
+  if (DOM.platformFilterDropdown) {
+  const showPlatformFilter = AppState.activeSource === 'social' && !AppState.isSettingsOpen && !AppState.isProfileEditOpen && !AppState.isExtensionOpen;
+    DOM.platformFilterDropdown.hidden = !showPlatformFilter;
+    DOM.platformFilterDropdown.setAttribute('aria-hidden', String(!showPlatformFilter));
+  }
+  if (DOM.socialHeaderControls) {
+    const showSocialHeaderControls = AppState.activeSource === 'social' && !AppState.isSettingsOpen && !AppState.isProfileEditOpen && !AppState.isExtensionOpen;
+    DOM.socialHeaderControls.hidden = !showSocialHeaderControls;
+    DOM.socialHeaderControls.setAttribute('aria-hidden', String(!showSocialHeaderControls));
+  }
+  if (DOM.socialCategoryDropdown) {
+    const showSocialCategory = AppState.activeSource === 'social' && !AppState.isSettingsOpen && !AppState.isProfileEditOpen && !AppState.isExtensionOpen;
+    DOM.socialCategoryDropdown.hidden = !showSocialCategory;
+    DOM.socialCategoryDropdown.setAttribute('aria-hidden', String(!showSocialCategory));
+  }
+  if (DOM.socialCategoryRename) {
+    const canRenameSocialCategory = AppState.activeSource === 'social'
+      && !AppState.isSettingsOpen
+      && !AppState.isProfileEditOpen
+      && !AppState.isExtensionOpen
+      && AppState.activePlatform !== 'all'
+      && AppState.activeCollection !== 'all'
+      && AppState.activeCollection !== 'uncategorized';
+    DOM.socialCategoryRename.hidden = !canRenameSocialCategory;
+    DOM.socialCategoryRename.setAttribute('aria-hidden', String(!canRenameSocialCategory));
   }
 
   Object.entries(platformCounts).forEach(([platform, count]) => {
     const el = document.getElementById("count-platform-" + platform);
     if (el) el.textContent = count;
   });
+  const sidebarAllCount = document.getElementById('sidebar-count-platform-all');
+  if (sidebarAllCount) sidebarAllCount.textContent = platformCounts.all || 0;
 
   const browserCount = AppState.libraryCounts && AppState.libraryCounts.sources ? AppState.libraryCounts.sources.browser : (AppState.activeSource === "browser" ? AppState.bookmarks.length : 0);
   const browserCountEl = document.getElementById("count-browser-bookmarks");
   if (browserCountEl) browserCountEl.textContent = browserCount || 0;
 
   const browserItem = document.getElementById("sidebar-browser-item");
-  if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser" && !AppState.isSettingsOpen);
+  if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser" && !AppState.isSettingsOpen && !AppState.isProfileEditOpen && !AppState.isExtensionOpen);
 
-  const settingsButton = document.getElementById("btn-settings");
+  const profileItem = document.getElementById('sidebar-profile-item');
+  if (profileItem) profileItem.classList.toggle('active', !!AppState.isProfileEditOpen);
+
+  const analyticsItem = document.getElementById('sidebar-analytics-item');
+  if (analyticsItem) analyticsItem.classList.toggle('active', !!AppState.isAnalyticsOpen);
+
+  const extensionItem = document.getElementById('sidebar-extension-item');
+  if (extensionItem) extensionItem.classList.toggle('active', !!AppState.isExtensionOpen);
+
+  const settingsButton = document.getElementById("btn-dashboard-settings");
   if (settingsButton) settingsButton.classList.toggle("active", !!AppState.isSettingsOpen);
 
-  if (DOM.sidebarPlatformList) {
-    DOM.sidebarPlatformList.querySelectorAll(".menu-item").forEach(item => {
-      const btn = item.querySelector("[data-platform]");
-      item.classList.toggle("active", !AppState.isSettingsOpen && AppState.activeSource === "social" && btn && btn.dataset.platform === AppState.activePlatform);
-    });
+  const socialPostsItem = DOM.sidebarSocialPostsItem || document.getElementById('sidebar-social-posts-item');
+  if (socialPostsItem) {
+    socialPostsItem.classList.toggle("active", !AppState.isSettingsOpen && !AppState.isProfileEditOpen && !AppState.isExtensionOpen && AppState.activeSource === "social");
   }
 
   const collectionSection = DOM.sidebarCollectionList ? DOM.sidebarCollectionList.closest(".sidebar-section") : null;
   if (collectionSection) collectionSection.hidden = false;
-  if (AppState.activeSource !== "social") {
+  if (AppState.isSettingsOpen || AppState.isProfileEditOpen || AppState.activeSource !== "social") {
     const collectionList = DOM.sidebarCollectionList;
     if (collectionList) {
       const socialCollections = getLibraryCountGroup("collections", "social") || { all: platformCounts.all || 0, uncategorized: 0 };
@@ -357,8 +458,20 @@ function setRouteHash(hash) {
   window.history.replaceState(null, '', url.toString());
 }
 
+function setRoutePath(pathname = '/dashboard') {
+  const url = new URL(window.location.href);
+  url.pathname = pathname;
+  url.hash = '';
+  window.history.replaceState(null, '', url.toString());
+}
+
 function appUrlForRoute(hash) {
   const url = new URL(window.location.href);
+  if (String(hash || '').startsWith('/')) {
+    url.pathname = hash;
+    url.hash = '';
+    return url.toString();
+  }
   url.hash = hash;
   return url.toString();
 }
@@ -396,20 +509,45 @@ function initSidebarNewTabContextMenu() {
 function applyRouteFromHash(options = {}) {
   const hash = decodeURIComponent(window.location.hash || '');
   let matched = false;
-  if (hash === '#settings') {
+  if (!hash || hash === '#') {
+    AppState.activeSource = 'browser';
+    AppState.activePlatform = 'all';
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    matched = true;
+    openProfileEdit();
+  } else if (hash === '#settings') {
     AppState.activeSource = 'browser';
     AppState.activePlatform = 'all';
     AppState.activeCollection = 'all';
     AppState.nextCursor = null;
     matched = true;
     openSettings();
-  } else if (hash === '#bookmarks') {
+  } else if (hash === '#extension') {
     AppState.activeSource = 'browser';
     AppState.activePlatform = 'all';
     AppState.activeCollection = 'all';
     AppState.nextCursor = null;
     matched = true;
+    openExtension();
+  } else if (hash === '#profile-edit') {
+    AppState.activeSource = 'browser';
+    AppState.activePlatform = 'all';
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    matched = true;
+    setRoutePath('/dashboard');
+    openProfileEdit();
+  } else if (hash === '#links' || hash === '#bookmarks') {
+    AppState.activeSource = 'browser';
+    AppState.activePlatform = 'all';
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    matched = true;
+    if (hash === '#bookmarks') setRouteHash('#links');
     closeSettings();
+    closeExtension();
+    closeProfileEdit();
   } else if (hash.startsWith('#platform=')) {
     const platform = hash.slice('#platform='.length) || 'all';
     AppState.activeSource = 'social';
@@ -418,6 +556,8 @@ function applyRouteFromHash(options = {}) {
     AppState.nextCursor = null;
     matched = true;
     closeSettings();
+    closeExtension();
+    closeProfileEdit();
   }
   if (matched) {
     syncFilterSelects();
@@ -435,5 +575,5 @@ function refreshLocalMetadataAndCounts() {
   refreshPlatformCounts();
 }
 
-registerActions('library-navigation', { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updateSidebarNavigation, setSidebarNavigationLoading, setRouteHash, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts });
-export { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updateSidebarNavigation, setSidebarNavigationLoading, setRouteHash, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts };
+registerActions('library-navigation', { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updatePlatformFilterMenu, updateSocialCategoryMenu, updateSidebarNavigation, setSidebarNavigationLoading, setRouteHash, setRoutePath, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts });
+export { processCollections, updateCollectionsFilterDropdown, processTags, renderTagCloud, filterByPlatform, filterByTag, syncFilterSelects, getCurrentCountSource, getLibraryCountGroup, normalizeCollectionKey, browserCategoryLabel, socialCategoryLabel, getLoadedCollectionCounts, getCategoryDefaultLabel, getCategoryContextFromPlatform, getCategoryCountsForContext, sortedCategoryItemsFromCounts, platformIconMarkup, getLoadedTagCounts, updatePlatformFilterMenu, updateSocialCategoryMenu, updateSidebarNavigation, setSidebarNavigationLoading, setRouteHash, setRoutePath, appUrlForRoute, showSidebarContextMenu, initSidebarNewTabContextMenu, applyRouteFromHash, refreshLocalMetadataAndCounts };

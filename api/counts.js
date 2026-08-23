@@ -61,7 +61,7 @@ module.exports = async (req, res) => {
   try {
     const collection = (await connectToDatabase()).collection("bookmarks");
     const rows = await collection.aggregate([
-      { $match: { source: { $ne: "browser" } } },
+      { $match: { userId: req.auth.userId, source: { $ne: "browser" } } },
       { $group: { _id: "$platform", count: { $sum: 1 }, platformName: { $max: { $ifNull: ["$platformName", ""] } } } }
     ]).toArray();
 
@@ -75,8 +75,9 @@ module.exports = async (req, res) => {
       if (label) platformLabels[platform] = label;
     });
     const socialTotal = Object.values(platforms).reduce((total, count) => total + count, 0);
-    const socialFilter = { source: { $ne: "browser" } };
-    const browserFilter = { source: "browser" };
+    const userFilter = { userId: req.auth.userId };
+    const socialFilter = { ...userFilter, source: { $ne: "browser" } };
+    const browserFilter = { ...userFilter, source: "browser" };
 
     const platformCollectionPromises = Object.fromEntries(
       Object.keys(platforms).map(platform => [platform, countCollections(collection, { ...socialFilter, platform })])

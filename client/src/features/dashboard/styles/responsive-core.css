@@ -22,6 +22,10 @@
 }
 
 @media (max-width: 768px) {
+  .sidebar-collapse-toggle {
+    display: none;
+  }
+
   .app-body {
     height: calc(100vh - 64px);
     height: calc(100dvh - 64px);
@@ -40,16 +44,6 @@
   
   .btn-text {
     display: none;
-  }
-  
-   #btn-sync-now {
-    height: 38px;
-    width: 38px;
-    padding: 0;
-    min-width: 38px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
   
   .main-header {
@@ -168,14 +162,71 @@
   }
   
   .feed-section-header {
+    margin: -16px -16px 16px;
+    padding: 10px 16px 12px;
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
+
+  .feed-section-header:not(.feed-header-collapsed) .feed-title-area {
+    padding-right: 38px;
+  }
+
+  .feed-section-header.feed-header-collapsed {
+    min-height: 30px;
+    height: 30px;
+    margin: -16px -16px 12px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .feed-header-collapse-toggle {
+    top: 1px;
+    right: 8px;
+  }
   
   .action-toolbar {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow: visible;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .action-toolbar > .toolbar-btn,
+  .action-toolbar > .toolbar-dropdown {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .action-toolbar > .toolbar-btn,
+  .action-toolbar > .toolbar-dropdown > .toolbar-btn {
+    width: 100%;
+    max-width: none;
+    justify-content: center;
+    padding-inline: 8px;
+  }
+
+  .action-toolbar .toolbar-btn .btn-label {
+    display: none !important;
+  }
+
+  .action-toolbar .toolbar-btn,
+  .action-toolbar .toolbar-btn:hover,
+  .action-toolbar .toolbar-btn:focus,
+  .action-toolbar .toolbar-btn:focus-within,
+  .action-toolbar .toolbar-dropdown > .toolbar-btn,
+  .action-toolbar .toolbar-dropdown > .toolbar-btn:hover,
+  .action-toolbar .toolbar-dropdown > .toolbar-btn:focus,
+  .action-toolbar .toolbar-dropdown > .toolbar-btn:focus-within {
+    max-width: none !important;
+    padding-inline: 8px !important;
+  }
+
+  .action-toolbar::-webkit-scrollbar {
+    display: none;
   }
 }
 

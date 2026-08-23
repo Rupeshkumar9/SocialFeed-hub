@@ -32,11 +32,11 @@ module.exports = async (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const normalizedBookmarks = bookmarks.map(bm => normalizeBookmark(bm, {
+    const normalizedBookmarks = bookmarks.map(bm => ({ ...normalizeBookmark(bm, {
       now,
       preserveCreatedAt: true,
       importSource: bm.importSource || 'manual'
-    }));
+    }), userId: req.auth.userId }));
 
     const cloudinaryConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY));
     let uploadCount = 0;
@@ -80,7 +80,7 @@ module.exports = async (req, res) => {
       } = bookmark;
       return {
         updateOne: {
-          filter: { id: bookmark.id },
+          filter: { userId: req.auth.userId, id: bookmark.id },
           update: {
             $set: mutableFields,
             $setOnInsert: {
@@ -105,7 +105,7 @@ module.exports = async (req, res) => {
     const upsertedIds = new Set(normalizedBookmarks.map(bookmark => bookmark.id));
     const deletions = [...new Set(deletedIds.filter(id => id && !upsertedIds.has(id)))];
     if (deletions.length > 0) {
-      operations.push({ deleteMany: { filter: { id: { $in: deletions } } } });
+      operations.push({ deleteMany: { filter: { userId: req.auth.userId, id: { $in: deletions } } } });
     }
 
     if (operations.length > 0) {

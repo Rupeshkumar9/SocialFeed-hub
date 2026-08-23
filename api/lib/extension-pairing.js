@@ -105,6 +105,7 @@ async function authorizePairing(body, req) {
   const token = randomToken();
   const now = new Date();
   const device = {
+    userId: req.auth?.userId || '',
     tokenHash: hashToken(token),
     label: typeof body?.label === 'string' && body.label.trim() ? body.label.trim().slice(0, 100) : 'Browser extension',
     status: 'active',
@@ -151,7 +152,7 @@ function extractExtensionToken(req) {
 async function authorizeExtensionDevice(req) {
   const token = extractExtensionToken(req);
   const legacy = process.env.EXTENSION_SYNC_TOKEN || '';
-  if (legacy && typeof token === 'string' && safeEqual(token, legacy)) return { authorized: true, legacy: true };
+  if (legacy && typeof token === 'string' && safeEqual(token, legacy)) return { authorized: true, legacy: true, userId: process.env.LEGACY_EXTENSION_USER_ID || '' };
   if (!token || typeof token !== 'string') return { authorized: false };
 
   await ensureExtensionIndexes();
@@ -165,7 +166,7 @@ async function authorizeExtensionDevice(req) {
     return { authorized: false };
   }
   await db.collection('extension_devices').updateOne({ _id: device._id }, { $set: { lastUsedAt: new Date() } });
-  return { authorized: true, legacy: false, device };
+  return { authorized: true, legacy: false, userId: device.userId?.toString() || '', device };
 }
 
 async function revokeExtensionDevice(req) {
@@ -174,22 +175,22 @@ async function revokeExtensionDevice(req) {
   await ensureExtensionIndexes();
   const db = await connectToDatabase();
   const result = await db.collection('extension_devices').updateOne(
-    { tokenHash: hashToken(token), status: 'active' },
+    { tokenHash: hashToken(token), userId: req.auth?.userId, status: 'active' },
     { $set: { status: 'revoked', revokedAt: new Date() } }
   );
   return result.modifiedCount > 0;
 }
 
-async function listExtensionDevices() {
+async function listExtensionDevices(userId) {
   await ensureExtensionIndexes();
   const db = await connectToDatabase();
-  return db.collection('extension_devices').find({ status: 'active' }, { projection: { tokenHash: 0 } }).sort({ lastUsedAt: -1, createdAt: -1 }).toArray();
+  return db.collection('extension_devices').find({ userId, status: 'active' }, { projection: { tokenHash: 0 } }).sort({ lastUsedAt: -1, createdAt: -1 }).toArray();
 }
 
-async function revokeAllExtensionDevices() {
+async function revokeAllExtensionDevices(userId) {
   await ensureExtensionIndexes();
   const db = await connectToDatabase();
-  const result = await db.collection('extension_devices').updateMany({ status: 'active' }, { $set: { status: 'revoked', revokedAt: new Date() } });
+  const result = await db.collection('extension_devices').updateMany({ userId, status: 'active' }, { $set: { status: 'revoked', revokedAt: new Date() } });
   return result.modifiedCount;
 }
 

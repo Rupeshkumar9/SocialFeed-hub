@@ -34,8 +34,9 @@ function requestBrowserFavicon(bookmark) {
 }
 
 function getBrowserFaviconUrl(bookmark) {
-  for (const candidate of [bookmark.favicon, '/favicon.ico']) {
+  for (const candidate of [bookmark.favicon]) {
     if (!candidate) continue;
+    if (/^data:image\/(?:png|jpe?g|gif|webp|svg\+xml);/i.test(candidate)) return candidate;
     try {
       const url = new URL(candidate, bookmark.url);
       if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) return url.toString();
@@ -44,6 +45,12 @@ function getBrowserFaviconUrl(bookmark) {
     }
   }
   return '';
+}
+
+function visibilityIconMarkup(bookmark, label = 'post') {
+  const isPublic = bookmark.visibility === 'public';
+  const visibilityLabel = isPublic ? `Public ${label}` : `Private ${label}`;
+  return `<span class="card-visibility-status ${isPublic ? 'is-public' : 'is-private'}" title="${visibilityLabel}" aria-label="${visibilityLabel}"><i class="app-icon icon-${isPublic ? 'globe' : 'lock'}"></i></span>`;
 }
 
 function buildCardElement(bm) {
@@ -249,14 +256,17 @@ function buildCardElement(bm) {
       </div>
       <div class="card-header-actions">
         ${folderMarkup}
+        ${visibilityIconMarkup(bm)}
         
         <div class="card-menu-container">
-          <button class="btn-card-menu" title="Actions">
+          <button class="btn-card-menu" title="Actions" aria-label="Actions" aria-haspopup="menu" aria-expanded="false">
             <i class="app-icon icon-ellipsis-vertical"></i>
           </button>
           <div class="card-menu-dropdown">
-            <button class="menu-item-visibility"><i class="app-icon icon-globe"></i> ${bm.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
             <button class="menu-item-edit"><i class="app-icon icon-pen"></i> Edit</button>
+            <button class="menu-item-visibility"><i class="app-icon icon-${bm.visibility === 'public' ? 'lock' : 'globe'}"></i> ${bm.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
+            <button class="menu-item-copy"><i class="app-icon icon-copy"></i> Copy link</button>
+            <button class="menu-item-featured"><i class="app-icon icon-bookmark"></i> ${bm.featured ? 'Remove featured' : 'Feature publicly'}</button>
             <button class="menu-item-delete"><i class="app-icon icon-trash"></i> Delete</button>
           </div>
         </div>
@@ -355,6 +365,7 @@ function buildCardElement(bm) {
         if (el !== dropdown) el.classList.remove('active');
       });
       dropdown.classList.toggle('active');
+      menuBtn.setAttribute('aria-expanded', String(dropdown.classList.contains('active')));
     });
 
     const editBtn = card.querySelector('.menu-item-edit');
@@ -362,21 +373,54 @@ function buildCardElement(bm) {
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         dropdown.classList.remove('active');
+        menuBtn.setAttribute('aria-expanded', 'false');
         openEditBookmarkModal(bm);
       });
     }
 
     const visibilityBtn = card.querySelector('.menu-item-visibility');
     visibilityBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation(); dropdown.classList.remove('active');
+      e.stopPropagation(); dropdown.classList.remove('active'); menuBtn.setAttribute('aria-expanded', 'false');
       const visibility = bm.visibility === 'public' ? 'private' : 'public';
       try {
         await socialFeedApi.updateBookmarkVisibility({ ids: [bm.id], visibility });
         bm.visibility = visibility;
-        visibilityBtn.textContent = visibility === 'public' ? 'Make private' : 'Publish to profile';
+        visibilityBtn.innerHTML = `<i class="app-icon icon-${visibility === 'public' ? 'lock' : 'globe'}"></i> ${visibility === 'public' ? 'Make private' : 'Publish to profile'}`;
         actions.showToast(visibility === 'public' ? 'Post published to your profile.' : 'Post made private.', 'success');
         renderFeedGrid();
       } catch (error) { actions.showToast(error?.message || 'Unable to update post visibility.', 'error'); }
+    });
+
+    const copyBtn = card.querySelector('.menu-item-copy');
+    copyBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(bm.url);
+        actions.showToast('Link copied.', 'success');
+      } catch (error) {
+        actions.showToast('Unable to copy the link.', 'error');
+      } finally {
+        dropdown.classList.remove('active');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    const featuredBtn = card.querySelector('.menu-item-featured');
+    featuredBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('active');
+      menuBtn.setAttribute('aria-expanded', 'false');
+      try {
+        const featured = !bm.featured;
+        const visibility = featured ? 'public' : bm.visibility;
+        await socialFeedApi.updateBookmarkVisibility({ ids: [bm.id], visibility, featured });
+        bm.visibility = visibility;
+        bm.featured = featured;
+        actions.showToast(featured ? 'Post published and featured publicly.' : 'Post removed from featured.', 'success');
+        renderFeedGrid();
+      } catch (error) {
+        actions.showToast(error?.message || 'Unable to update featured status.', 'error');
+      }
     });
 
     const deleteBtn = card.querySelector('.menu-item-delete');
@@ -384,6 +428,7 @@ function buildCardElement(bm) {
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         dropdown.classList.remove('active');
+        menuBtn.setAttribute('aria-expanded', 'false');
         if (confirm("Are you sure you want to permanently delete this bookmark?")) {
           deleteBookmark(bm.id);
         }

@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
     console.error('Extension authorization failed:', error);
     return res.status(503).json({ error: 'Extension authorization is temporarily unavailable.' });
   }
-  if (!extensionAuth.authorized) return res.status(401).json({ error: 'Connect this extension to SocialFeed before syncing.' });
+  if (!extensionAuth.authorized || !extensionAuth.userId) return res.status(401).json({ error: 'Reconnect this extension to a signed-in SocialFeed account before syncing.' });
 
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -58,6 +58,7 @@ module.exports = async (req, res) => {
         now,
         importSource: item.importSource || 'extension'
       });
+      bookmark.userId = extensionAuth.userId;
       const identity = bookmark.platformItemId
         ? `${bookmark.platform}:${bookmark.platformItemId}`
         : `url:${bookmark.canonicalUrl}`;
@@ -69,6 +70,7 @@ module.exports = async (req, res) => {
       seenIdentities.add(identity);
 
       const existing = await collection.findOne({
+        userId: extensionAuth.userId,
         $or: [{ identityKey: bookmark.identityKey }, identityFilter(bookmark)]
       }, { projection: { _id: 1 } });
       // Repeated scans are deliberately ignored so notes, tags, folders,
@@ -95,7 +97,7 @@ module.exports = async (req, res) => {
 
       operations.push({
         updateOne: {
-          filter: { identityKey: bookmark.identityKey },
+          filter: { userId: extensionAuth.userId, identityKey: bookmark.identityKey },
           update: { $setOnInsert: bookmark },
           upsert: true
         }

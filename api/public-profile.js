@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     await ensurePublicProfileIndexes();
     const { db, profile } = await getPublicProfileByUsername(username);
     if (!profile) return res.status(404).json({ error: 'Profile not found.' });
-    const counts = await getPublicCounts(db);
+    const counts = await getPublicCounts(db, profile.userId);
     res.set('Cache-Control', 'no-store');
     return res.status(200).json({ profile: buildPublicProfile(profile, counts) });
   } catch (error) {

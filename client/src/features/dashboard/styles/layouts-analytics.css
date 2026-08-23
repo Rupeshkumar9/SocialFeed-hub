@@ -263,8 +263,9 @@
 }
 
 .analytics-modal-box {
-  width: min(1000px, calc(100vw - 48px));
-  max-height: 85dvh;
+  width: min(1120px, calc(100vw - 48px));
+  max-width: min(1120px, calc(100vw - 48px));
+  max-height: min(860px, calc(100dvh - 48px));
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -282,7 +283,46 @@
 
 .analytics-modal-box .stats-grid {
   margin-top: 0;
+  display: block;
 }
+
+.analytics-source-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 5px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.analytics-source-tab {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.analytics-source-tab.active,
+.analytics-source-tab:hover {
+  background: var(--surface-solid);
+  color: var(--accent-blue);
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-source-panel[hidden] { display: none !important; }
+.analytics-modal-box .stats-card { min-height: 500px; }
+.analytics-modal-box .stats-list { max-height: 440px; overflow-y: auto; padding-right: 8px; }
 
 @media (max-width: 680px) {
   .analytics-modal-overlay.stats-panel {
@@ -294,6 +334,9 @@
     width: calc(100vw - 24px);
     max-height: calc(100dvh - 24px);
   }
+
+  .analytics-modal-box .stats-card { min-height: 0; }
+  .analytics-modal-box .stats-list { max-height: 48dvh; }
 }
 
 @keyframes slideDown {

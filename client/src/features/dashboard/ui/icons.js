@@ -12,6 +12,7 @@ const ICONS = Object.freeze({
   'chevron-down': stroke('<path d="m6 9 6 6 6-6"/>'),
   'circle-nodes': stroke('<circle cx="12" cy="12" r="2.5"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="m7 7.5 3 2.7m4 0 3-2.7m-10 9 3-2.7m4 0 3 2.7"/>'),
   'circle-notch': stroke('<path d="M21 12a9 9 0 1 1-6.2-8.55"/>'),
+  copy: stroke('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
   'cloud-arrow-up': stroke('<path d="M16 16l-4-4-4 4M12 12v9M20 17.5A4.5 4.5 0 0 0 18 9a7 7 0 0 0-13.5 2A4 4 0 0 0 5 19h2"/>'),
   'credit-card': stroke('<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M6 15h4"/>'),
   database: stroke('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>'),

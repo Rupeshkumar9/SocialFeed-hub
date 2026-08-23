@@ -1,0 +1,378 @@
+---
+import "../../styles/public-profile.css";
+
+export interface Props {
+  profile: Record<string, any>;
+  browserBookmarks?: Record<string, any>[];
+  socialBookmarks?: Record<string, any>[];
+}
+
+const {
+  profile,
+  browserBookmarks = [],
+  socialBookmarks = [],
+} = Astro.props;
+
+const displayName = profile.displayName || profile.username || "SocialFeed Owner";
+const username = profile.username || "socialfeed";
+const initials = displayName.trim().charAt(0).toUpperCase() || "S";
+const accent = profile.theme?.accent || "#8b7bff";
+const theme = profile.theme?.background || "default";
+const safeHttp = (value = "") => {
+  try {
+    const url = new URL(String(value));
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
+};
+const hostFor = (value = "") => {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+};
+const labelForBookmark = (bookmark: Record<string, any>) =>
+  bookmark.publicTitle || bookmark.authorName || bookmark.siteName || bookmark.content || hostFor(bookmark.url) || "Saved link";
+const descriptionForBookmark = (bookmark: Record<string, any>) =>
+  bookmark.publicDescription || bookmark.content || "Open the original link";
+const dateFor = (value: unknown) => {
+  const date = new Date(String(value || ""));
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+};
+
+const socialGlyphs: Record<string, string> = {
+  instagram: "◎",
+  x: "𝕏",
+  threads: "◉",
+  facebook: "f",
+  tiktok: "♪",
+  whatsapp: "◔",
+  telegram: "➤",
+  custom: "↗",
+};
+const platformForSocial = (link: Record<string, any>) => {
+  const declared = String(link.platform || "").toLowerCase();
+  if (socialGlyphs[declared] && declared !== "custom") return declared;
+  const host = hostFor(link.url);
+  if (host.includes("instagram")) return "instagram";
+  if (host === "x.com" || host.includes("twitter")) return "x";
+  if (host.includes("threads")) return "threads";
+  if (host.includes("facebook")) return "facebook";
+  if (host.includes("tiktok")) return "tiktok";
+  if (host === "wa.me" || host.includes("whatsapp")) return "whatsapp";
+  if (host.includes("telegram") || host === "t.me") return "telegram";
+  return "custom";
+};
+
+const socialLinks = (profile.socialLinks || [])
+  .map((link: Record<string, any>) => ({ ...link, href: safeHttp(link.url), platform: platformForSocial(link) }))
+  .filter((link: Record<string, any>) => link.href);
+const browserLinks = browserBookmarks.filter((bookmark) => safeHttp(bookmark.url));
+const savedPosts = socialBookmarks.filter((bookmark) => safeHttp(bookmark.url));
+const shopLinks = (profile.shopLinks || [])
+  .map((item: Record<string, any>, index: number) => ({
+    ...item,
+    id: String(item.id || `shop_${index + 1}`),
+    href: safeHttp(item.url),
+    image: safeHttp(item.thumbnail),
+  }))
+  .filter((item: Record<string, any>) => item.href && item.title);
+const itemId = (item: Record<string, any>, fallback: string) =>
+  String(item.id || fallback).replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 48);
+const defaultTab = ["posts", "shop"].includes(profile.defaultTab) ? profile.defaultTab : "links";
+const profileItemData = [
+  ...browserLinks.map((bookmark, index) => ({
+    id: itemId(bookmark, `link-${index + 1}`),
+    title: labelForBookmark(bookmark),
+    description: descriptionForBookmark(bookmark),
+    url: safeHttp(bookmark.url),
+    meta: hostFor(bookmark.url),
+    kind: "Public link",
+    image: safeHttp(bookmark.thumbnail || bookmark.favicon),
+  })),
+  ...savedPosts.map((bookmark, index) => ({
+    id: itemId(bookmark, `post-${index + 1}`),
+    title: labelForBookmark(bookmark),
+    description: descriptionForBookmark(bookmark),
+    url: safeHttp(bookmark.url),
+    meta: `${bookmark.platformName || bookmark.platform || "Saved post"}${dateFor(bookmark.firstSavedAt) ? ` · ${dateFor(bookmark.firstSavedAt)}` : ""}`,
+    kind: "Saved post",
+    image: safeHttp(bookmark.thumbnail),
+  })),
+  ...shopLinks.map((item, index) => ({
+    id: itemId(item, `shop-${index + 1}`),
+    title: item.title,
+    description: item.description || "A recommendation from this profile.",
+    url: item.href,
+    meta: [item.merchant, item.price].filter(Boolean).join(" · "),
+    kind: "Shop pick",
+    image: item.image,
+  })),
+];
+---
+
+<div
+  class={`public-profile-page public-profile-theme-${theme}`}
+  data-profile-theme={theme}
+  style={`--profile-accent: ${accent};`}
+>
+  <div class="public-profile-shell">
+    <div class="profile-brand-row">
+      <a class="profile-brand" href="/" aria-label="SocialFeed Hub home">
+        <img src="/favicon.svg" alt="" width="36" height="36" />
+        <span>SocialFeed Hub</span>
+      </a>
+      <span class="profile-brand-label">Public profile</span>
+    </div>
+
+    <header class="profile-hero">
+      <div class="profile-avatar" aria-label={`${displayName} profile picture`}>
+        {safeHttp(profile.avatarUrl) ? (
+          <img src={safeHttp(profile.avatarUrl)} alt={`${displayName} profile picture`} />
+        ) : (
+          <span>{initials}</span>
+        )}
+      </div>
+      <div class="profile-identity">
+        <p class="profile-eyebrow">Curated by</p>
+        <h1>{displayName}</h1>
+        <p class="profile-username">@{username}</p>
+        {profile.bio ? <p class="profile-bio">{profile.bio}</p> : null}
+        {socialLinks.length ? (
+          <nav class="profile-social-links" aria-label={`${displayName} social links`}>
+            {socialLinks.map((link) => (
+              <a
+                class={`profile-social-icon profile-social-${link.platform}`}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={link.label || link.platform}
+                title={link.label || link.platform}
+              >
+                <span aria-hidden="true">{socialGlyphs[link.platform] || socialGlyphs.custom}</span>
+                <span class="profile-sr-only">{link.label || link.platform}</span>
+              </a>
+            ))}
+          </nav>
+        ) : null}
+      </div>
+      <button class="profile-share" id="profile-share" type="button">
+        <span aria-hidden="true">↗</span> Share profile
+      </button>
+    </header>
+
+    <div class="profile-stats" aria-label="Profile statistics">
+      <div><strong>{profile.counts?.browser || 0}</strong><span>Public links</span></div>
+      <div><strong>{profile.counts?.social || 0}</strong><span>Saved posts</span></div>
+      <div><strong>{shopLinks.length}</strong><span>Shop picks</span></div>
+      <div><strong>{socialLinks.length}</strong><span>Social links</span></div>
+    </div>
+
+    <nav class="profile-tabs" aria-label="Profile sections" role="tablist">
+      <a class:list={{ active: defaultTab === "links" }} href="#links" data-profile-tab="links" role="tab" aria-selected={defaultTab === "links"}>Links <span>{profile.counts?.browser || 0}</span></a>
+      <a class:list={{ active: defaultTab === "posts" }} href="#posts" data-profile-tab="posts" role="tab" aria-selected={defaultTab === "posts"}>Saved posts <span>{profile.counts?.social || 0}</span></a>
+      <a class:list={{ active: defaultTab === "shop" }} href="#shop" data-profile-tab="shop" role="tab" aria-selected={defaultTab === "shop"}>Shop <span>{shopLinks.length}</span></a>
+    </nav>
+
+    <div class="profile-view-toolbar" aria-label="Public content view">
+      <div>
+        <p class="profile-eyebrow">Your public corner</p>
+        <span>Browse the collection your way.</span>
+      </div>
+      <div class="profile-view-switcher" role="group" aria-label="Choose card layout">
+        <button type="button" class="is-active" data-profile-view="grid" aria-pressed="true"><span aria-hidden="true">▦</span> Grid</button>
+        <button type="button" data-profile-view="list" aria-pressed="false"><span aria-hidden="true">☷</span> List</button>
+      </div>
+    </div>
+
+    <main>
+      <section class="profile-section" id="links" aria-labelledby="links-title" data-profile-panel="links" hidden={defaultTab !== "links"}>
+        <div class="profile-section-heading">
+          <div>
+            <p class="profile-eyebrow">Browser bookmarks</p>
+            <h2 id="links-title">Links worth returning to</h2>
+          </div>
+          <span class="profile-section-count">{profile.counts?.browser || 0} public</span>
+        </div>
+        {browserLinks.length ? (
+          <div class="profile-link-grid profile-collection" data-profile-collection="links">
+            {browserLinks.map((bookmark, index) => (
+              <article class="profile-link-card" id={`item-${itemId(bookmark, `link-${index + 1}`)}`} data-profile-item={itemId(bookmark, `link-${index + 1}`)}>
+                <div class="profile-link-card-top">
+                  <span class="profile-link-favicon">
+                    {safeHttp(bookmark.favicon) ? (
+                      <img src={safeHttp(bookmark.favicon)} alt="" loading="lazy" />
+                    ) : (
+                      <span>{labelForBookmark(bookmark).charAt(0).toUpperCase()}</span>
+                    )}
+                  </span>
+                  <div class="profile-card-actions">
+                    {bookmark.featured ? <span class="profile-featured">Featured</span> : null}
+                    <button type="button" class="profile-item-share" data-profile-share-item={itemId(bookmark, `link-${index + 1}`)} aria-label={`Share ${labelForBookmark(bookmark)}`} title="Share link">↗</button>
+                  </div>
+                </div>
+                <h3>{labelForBookmark(bookmark)}</h3>
+                <p>{descriptionForBookmark(bookmark)}</p>
+                <div class="profile-card-footer"><span class="profile-link-meta">{hostFor(bookmark.url)}</span><button type="button" class="profile-open-button" data-profile-open={itemId(bookmark, `link-${index + 1}`)}>View link <span aria-hidden="true">↗</span></button></div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="profile-empty"><strong>No public links yet</strong><span>This profile has not published any browser bookmarks.</span></div>
+        )}
+      </section>
+
+      <section class="profile-section" id="posts" aria-labelledby="posts-title" data-profile-panel="posts" hidden={defaultTab !== "posts"}>
+        <div class="profile-section-heading">
+          <div>
+            <p class="profile-eyebrow">Social saves</p>
+            <h2 id="posts-title">Saved posts and ideas</h2>
+          </div>
+          <span class="profile-section-count">{profile.counts?.social || 0} public</span>
+        </div>
+        {savedPosts.length ? (
+          <div class="profile-post-grid profile-collection" data-profile-collection="posts">
+            {savedPosts.map((bookmark, index) => (
+              <article class="profile-post-card" id={`item-${itemId(bookmark, `post-${index + 1}`)}`} data-profile-item={itemId(bookmark, `post-${index + 1}`)}>
+                {safeHttp(bookmark.thumbnail) ? <img src={safeHttp(bookmark.thumbnail)} alt="" loading="lazy" /> : null}
+                <div class="profile-post-card-body">
+                  <div class="profile-post-meta"><span>{bookmark.platformName || bookmark.platform || "Saved post"}</span><time>{dateFor(bookmark.firstSavedAt)}</time><button type="button" class="profile-item-share" data-profile-share-item={itemId(bookmark, `post-${index + 1}`)} aria-label={`Share ${labelForBookmark(bookmark)}`} title="Share post">↗</button></div>
+                  <h3>{labelForBookmark(bookmark)}</h3>
+                  <p>{descriptionForBookmark(bookmark)}</p>
+                  <button type="button" class="profile-open-button" data-profile-open={itemId(bookmark, `post-${index + 1}`)}>Open post <span aria-hidden="true">↗</span></button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="profile-empty"><strong>No public saved posts yet</strong><span>This profile has not published any social saves.</span></div>
+        )}
+      </section>
+
+      <section class="profile-section" id="shop" aria-labelledby="shop-title" data-profile-panel="shop" hidden={defaultTab !== "shop"}>
+        <div class="profile-section-heading">
+          <div>
+            <p class="profile-eyebrow">Recommended by {displayName}</p>
+            <h2 id="shop-title">Tools, products & good finds</h2>
+          </div>
+          <span class="profile-section-count">{shopLinks.length} picks</span>
+        </div>
+        {shopLinks.length ? (
+          <div class="profile-shop-grid profile-collection" data-profile-collection="shop">
+            {shopLinks.map((item, index) => (
+              <article class="profile-shop-card" id={`item-${itemId(item, `shop-${index + 1}`)}`} data-profile-item={itemId(item, `shop-${index + 1}`)}>
+                {item.image ? <img src={item.image} alt="" loading="lazy" /> : <div class="profile-shop-placeholder"><span aria-hidden="true">✦</span></div>}
+                <div class="profile-shop-body">
+                  <div class="profile-shop-kicker"><span>{item.merchant || "Partner pick"}</span>{item.price ? <strong>{item.price}</strong> : null}</div>
+                  <h3>{item.title}</h3>
+                  {item.description ? <p>{item.description}</p> : null}
+                  <div class="profile-card-footer"><button type="button" class="profile-open-button" data-profile-open={itemId(item, `shop-${index + 1}`)}>See pick <span aria-hidden="true">↗</span></button><button type="button" class="profile-item-share" data-profile-share-item={itemId(item, `shop-${index + 1}`)} aria-label={`Share ${item.title}`} title="Share pick">↗</button></div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="profile-empty"><strong>Shop picks are coming soon</strong><span>This profile has not added affiliate recommendations yet.</span></div>
+        )}
+      </section>
+    </main>
+
+    <footer class="profile-footer">
+      <a href="/">Create your own SocialFeed Hub profile</a>
+      <span>Public links selected by @{username}</span>
+    </footer>
+  </div>
+
+  <dialog class="profile-item-dialog" id="profile-item-dialog" aria-labelledby="profile-dialog-title">
+    <button class="profile-dialog-close" type="button" data-profile-dialog-close aria-label="Close preview">×</button>
+    <div class="profile-dialog-image" data-profile-dialog-image hidden></div>
+    <p class="profile-eyebrow" data-profile-dialog-kicker>Public pick</p>
+    <h2 id="profile-dialog-title" data-profile-dialog-title>Preview</h2>
+    <p data-profile-dialog-description></p>
+    <div class="profile-dialog-meta" data-profile-dialog-meta></div>
+    <div class="profile-dialog-actions"><a class="profile-dialog-primary" data-profile-dialog-link href="#" target="_blank" rel="noopener noreferrer">Open original <span aria-hidden="true">↗</span></a><button type="button" class="profile-dialog-secondary" data-profile-dialog-share>Share</button></div>
+  </dialog>
+  <script type="application/json" id="profile-item-data" set:html={JSON.stringify(profileItemData)}></script>
+</div>
+
+<script>
+  const shareButton = document.getElementById("profile-share");
+  shareButton?.addEventListener("click", async () => {
+    const shareData = { title: document.title, url: window.location.href };
+    try {
+      if (navigator.share) await navigator.share(shareData);
+      else await navigator.clipboard.writeText(window.location.href);
+      shareButton.innerHTML = "<span aria-hidden=\"true\">✓</span> Link copied";
+      window.setTimeout(() => { shareButton.innerHTML = "<span aria-hidden=\"true\">↗</span> Share profile"; }, 2200);
+    } catch {
+      // The user can still copy the URL from the browser address bar.
+    }
+  });
+
+  const profileTabs = Array.from(document.querySelectorAll("[data-profile-tab]"));
+  const profilePanels = Array.from(document.querySelectorAll("[data-profile-panel]"));
+  const showProfileTab = (tabName, updateHash = true) => {
+    const selected = ["posts", "shop"].includes(tabName) ? tabName : "links";
+    profileTabs.forEach((tab) => {
+      const isActive = tab.dataset.profileTab === selected;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+    });
+    profilePanels.forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== selected; });
+    if (updateHash && window.location.hash !== `#${selected}`) history.replaceState(null, "", `#${selected}`);
+  };
+  profileTabs.forEach((tab) => tab.addEventListener("click", (event) => {
+    event.preventDefault();
+    showProfileTab(tab.dataset.profileTab || "links");
+  }));
+  const initialHash = window.location.hash.replace("#", "");
+  if (["links", "posts", "shop"].includes(initialHash)) showProfileTab(initialHash, false);
+  window.addEventListener("hashchange", () => showProfileTab(window.location.hash.replace("#", ""), false));
+
+  const collections = Array.from(document.querySelectorAll("[data-profile-collection]"));
+  document.querySelectorAll("[data-profile-view]").forEach((button) => button.addEventListener("click", () => {
+    const view = button.dataset.profileView === "list" ? "list" : "grid";
+    document.querySelectorAll("[data-profile-view]").forEach((item) => { item.classList.toggle("is-active", item === button); item.setAttribute("aria-pressed", String(item === button)); });
+    collections.forEach((collection) => collection.classList.toggle("is-list", view === "list"));
+  }));
+
+  const dialog = document.getElementById("profile-item-dialog");
+  const dialogTitle = dialog?.querySelector("[data-profile-dialog-title]");
+  const dialogDescription = dialog?.querySelector("[data-profile-dialog-description]");
+  const dialogMeta = dialog?.querySelector("[data-profile-dialog-meta]");
+  const dialogLink = dialog?.querySelector("[data-profile-dialog-link]");
+  const dialogImage = dialog?.querySelector("[data-profile-dialog-image]");
+  const items = new Map();
+  const addItem = (id, item) => { if (id) items.set(id, item); };
+  const serializedItems = document.getElementById("profile-item-data")?.textContent || "[]";
+  JSON.parse(serializedItems).forEach((item) => addItem(item.id, item));
+  const openItem = (id, updateUrl = true) => {
+    const item = items.get(id); if (!item || !dialog) return;
+    if (dialogTitle) dialogTitle.textContent = item.title;
+    if (dialogDescription) dialogDescription.textContent = item.description;
+    if (dialogMeta) dialogMeta.textContent = item.meta || item.kind;
+    if (dialogLink) dialogLink.href = item.url;
+    if (dialogImage) { dialogImage.hidden = !item.image; dialogImage.innerHTML = item.image ? `<img src="${item.image}" alt="">` : ""; }
+    dialog.dataset.activeItem = id;
+    if (!dialog.open) dialog.showModal();
+    if (updateUrl) history.replaceState(null, "", `${window.location.pathname}?item=${encodeURIComponent(id)}`);
+  };
+  document.querySelectorAll("[data-profile-open]").forEach((button) => button.addEventListener("click", () => openItem(button.dataset.profileOpen)));
+  document.querySelectorAll("[data-profile-share-item]").forEach((button) => button.addEventListener("click", async (event) => {
+    event.stopPropagation(); const id = button.dataset.profileShareItem; const url = `${window.location.origin}${window.location.pathname}?item=${encodeURIComponent(id || "")}`;
+    try { if (navigator.share) await navigator.share({ title: document.title, url }); else await navigator.clipboard.writeText(url); button.textContent = "✓"; window.setTimeout(() => { button.textContent = "↗"; }, 1600); } catch { /* cancelled */ }
+  }));
+  dialog?.querySelector("[data-profile-dialog-close]")?.addEventListener("click", () => dialog.close());
+  dialog?.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
+  dialog?.addEventListener("close", () => { if (window.location.search.includes("item=")) history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`); });
+  dialog?.querySelector("[data-profile-dialog-share]")?.addEventListener("click", async () => {
+    const id = dialog.dataset.activeItem || ""; const url = `${window.location.origin}${window.location.pathname}?item=${encodeURIComponent(id)}`;
+    try { if (navigator.share) await navigator.share({ title: document.title, url }); else await navigator.clipboard.writeText(url); } catch { /* cancelled */ }
+  });
+  const itemFromUrl = new URLSearchParams(window.location.search).get("item");
+  if (itemFromUrl) openItem(itemFromUrl, false);
+</script>

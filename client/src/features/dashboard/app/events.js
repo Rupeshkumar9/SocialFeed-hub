@@ -24,6 +24,10 @@ const loadData = (...args) => actions.loadData(...args);
 const openBulkEditModal = (...args) => actions.openBulkEditModal(...args);
 const openLinkViewModal = (...args) => actions.openLinkViewModal(...args);
 const openSettings = (...args) => actions.openSettings(...args);
+const openExtension = (...args) => actions.openExtension(...args);
+const closeExtension = (...args) => actions.closeExtension(...args);
+const openProfileEdit = (...args) => actions.openProfileEdit(...args);
+const closeProfileEdit = (...args) => actions.closeProfileEdit(...args);
 const populateModalCategorySelect = (...args) => actions.populateModalCategorySelect(...args);
 const previewBrowserLink = (...args) => actions.previewBrowserLink(...args);
 const isKnownSocialPlatform = (...args) => actions.isKnownSocialPlatform(...args);
@@ -34,7 +38,12 @@ const saveBookmarkNotes = (...args) => actions.saveBookmarkNotes(...args);
 const saveModalNoteAndClose = (...args) => actions.saveModalNoteAndClose(...args);
 const setManualImageFieldVisible = (...args) => actions.setManualImageFieldVisible(...args);
 const setManualImageFromFile = (...args) => actions.setManualImageFromFile(...args);
+const setBrowserIconFromFile = (...args) => actions.setBrowserIconFromFile(...args);
+const clearBrowserIconValue = (...args) => actions.clearBrowserIconValue(...args);
+const updateBrowserIconPreview = (...args) => actions.updateBrowserIconPreview(...args);
+const setBrowserIconPickerVisible = (...args) => actions.setBrowserIconPickerVisible(...args);
 const setRouteHash = (...args) => actions.setRouteHash(...args);
+const setRoutePath = (...args) => actions.setRoutePath(...args);
 const showToast = (...args) => actions.showToast(...args);
 const syncFilterSelects = (...args) => actions.syncFilterSelects(...args);
 const toggleSelectionMode = (...args) => actions.toggleSelectionMode(...args);
@@ -46,11 +55,49 @@ const updateSidebarNavigation = (...args) => actions.updateSidebarNavigation(...
 const updateStatsAnalytics = (...args) => actions.updateStatsAnalytics(...args);
 const openCategoryRenameDialog = (...args) => actions.openCategoryRenameDialog(...args);
 const visitPublicProfile = (...args) => actions.visitPublicProfile(...args);
+const logout = (...args) => actions.logout(...args);
 
 function initEventListeners() {
+  const sidebarCollapseToggle = document.getElementById('sidebar-collapse-toggle');
+  if (sidebarCollapseToggle) {
+    sidebarCollapseToggle.addEventListener('click', () => {
+      const collapsed = document.body.classList.toggle('sidebar-collapsed');
+      sidebarCollapseToggle.setAttribute('aria-expanded', String(!collapsed));
+      sidebarCollapseToggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      sidebarCollapseToggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    });
+  }
+
+  const feedHeader = document.getElementById('feed-section-header');
+  const feedHeaderToggle = document.getElementById('feed-header-collapse-toggle');
+  if (feedHeader && feedHeaderToggle) {
+    const setFeedHeaderExpanded = expanded => {
+      feedHeader.classList.toggle('feed-header-collapsed', !expanded);
+      feedHeaderToggle.setAttribute('aria-expanded', String(expanded));
+      feedHeaderToggle.setAttribute('aria-label', expanded ? 'Collapse feed controls' : 'Expand feed controls');
+      feedHeaderToggle.title = expanded ? 'Collapse feed controls' : 'Expand feed controls';
+    };
+
+    setFeedHeaderExpanded(!feedHeader.classList.contains('feed-header-collapsed'));
+    feedHeaderToggle.addEventListener('click', event => {
+      event.stopPropagation();
+      setFeedHeaderExpanded(feedHeader.classList.contains('feed-header-collapsed'));
+    });
+  }
+
   DOM.feedTitle?.addEventListener('click', event => {
     const button = event.target.closest('[data-category-rename]');
     if (!button || button.dataset.categoryRename !== 'social') return;
+    openCategoryRenameDialog({
+      source: 'social',
+      platform: AppState.activePlatform,
+      oldName: AppState.activeCollection
+    });
+  });
+  DOM.socialHeaderControls?.addEventListener('click', event => {
+    const button = event.target.closest('[data-category-rename]');
+    if (!button || button.dataset.categoryRename !== 'social' || button.hidden) return;
+    event.stopPropagation();
     openCategoryRenameDialog({
       source: 'social',
       platform: AppState.activePlatform,
@@ -129,24 +176,59 @@ function initEventListeners() {
     });
   }
 
+  const navigateToSocialPlatform = (btn) => {
+    if (AppState.isNavigationLoading || !btn?.dataset.platform) return;
+    closeSettings();
+    closeExtension();
+    closeProfileEdit();
+    AppState.activeSource = 'social';
+    setRouteHash(btn.dataset.sidebarRoute || ('#platform=' + encodeURIComponent(btn.dataset.platform)));
+    AppState.activePlatform = btn.dataset.platform;
+    AppState.activeCollection = 'all';
+    AppState.nextCursor = null;
+    syncFilterSelects();
+    updateSidebarNavigation();
+    if (AppState.isServerConnected) loadData({ navigation: true });
+    else applyFiltersAndSearch();
+    const drawer = document.getElementById('mobile-drawer-overlay');
+    if (drawer) drawer.classList.remove('active');
+  };
+
+  const navigateToSocialCollection = (btn) => {
+    if (AppState.isNavigationLoading || !btn?.dataset.collection) return;
+    closeExtension();
+    AppState.activeSource = 'social';
+    AppState.activeCollection = btn.dataset.collection;
+    AppState.nextCursor = null;
+    syncFilterSelects();
+    updateSidebarNavigation();
+    if (AppState.isServerConnected) loadData({ navigation: true });
+    else applyFiltersAndSearch();
+    const drawer = document.getElementById('mobile-drawer-overlay');
+    if (drawer) drawer.classList.remove('active');
+  };
+
+  // The platform selector is rendered with the Social Posts heading so both
+  // social filters stay visible and grouped together. Keep one DOM instance
+  // so its existing event wiring and dynamic custom-platform options remain.
+  if (DOM.socialHeaderControls && DOM.platformFilterDropdown && !DOM.socialHeaderControls.contains(DOM.platformFilterDropdown)) {
+    DOM.socialHeaderControls.insertBefore(DOM.platformFilterDropdown, DOM.socialHeaderControls.firstChild);
+  }
+
   // Sidebar platform and category navigation
   if (DOM.sidebarPlatformList) {
     DOM.sidebarPlatformList.addEventListener('click', (e) => {
-      if (AppState.isNavigationLoading) return;
+      navigateToSocialPlatform(e.target.closest('[data-platform]'));
+    });
+  }
+
+  if (DOM.platformFilterMenu) {
+    DOM.platformFilterMenu.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-platform]');
       if (!btn) return;
-      closeSettings();
-      AppState.activeSource = 'social';
-      setRouteHash(btn.dataset.sidebarRoute || ('#platform=' + btn.dataset.platform));
-      AppState.activePlatform = btn.dataset.platform;
-      AppState.activeCollection = "all";
-      AppState.nextCursor = null;
-      syncFilterSelects();
-      updateSidebarNavigation();
-      if (AppState.isServerConnected) loadData({ navigation: true });
-      else applyFiltersAndSearch();
-      const drawer = document.getElementById('mobile-drawer-overlay');
-      if (drawer) drawer.classList.remove('active');
+      navigateToSocialPlatform(btn);
+      closeAllToolbarDropdowns();
+      DOM.platformFilterBtn?.focus();
     });
   }
 
@@ -175,6 +257,10 @@ function initEventListeners() {
   const dataMenu = document.getElementById('toolbar-data-menu');
   const categoryBtn = document.getElementById('toolbar-category-btn');
   const categoryMenu = document.getElementById('toolbar-category-menu');
+  const platformFilterBtn = document.getElementById('platform-filter-btn');
+  const platformFilterMenu = document.getElementById('platform-filter-menu');
+  const socialCategoryBtn = DOM.socialCategoryBtn;
+  const socialCategoryMenu = DOM.socialCategoryMenu;
 
   const closeAllToolbarDropdowns = () => {
     if (sortMenu) sortMenu.classList.remove('active');
@@ -185,7 +271,42 @@ function initEventListeners() {
     if (dataBtn) dataBtn.setAttribute('aria-expanded', 'false');
     if (categoryMenu) categoryMenu.classList.remove('active');
     if (categoryBtn) categoryBtn.setAttribute('aria-expanded', 'false');
+    if (platformFilterMenu) platformFilterMenu.classList.remove('active');
+    if (platformFilterBtn) platformFilterBtn.setAttribute('aria-expanded', 'false');
+    if (socialCategoryMenu) socialCategoryMenu.classList.remove('active');
+    if (socialCategoryBtn) socialCategoryBtn.setAttribute('aria-expanded', 'false');
   };
+
+  if (platformFilterBtn && platformFilterMenu) {
+    platformFilterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = platformFilterMenu.classList.contains('active');
+      closeAllToolbarDropdowns();
+      if (!isOpen) {
+        platformFilterMenu.classList.add('active');
+        platformFilterBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  }
+
+  if (socialCategoryBtn && socialCategoryMenu) {
+    socialCategoryBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = socialCategoryMenu.classList.contains('active');
+      closeAllToolbarDropdowns();
+      if (!isOpen) {
+        socialCategoryMenu.classList.add('active');
+        socialCategoryBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+    socialCategoryMenu.addEventListener('click', (event) => {
+      const item = event.target.closest('[data-collection]');
+      if (!item) return;
+      navigateToSocialCollection(item);
+      closeAllToolbarDropdowns();
+      socialCategoryBtn.focus();
+    });
+  }
 
   // Sort dropdown menu event listeners
   if (sortBtn && sortMenu) {
@@ -283,17 +404,32 @@ function initEventListeners() {
 
 
   // Global click to close active dropdowns
-  document.addEventListener('click', () => {
+  document.addEventListener('click', (event) => {
     closeAllToolbarDropdowns();
     document.querySelectorAll('.card-menu-dropdown.active').forEach(el => {
       el.classList.remove('active');
       const row = el.closest('.browser-link-row');
       row?.classList.remove('menu-open');
       row?.querySelector('.browser-row-menu')?.setAttribute('aria-expanded', 'false');
+      el.closest('.bookmark-card')?.querySelector('.btn-card-menu')?.setAttribute('aria-expanded', 'false');
     });
     document.querySelectorAll('.card-category-popover.active').forEach(el => {
       el.classList.remove('active');
     });
+    const account = document.getElementById('dashboard-account');
+    const accountMenu = document.getElementById('dashboard-account-menu');
+    const accountTrigger = document.getElementById('dashboard-account-trigger');
+    if (event.target.closest('#dashboard-account-menu [role="menuitem"]')) {
+      accountMenu?.setAttribute('hidden', '');
+      accountMenu?.removeAttribute('aria-expanded');
+      account?.classList.remove('is-open');
+      accountTrigger?.setAttribute('aria-expanded', 'false');
+    }
+    if (account && accountMenu && !account.contains(event.target)) {
+      accountMenu.hidden = true;
+      account.classList.remove('is-open');
+      accountTrigger?.setAttribute('aria-expanded', 'false');
+    }
   });
 
   // Global keydown for Escape to close dropdowns and modals
@@ -309,13 +445,20 @@ function initEventListeners() {
         return;
       }
 
-      const activeMenu = [sortMenu, layoutMenu, dataMenu, categoryMenu].find(m => m && m.classList.contains('active'));
-      const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : activeMenu === categoryMenu ? categoryBtn : null;
+      const activeMenu = [sortMenu, layoutMenu, dataMenu, categoryMenu, platformFilterMenu, socialCategoryMenu].find(m => m && m.classList.contains('active'));
+      const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : activeMenu === categoryMenu ? categoryBtn : activeMenu === platformFilterMenu ? platformFilterBtn : activeMenu === socialCategoryMenu ? socialCategoryBtn : null;
 
       closeAllToolbarDropdowns();
 
       if (activeBtn) {
         activeBtn.focus();
+      }
+      const accountMenu = document.getElementById('dashboard-account-menu');
+      const accountTrigger = document.getElementById('dashboard-account-trigger');
+      if (accountMenu && !accountMenu.hidden) {
+        accountMenu.hidden = true;
+        accountTrigger?.setAttribute('aria-expanded', 'false');
+        document.getElementById('dashboard-account')?.classList.remove('is-open');
       }
     }
   });
@@ -372,8 +515,8 @@ function initEventListeners() {
 
 
 
-  // Analytics modal (sidebar item)
-  const btnToggleStats = document.getElementById('btn-toggle-stats');
+  // Analytics modal (account menu item)
+  const btnToggleStats = document.getElementById('btn-sidebar-analytics');
   const statsPanel = document.getElementById('stats-panel');
   const closeAnalytics = document.getElementById('close-analytics-modal');
   const closeAnalyticsModal = () => {
@@ -381,26 +524,26 @@ function initEventListeners() {
     statsPanel.hidden = true;
     statsPanel.classList.remove('active');
     AppState.isAnalyticsOpen = false;
-    const li = btnToggleStats?.closest('.menu-item');
     btnToggleStats?.classList.remove('active');
-    li?.classList.remove('active');
+    updateSidebarNavigation();
     AppState.analyticsReturnFocus?.focus?.();
     AppState.analyticsReturnFocus = null;
   };
   if (btnToggleStats && statsPanel) {
     btnToggleStats.addEventListener('click', () => {
       const isOpen = !statsPanel.hidden;
-      const li = btnToggleStats.closest('.menu-item');
       if (isOpen) {
         closeAnalyticsModal();
       } else {
         closeSettings();
+        closeExtension();
+        closeProfileEdit();
         AppState.analyticsReturnFocus = btnToggleStats;
         statsPanel.hidden = false;
         statsPanel.classList.add('active');
         AppState.isAnalyticsOpen = true;
         btnToggleStats.classList.add('active');
-        if (li) li.classList.add('active');
+        updateSidebarNavigation();
         updateStatsAnalytics();
         closeAnalytics?.focus();
       }
@@ -482,6 +625,12 @@ function initEventListeners() {
     updateManualModalPlatformUI('');
     if (DOM.addThumbnail) DOM.addThumbnail.value = '';
     setManualImageFieldVisible(false);
+    if (DOM.browserIconValue) {
+      DOM.browserIconValue.value = '';
+      DOM.browserIconValue.dataset.custom = 'false';
+    }
+    if (DOM.browserIconPickerPanel) DOM.browserIconPickerPanel.hidden = true;
+    setBrowserIconPickerVisible(false);
     populateModalCategorySelect('', getCategoryContextFromPlatform(''));
   };
 
@@ -516,6 +665,29 @@ function initEventListeners() {
     DOM.btnToggleImageField.addEventListener('click', () => {
       setManualImageFieldVisible(DOM.addImageField ? DOM.addImageField.hidden : true);
       if (!DOM.addImageField.hidden && DOM.addThumbnail) DOM.addThumbnail.focus();
+    });
+  }
+
+  const toggleBrowserIconPickerPanel = () => {
+    if (!DOM.browserIconPickerPanel) return;
+    DOM.browserIconPickerPanel.hidden = !DOM.browserIconPickerPanel.hidden;
+  };
+  DOM.browserIconPreview?.addEventListener('click', toggleBrowserIconPickerPanel);
+  DOM.btnClearBrowserIcon?.addEventListener('click', clearBrowserIconValue);
+  if (DOM.browserIconDropzone && DOM.browserIconFile) {
+    DOM.browserIconDropzone.addEventListener('click', () => DOM.browserIconFile.click());
+    DOM.browserIconDropzone.addEventListener('dragover', event => { event.preventDefault(); DOM.browserIconDropzone.classList.add('dragover'); });
+    DOM.browserIconDropzone.addEventListener('dragleave', () => DOM.browserIconDropzone.classList.remove('dragover'));
+    DOM.browserIconDropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      DOM.browserIconDropzone.classList.remove('dragover');
+      const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+      setBrowserIconFromFile(file);
+    });
+    DOM.browserIconFile.addEventListener('change', event => {
+      const file = event.target.files ? event.target.files[0] : null;
+      setBrowserIconFromFile(file);
+      event.target.value = '';
     });
   }
   if (DOM.addThumbnail) DOM.addThumbnail.addEventListener('input', updateManualImagePreview);
@@ -766,25 +938,49 @@ function checkMobileDrawerLayout() {
 }
 
 function initPrivateEventListeners() {
+  const sidebarProfileButton = document.getElementById('btn-sidebar-profile');
+  if (sidebarProfileButton) sidebarProfileButton.addEventListener('click', () => {
+    if (AppState.isNavigationLoading) return;
+    setRoutePath('/dashboard');
+    openProfileEdit();
+  });
+
+  const extensionButton = document.getElementById('btn-sidebar-extension');
+  if (extensionButton) extensionButton.addEventListener('click', () => {
+    if (AppState.isNavigationLoading) return;
+    setRouteHash('#extension');
+    openExtension();
+  });
+
   const browserButton = document.getElementById('btn-browser-bookmarks');
   if (browserButton) browserButton.addEventListener('click', () => {
     if (AppState.isNavigationLoading) return;
     closeSettings();
+    closeExtension();
+    closeProfileEdit();
     AppState.activeSource = 'browser';
     AppState.activePlatform = 'all';
     AppState.activeCollection = 'all';
     AppState.nextCursor = null;
-    setRouteHash('#bookmarks');
+    setRouteHash('#links');
     updateSidebarNavigation();
     loadData({ navigation: true });
   });
 
-  const settingsButton = document.getElementById('btn-settings');
+  const settingsButton = document.getElementById('btn-dashboard-settings');
   if (settingsButton) settingsButton.addEventListener('click', () => { setRouteHash('#settings'); openSettings(); });
-  const visitProfileButton = document.getElementById('btn-visit-profile');
-  if (visitProfileButton) visitProfileButton.addEventListener('click', () => visitPublicProfile());
-  const backButton = document.getElementById('btn-back-to-bookmarks');
-  if (backButton) backButton.addEventListener('click', () => { setRouteHash('#bookmarks'); closeSettings(); });
+  const visitProfileButton = document.getElementById('btn-dashboard-visit-profile');
+  if (visitProfileButton) visitProfileButton.addEventListener('click', event => { event.preventDefault(); visitPublicProfile(visitProfileButton); });
+  const account = document.getElementById('dashboard-account');
+  const accountTrigger = document.getElementById('dashboard-account-trigger');
+  const accountMenu = document.getElementById('dashboard-account-menu');
+  accountTrigger?.addEventListener('click', event => {
+    event.stopPropagation();
+    const open = accountMenu?.hidden !== false;
+    if (accountMenu) accountMenu.hidden = !open;
+    account?.classList.toggle('is-open', open);
+    accountTrigger.setAttribute('aria-expanded', String(open));
+  });
   const more = document.getElementById('btn-load-more');
   if (more) more.addEventListener('click', () => loadData({ append: true }));
 
@@ -810,8 +1006,15 @@ function initPrivateEventListeners() {
   });
   if (DOM.addUrl) DOM.addUrl.addEventListener('input', () => {
     AppState.linkPreview = null;
+    if (platformSelect?.value === 'browser' && DOM.browserIconValue?.dataset.custom !== 'true') {
+      DOM.browserIconValue.value = '';
+      updateBrowserIconPreview();
+    }
     const status = document.getElementById('add-preview-status');
     if (status) { status.hidden = true; status.textContent = ''; }
+  });
+  if (DOM.addAuthorName) DOM.addAuthorName.addEventListener('input', () => {
+    if (platformSelect?.value === 'browser' && !DOM.browserIconValue?.value) updateBrowserIconPreview();
   });
 }
 

@@ -29,9 +29,10 @@ function sign(value) {
   return crypto.createHmac('sha256', sessionSecret()).update(value).digest('base64url');
 }
 
-function createSessionToken() {
+function createSessionToken(userId) {
   if (!sessionSecret()) throw new Error('SESSION_SECRET must be configured.');
-  const payload = Buffer.from(JSON.stringify({ v: 1, exp: Date.now() + sessionMaxAgeSeconds() * 1000 })).toString('base64url');
+  if (!userId) throw new Error('A user ID is required to create a session.');
+  const payload = Buffer.from(JSON.stringify({ v: 2, userId: String(userId), exp: Date.now() + sessionMaxAgeSeconds() * 1000 })).toString('base64url');
   return `${payload}.${sign(payload)}`;
 }
 
@@ -44,18 +45,27 @@ function verifySessionToken(token) {
   if (!valid) return false;
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return data && data.v === 1 && Number(data.exp) > Date.now();
+    return data && data.v === 2 && data.userId && Number(data.exp) > Date.now() ? data : false;
   } catch (error) {
     return false;
   }
 }
 
+function getSession(req) {
+  const session = verifySessionToken(parseCookies(req)[SESSION_COOKIE]);
+  return session && session.v === 2 && session.userId ? session : null;
+}
+
 function isAuthenticated(req) {
-  return verifySessionToken(parseCookies(req)[SESSION_COOKIE]);
+  return Boolean(getSession(req));
 }
 
 function requireSession(req, res) {
-  if (isAuthenticated(req)) return true;
+  const session = getSession(req);
+  if (session) {
+    req.auth = { userId: session.userId, session };
+    return true;
+  }
   res.status(401).json({ error: 'Authentication required.' });
   return false;
 }
@@ -70,17 +80,4 @@ function clearSessionCookie() {
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`;
 }
 
-function hasValidPassword(value) {
-  const expected = process.env.ADMIN_PASSWORD || '';
-  if (!expected || typeof value !== 'string' || value.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(value), Buffer.from(expected));
-}
-
-function hasValidEmail(value) {
-  const expected = String(process.env.PROFILE_EMAIL || '').trim().toLowerCase();
-  const actual = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  if (!expected || !actual || expected.length !== actual.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
-}
-
-module.exports = { clearSessionCookie, createSessionToken, hasValidEmail, hasValidPassword, isAuthenticated, requireSession, sessionCookie, sessionMaxAgeSeconds };
+module.exports = { clearSessionCookie, createSessionToken, getSession, isAuthenticated, requireSession, sessionCookie, sessionMaxAgeSeconds, verifySessionToken };

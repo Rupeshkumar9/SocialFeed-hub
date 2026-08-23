@@ -22,8 +22,12 @@ module.exports = async (req, res) => {
     if (req.body.publicTitle !== undefined) set.publicTitle = String(req.body.publicTitle || '').trim().slice(0, 160);
     if (req.body.publicDescription !== undefined) set.publicDescription = String(req.body.publicDescription || '').trim().slice(0, 280);
     if (req.body.publicOrder !== undefined) set.publicOrder = Number.isFinite(Number(req.body.publicOrder)) ? Number(req.body.publicOrder) : null;
-    const result = await db.collection('bookmarks').updateMany({ id: { $in: ids } }, { $set: set });
-    const counts = await getPublicCounts(db);
+    if (req.body.thumbnail !== undefined) {
+      const thumbnail = String(req.body.thumbnail || '').trim();
+      set.thumbnail = /^https?:\/\//i.test(thumbnail) ? thumbnail.slice(0, 2000) : '';
+    }
+    const result = await db.collection('bookmarks').updateMany({ userId: req.auth.userId, id: { $in: ids } }, { $set: set });
+    const counts = await getPublicCounts(db, req.auth.userId);
     return res.status(200).json({ updated: result.modifiedCount, matched: result.matchedCount, counts });
   } catch (error) {
     console.error('Failed to update bookmark visibility:', error);

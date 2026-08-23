@@ -14,7 +14,7 @@ function hostFor(url) {
 }
 
 function titleFor(bookmark) {
-  return bookmark.publicTitle || bookmark.title || bookmark.content || bookmark.authorName || hostFor(bookmark.url) || 'Untitled link';
+  return bookmark.publicTitle || bookmark.authorName || bookmark.siteName || bookmark.title || bookmark.content || hostFor(bookmark.url) || 'Untitled link';
 }
 
 function buildBrowserLinkRow(bookmark) {
@@ -24,28 +24,28 @@ function buildBrowserLinkRow(bookmark) {
   const title = titleFor(bookmark);
   const host = hostFor(bookmark.url);
   const initial = title.trim().charAt(0).toUpperCase() || '↗';
-  const favicon = bookmark.favicon || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+  const favicon = bookmark.favicon || '';
   row.innerHTML = `
     <label class="browser-row-select" aria-label="Select ${escapeHTML(title)}"><input type="checkbox" class="card-checkbox" data-id="${escapeHTML(bookmark.id)}"><span></span></label>
     <button class="browser-row-main" type="button" aria-label="Open ${escapeHTML(title)}">
-      <span class="browser-row-icon"><img src="${escapeHTML(favicon)}" alt="" loading="lazy"><span>${escapeHTML(initial)}</span></span>
+      <span class="browser-row-icon">${favicon ? `<img src="${escapeHTML(favicon)}" alt="" loading="lazy">` : ''}<span>${escapeHTML(initial)}</span></span>
       <span class="browser-row-copy"><strong>${escapeHTML(title)}</strong><small>${escapeHTML(host)}</small></span>
     </button>
     <span class="browser-row-meta">${bookmark.visibility === 'public' ? '<span class="browser-visibility-badge public">Public</span>' : '<span class="browser-visibility-badge">Private</span>'}${bookmark.featured ? '<span class="browser-featured" title="Featured publicly">★</span>' : ''}</span>
     <div class="card-menu-container browser-row-menu-container">
       <button class="btn-card-menu browser-row-menu" type="button" title="Actions" aria-label="Link actions" aria-haspopup="menu" aria-expanded="false"><i class="app-icon icon-ellipsis-vertical"></i></button>
       <div class="card-menu-dropdown browser-row-actions" role="menu">
-        <button type="button" class="menu-item-visibility" data-action="visibility"><i class="app-icon icon-globe"></i> ${bookmark.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
         <button type="button" class="menu-item-edit" data-action="edit"><i class="app-icon icon-pen"></i> Edit</button>
-        <button type="button" class="menu-item-delete" data-action="delete"><i class="app-icon icon-trash"></i> Delete</button>
+        <button type="button" class="menu-item-visibility" data-action="visibility"><i class="app-icon icon-${bookmark.visibility === 'public' ? 'lock' : 'globe'}"></i> ${bookmark.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
+        <button type="button" data-action="copy"><i class="app-icon icon-copy"></i> Copy link</button>
         <button type="button" data-action="featured"><i class="app-icon icon-bookmark"></i> ${bookmark.featured ? 'Remove featured' : 'Feature publicly'}</button>
-        <button type="button" data-action="copy">Copy URL</button>
+        <button type="button" class="menu-item-delete" data-action="delete"><i class="app-icon icon-trash"></i> Delete</button>
       </div>
     </div>`;
 
   const image = row.querySelector('img');
   image?.addEventListener('error', () => { image.hidden = true; row.querySelector('.browser-row-icon span').hidden = false; }, { once: true });
-  row.querySelector('.browser-row-icon span').hidden = Boolean(bookmark.favicon);
+  row.querySelector('.browser-row-icon span').hidden = !(!bookmark.favicon || !image);
   row.querySelector('.browser-row-main').addEventListener('click', () => {
     if (AppState.isSelectionMode) {
       const checkbox = row.querySelector('.card-checkbox');
@@ -57,7 +57,13 @@ function buildBrowserLinkRow(bookmark) {
   });
   const checkbox = row.querySelector('.card-checkbox');
   checkbox.addEventListener('click', event => event.stopPropagation());
-  checkbox.addEventListener('change', () => actions.toggleSelectBookmark(bookmark.id, checkbox.checked));
+  checkbox.addEventListener('change', () => {
+    if (!AppState.isSelectionMode) {
+      checkbox.checked = false;
+      return;
+    }
+    actions.toggleSelectBookmark(bookmark.id, checkbox.checked);
+  });
   const menuButton = row.querySelector('.browser-row-menu');
   const menu = row.querySelector('.browser-row-actions');
   menuButton.addEventListener('click', event => {
@@ -94,10 +100,13 @@ function buildBrowserLinkRow(bookmark) {
         showToast(visibility === 'public' ? 'Link published to your profile.' : 'Link made private.', 'success');
         renderFeedGrid(); updateSidebarNavigation();
       } else if (action === 'featured') {
-        await socialFeedApi.updateBookmarkVisibility({ ids: [bookmark.id], visibility: bookmark.visibility, featured: !bookmark.featured });
-        bookmark.featured = !bookmark.featured;
-        showToast(bookmark.featured ? 'Link featured publicly.' : 'Link removed from featured.', 'success');
-        renderFeedGrid();
+        const featured = !bookmark.featured;
+        const visibility = featured ? 'public' : bookmark.visibility;
+        await socialFeedApi.updateBookmarkVisibility({ ids: [bookmark.id], visibility, featured });
+        bookmark.visibility = visibility;
+        bookmark.featured = featured;
+        showToast(featured ? 'Link published and featured publicly.' : 'Link removed from featured.', 'success');
+        renderFeedGrid(); updateSidebarNavigation();
       }
     } catch (error) { showToast(error?.message || 'Unable to update link.', 'error'); }
     menu.classList.remove('active');

@@ -1,48 +1,89 @@
 ---
 import { getCollection } from "astro:content";
-import ComingSoon from "../../components/ComingSoon.astro";
 import PublicLayout from "../../layouts/PublicLayout.astro";
 const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
   (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
 );
+const pageSize = 10;
+const requestedPage = Number.parseInt(Astro.url.searchParams.get("page") || "1", 10);
+const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
+const currentPage = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), totalPages) : 1;
+const pagePosts = posts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 const hasPosts = posts.length > 0;
+const featuredPost = pagePosts[0];
+const remainingPosts = pagePosts.slice(1);
+const tags = [...new Set(posts.flatMap((post) => post.data.tags))].slice(0, 6);
 ---
 
 <PublicLayout
   title="Journal · SocialFeed Hub"
   description="Notes on saving, organizing, and sharing the web."
-  robots={hasPosts ? "index, follow" : "noindex, nofollow"}
+  robots="index, follow"
 >
-  {
-    hasPosts ? (
-      <section class="section">
-        <>
-          <div class="eyebrow">The SocialFeed Hub journal</div>
-          <h1>Notes for a better personal web.</h1>
-          <div class="feature-grid">
-            {posts.map((post) => (
-              <article class="glass-card feature-card">
-                <div class="eyebrow">
-                  {post.data.publishDate.toLocaleDateString()}
-                </div>
-                <h2>
-                  <a href={`/blog/${post.id}/`}>{post.data.title}</a>
-                </h2>
-                <p>{post.data.description}</p>
-              </article>
-            ))}
+  <section class="section blog-index blog-index-v2">
+    <div class="blog-hero">
+      <div>
+        <div class="eyebrow">The SocialFeed Hub journal</div>
+        <h1>Notes for a better personal web.</h1>
+        <p class="blog-hero-copy">Practical ideas for saving the good parts of the internet, adding your own context, and sharing a quieter corner of the web.</p>
+      </div>
+      <div class="blog-hero-note"><span>From the team</span><strong>{posts.length.toString().padStart(2, "0")}</strong><small>notes published</small></div>
+    </div>
+    {hasPosts ? (
+      <>
+        <div class="blog-toolbar">
+          <span>Latest thinking</span>
+          <div class="blog-topics" role="list" aria-label="Filter by topic">
+            <button type="button" class="is-active" data-blog-topic="all">All notes</button>
+            {tags.map((tag) => <button type="button" data-blog-topic={tag}>{tag}</button>)}
           </div>
-        </>
-      </section>
+        </div>
+        {featuredPost ? (
+          <article class="blog-featured-card" data-blog-tags={featuredPost.data.tags.join(",")}>
+            <div class="blog-featured-art" aria-hidden="true" style={featuredPost.data.heroImage ? `background-image: url(${featuredPost.data.heroImage})` : undefined}>
+              {!featuredPost.data.heroImage ? <><span>SF</span><i></i><b></b></> : null}
+            </div>
+            <div class="blog-featured-copy">
+              <div class="blog-post-meta"><span>Featured note</span><time datetime={featuredPost.data.publishDate.toISOString()}>{featuredPost.data.publishDate.toLocaleDateString()}</time></div>
+              <h2><a href={`/blog/${featuredPost.id}/`}>{featuredPost.data.title}</a></h2>
+              <p>{featuredPost.data.description}</p>
+              <div class="blog-card-bottom"><span>{featuredPost.data.author}</span><a class="blog-read-more" href={`/blog/${featuredPost.id}/`}>Read article <span aria-hidden="true">↗</span></a></div>
+            </div>
+          </article>
+        ) : null}
+        {remainingPosts.length ? <div class="blog-post-grid">
+          {remainingPosts.map((post) => (
+            <article class="blog-post-card" data-blog-tags={post.data.tags.join(",")}>
+              <div class="blog-post-card-art" aria-hidden="true" style={post.data.heroImage ? `background-image: url(${post.data.heroImage})` : undefined}><span>{post.data.tags[0] || "note"}</span></div>
+              <div class="blog-post-card-copy"><div class="blog-post-meta"><span>{post.data.tags[0] || "Journal"}</span><time datetime={post.data.publishDate.toISOString()}>{post.data.publishDate.toLocaleDateString()}</time></div><h2><a href={`/blog/${post.id}/`}>{post.data.title}</a></h2><p>{post.data.description}</p><a class="blog-read-more" href={`/blog/${post.id}/`}>Read article <span aria-hidden="true">↗</span></a></div>
+            </article>
+          ))}
+        </div> : null}
+        <div class="blog-subscribe"><div><div class="eyebrow">Keep a good tab open</div><h2>New notes, when they are worth your attention.</h2></div><a class="button primary" href="/">Build your public corner <span aria-hidden="true">↗</span></a></div>
+        <div class="blog-filter-empty" data-blog-filter-empty hidden>No notes match that topic yet.</div>
+        {totalPages > 1 ? (
+          <nav class="blog-pagination" aria-label="Blog pages">
+            {currentPage > 1 ? <a class="button ghost" href={`/blog?page=${currentPage - 1}`}>← Newer</a> : <span class="button ghost is-disabled">← Newer</span>}
+            <span class="blog-page-status">Page {currentPage} of {totalPages}</span>
+            {currentPage < totalPages ? <a class="button ghost" href={`/blog?page=${currentPage + 1}`}>Older →</a> : <span class="button ghost is-disabled">Older →</span>}
+          </nav>
+        ) : null}
+      </>
     ) : (
-      <ComingSoon
-        eyebrow="The journal is being prepared"
-        title="Thoughtful notes are coming soon."
-        description="The blog pipeline is ready for practical essays about personal knowledge, bookmarking, and building a calmer relationship with the internet."
-        icon="✎"
-        primaryLabel="Visit SocialFeed Hub"
-        primaryHref="/"
-      />
-    )
-  }
+      <div class="glass-card feature-card blog-empty"><h2>New notes are on the way.</h2><p>We are preparing practical essays about saving, organizing, and sharing the web.</p></div>
+    )}
+  </section>
 </PublicLayout>
+
+<script>
+  const topicButtons = Array.from(document.querySelectorAll("[data-blog-topic]"));
+  const blogCards = Array.from(document.querySelectorAll("[data-blog-tags]"));
+  const emptyState = document.querySelector("[data-blog-filter-empty]");
+  topicButtons.forEach((button) => button.addEventListener("click", () => {
+    const topic = button.dataset.blogTopic || "all";
+    topicButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+    let visible = 0;
+    blogCards.forEach((card) => { const show = topic === "all" || (card.dataset.blogTags || "").split(",").includes(topic); card.hidden = !show; if (show) visible += 1; });
+    if (emptyState) emptyState.hidden = visible > 0;
+  }));
+</script>

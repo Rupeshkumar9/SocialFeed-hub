@@ -5,7 +5,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed.' });
   if (!requireSession(req, res)) return;
   try {
-    const devices = await listExtensionDevices();
+    const devices = await listExtensionDevices(req.auth.userId);
     return res.status(200).json({ devices: devices.map(device => ({
       id: device._id.toString(),
       label: device.label,

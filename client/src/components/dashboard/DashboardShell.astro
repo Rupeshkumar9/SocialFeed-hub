@@ -5,14 +5,22 @@
     <button id="auth-retry" class="btn-secondary" type="button" hidden>Retry</button>
   </div>
   <div id="login-gate" class="login-gate" aria-live="polite">
-    <form id="private-login-form" class="login-card">
+    <form id="private-login-form" class="login-card" data-auth-mode="login">
       <div class="logo-icon"><img class="brand-logo-image" src="/favicon.svg" alt=""></div>
-      <h2>Welcome back</h2>
-      <p>Your SocialFeed Hub is private. Sign in to open your bookmarks.</p>
+      <h2 id="auth-form-title">Welcome back</h2>
+      <p id="auth-form-description">Sign in to open your SocialFeed Hub workspace.</p>
+      <div class="auth-mode-switch" role="group" aria-label="Account access mode">
+        <button type="button" class="auth-mode-button active" id="auth-mode-login">Sign in</button>
+        <button type="button" class="auth-mode-button" id="auth-mode-signup">Create account</button>
+      </div>
+      <label for="private-login-display-name" id="private-login-display-name-label" hidden>Display name</label>
+      <input id="private-login-display-name" type="text" autocomplete="name" maxlength="80" placeholder="Your display name" hidden>
+      <label for="private-login-username" id="private-login-username-label" hidden>Username</label>
+      <input id="private-login-username" type="text" autocomplete="username" pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{2,29}" maxlength="30" placeholder="your_username" hidden>
       <label for="private-login-email">Email</label>
       <input id="private-login-email" type="email" autocomplete="username" required placeholder="you@example.com">
       <label for="private-login-password">Password</label>
-      <input id="private-login-password" type="password" autocomplete="current-password" required placeholder="Enter your password">
+      <input id="private-login-password" type="password" autocomplete="current-password" minlength="10" required placeholder="Enter your password">
       <p id="private-login-error" class="login-error" hidden></p>
       <button id="private-login-submit" class="btn-primary login-submit" type="submit" aria-busy="false">
         <span>Sign in</span>
@@ -35,7 +43,6 @@
             </div>
             <div class="logo-text">
               <h1>SocialFeed</h1>
-              <span>Bookmark Manager</span>
             </div>
           </div>
         </a>
@@ -69,10 +76,19 @@
           <span class="sr-only">Switch theme</span>
         </button>
 
-        <!-- sync -->
-        <button class="btn-primary" id="btn-sync-now" type="button" title="Refresh the latest bookmarks and counts from the server" aria-label="Refresh the latest bookmarks and counts from the server">
-          <i class="app-icon icon-rotate"></i> <span class="btn-text">Sync</span>
-        </button>
+        <div class="public-account dashboard-account" id="dashboard-account">
+          <button class="public-account-trigger" id="dashboard-account-trigger" type="button" aria-expanded="false" aria-haspopup="menu">
+            <span class="public-account-avatar" id="dashboard-account-avatar" aria-hidden="true"><span class="public-account-avatar-fallback">S</span><img src="/favicon.svg" alt="" hidden /></span>
+            <span class="public-account-copy"><strong id="dashboard-account-name">SocialFeed Owner</strong><small id="dashboard-account-username">@socialfeed</small></span>
+            <span class="public-account-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="public-account-menu" id="dashboard-account-menu" role="menu" hidden>
+            <a href="/u/socialfeed" id="btn-dashboard-visit-profile" role="menuitem"><i class="app-icon icon-globe"></i> Visit profile</a>
+            <button type="button" id="btn-sync-now" role="menuitem"><i class="app-icon icon-rotate"></i> Sync</button>
+            <button type="button" id="btn-dashboard-settings" role="menuitem"><i class="app-icon icon-gear"></i> Settings</button>
+            <button type="button" id="btn-dashboard-logout" role="menuitem"><i class="app-icon icon-right-from-bracket"></i> Logout</button>
+          </div>
+        </div>
 
         <!-- Hidden elements for backward compatibility and JS selectors -->
         <div style="display: none;">
@@ -105,80 +121,44 @@
     </header>
 
     <div class="app-body">
+      <button id="sidebar-collapse-toggle" class="sidebar-collapse-toggle" type="button"
+        aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">
+        <i class="app-icon icon-arrow-left" aria-hidden="true"></i>
+      </button>
       <aside id="sidebar" class="app-sidebar">
         <div class="sidebar-menu">
           <section class="sidebar-section">
-            <div class="menu-section-title">Your Library</div>
-            <ul class="menu-list">
-              <li class="menu-item active" id="sidebar-browser-item"><button type="button" id="btn-browser-bookmarks" data-sidebar-route="#bookmarks"><i class="app-icon icon-bookmark"></i><span>Browser Bookmarks</span><span class="menu-count" id="count-browser-bookmarks">0</span></button></li>
+            <ul class="menu-list sidebar-primary-list" id="sidebar-primary-list">
+              <li class="menu-item" id="sidebar-profile-item"><button type="button" id="btn-sidebar-profile" data-sidebar-route="/dashboard"><i
+                    class="app-icon icon-user"></i><span>My Profile</span></button></li>
+              <li class="menu-item active" id="sidebar-browser-item"><button type="button" id="btn-browser-bookmarks" data-sidebar-route="#links"><i class="app-icon icon-bookmark"></i><span>Links</span><span class="menu-count" id="count-browser-bookmarks">0</span></button></li>
+              <li class="menu-item" id="sidebar-social-posts-item"><button type="button" id="btn-social-posts" data-platform="all" data-sidebar-route="#platform=all"><i
+                    class="app-icon icon-circle-nodes"></i><span>Social Posts</span><span class="menu-count"
+                    id="sidebar-count-platform-all">0</span></button></li>
+              <li class="menu-item" id="sidebar-analytics-item"><button type="button" id="btn-sidebar-analytics" title="Analytics"><i
+                    class="app-icon icon-chart-line"></i><span>Analytics</span></button></li>
+              <li class="menu-item" id="sidebar-extension-item"><button type="button" id="btn-sidebar-extension" data-sidebar-route="#extension" title="Extension"><i
+                    class="app-icon icon-plug"></i><span>Extension</span></button></li>
             </ul>
           </section>
 
           <section class="sidebar-section">
-            <div class="menu-section-title">Platform</div>
-            <ul class="menu-list" id="sidebar-platform-list">
-              <li class="menu-item active"><button type="button" data-platform="all" data-sidebar-route="#platform=all"><i
-                    class="app-icon icon-layer-group"></i><span>All Platforms</span><span class="menu-count"
-                    id="count-platform-all">0</span></button></li>
-              <li class="menu-item"><button type="button" data-platform="instagram" data-sidebar-route="#platform=instagram"><i
-                    class="app-icon icon-instagram"></i><span>Instagram</span><span class="menu-count"
-                    id="count-platform-instagram">0</span></button></li>
-              <li class="menu-item"><button type="button" data-platform="x" data-sidebar-route="#platform=x"><svg class="platform-inline-icon sidebar-platform-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z"/></svg><span> X / Twitter </span><span class="menu-count"
-                    id="count-platform-x">0</span></button></li>
-              <li class="menu-item"><button type="button" data-platform="threads" data-sidebar-route="#platform=threads"><svg class="platform-inline-icon sidebar-platform-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z"/></svg><span>Threads</span><span class="menu-count"
-                    id="count-platform-threads">0</span></button></li>
-              <li class="menu-item"><button type="button" data-platform="reddit" data-sidebar-route="#platform=reddit"><i
-                    class="app-icon icon-reddit-alien"></i><span>Reddit</span><span class="menu-count"
-                    id="count-platform-reddit">0</span></button></li>
-              <li class="menu-item"><button type="button" data-platform="facebook" data-sidebar-route="#platform=facebook"><i
-                    class="app-icon icon-facebook"></i><span>Facebook</span><span class="menu-count"
-                    id="count-platform-facebook">0</span></button></li>
-              <li class="menu-item"><button type="button" data-platform="youtube" data-sidebar-route="#platform=youtube"><i
-                    class="app-icon icon-youtube"></i><span>YouTube</span><span class="menu-count"
-                    id="count-platform-youtube">0</span></button></li>
-            </ul>
-          </section>
-
-          <section class="sidebar-section">
-            <div class="menu-section-title">Categories</div>
-            <ul class="menu-list" id="sidebar-collection-list">
-              <li class="menu-item active"><button type="button" data-collection="all"><i
-                    class="app-icon icon-folder-tree"></i><span>All</span><span class="menu-count"
-                    id="count-collection-all">0</span></button></li>
-              <li class="menu-item"><button type="button" data-collection="uncategorized"><i
-                    class="app-icon icon-folder"></i><span>Others</span><span class="menu-count"
-                    id="count-collection-uncategorized">0</span></button></li>
-            </ul>
-          </section>
-
-          <section class="sidebar-section">
-            <ul class="menu-list">
-              <li class="menu-item" id="sidebar-analytics-item">
-                <button type="button" id="btn-toggle-stats" title="Toggle Stats & Analytics Dashboard">
-                  <i class="app-icon icon-chart-line"></i>
-                  <span>Analytics</span>
-                </button>
-              </li>
-            </ul>
-          </section>
-
-          <section class="sidebar-section">
-            <div class="menu-section-title">Quick Actions</div>
-            <div class="sidebar-actions" style="display: flex; flex-direction: column; gap: 8px;">
-              <button type="button" class="sidebar-action" id="action-import"
-                title="Import Archive">
-                <i class="app-icon icon-file-import"></i><span>Import Archive</span>
+            <div class="menu-section-title">Tools</div>
+            <div class="sidebar-tools">
+              <button type="button" class="sidebar-action sidebar-tool-placeholder" disabled title="AI Categorization — Coming soon">
+                <i class="app-icon icon-circle-nodes"></i><span>AI Categorization</span><small>Coming soon</small>
               </button>
-              <button type="button" class="sidebar-action" id="action-export-json"
-                title="Export Bookmarks as JSON">
-                <i class="app-icon icon-download"></i><span>Export JSON</span>
+              <button type="button" class="sidebar-action sidebar-tool-placeholder" disabled title="Post Ideas — Coming soon">
+                <i class="app-icon icon-note-sticky"></i><span>Post Ideas</span><small>Coming soon</small>
               </button>
-              <button type="button" class="sidebar-action" id="btn-visit-profile"
-                title="Open your public profile">
-                <i class="app-icon icon-globe"></i><span>Visit Profile</span>
+              <button type="button" class="sidebar-action sidebar-tool-placeholder" disabled title="Visualize — Coming soon">
+                <i class="app-icon icon-chart-line"></i><span>Visualize</span><small>Coming soon</small>
               </button>
-              <button type="button" class="sidebar-action" id="btn-settings" title="Profile Settings" data-sidebar-route="#settings">
-                <i class="app-icon icon-gear"></i><span>Settings</span>
+              <button type="button" class="sidebar-action sidebar-tool-placeholder" disabled title="Auto Posts — Coming soon">
+                <i class="app-icon icon-rotate"></i><span>Auto Posts</span><small>Coming soon</small>
+              </button>
+              <button type="button" class="sidebar-action sidebar-tool-placeholder" disabled title="MCP — Coming soon">
+                <i class="app-icon icon-plug"></i><span>MCP</span><small>Coming soon</small>
               </button>
             </div>
           </section>
@@ -187,23 +167,80 @@
 
       <main id="main-panel">
         <section id="settings-view" class="settings-view" hidden>
-          <div class="settings-heading"><button type="button" class="back-link" id="btn-back-to-bookmarks"><i class="app-icon icon-arrow-left"></i> Back to Bookmarks</button><h2>Profile Settings</h2><p>Manage your private SocialFeed Hub account.</p></div>
+          <div class="settings-heading"><h2>Profile Settings</h2><p>Manage your private SocialFeed Hub account.</p></div>
           <div class="settings-layout">
             <div class="settings-main-column">
-              <article class="settings-card"><h3><i class="app-icon icon-user"></i> Personal Information</h3><p>Your account details</p><div class="settings-details"><div><span>Profile name</span><strong id="settings-profile-name">SocialFeed Owner</strong></div><div><span>Email address</span><strong id="settings-profile-email">Private account</strong></div><div><span>Account access</span><strong>Private dashboard</strong></div><div><span>Member since</span><strong id="settings-member-since">—</strong></div></div></article>
-              <article class="settings-card public-profile-card"><div class="settings-card-heading"><div><h3><i class="app-icon icon-globe"></i> Public Profile</h3><p>Choose which links and saved posts can be discovered at your public URL.</p></div><label class="toggle-control"><input type="checkbox" id="public-profile-published"><span></span><b>Published</b></label></div><form id="public-profile-form"><div class="public-profile-fields"><label>Username<input id="public-profile-username" name="username" pattern="[a-z0-9-]{3,30}" required><small>Your profile URL: <span id="public-profile-url">/socialfeed</span></small></label><label>Display name<input id="public-profile-display-name" name="displayName" maxlength="80"></label><label>Avatar URL<input id="public-profile-avatar" name="avatar" type="url" placeholder="https://…"></label><label>Default section<select id="public-profile-default-tab"><option value="links">Links</option><option value="posts">Saved Posts</option></select></label><label>Theme preset<select id="public-profile-theme"><option value="default">Clean</option><option value="paper">Paper</option><option value="midnight">Midnight</option></select></label><label class="full-width">Bio<textarea id="public-profile-bio" name="bio" maxlength="280" rows="3" placeholder="A short introduction…"></textarea></label></div><div class="public-profile-social"><div class="settings-card-heading"><strong>Social links</strong><button type="button" class="settings-inline-action" id="public-profile-add-social">Add link</button></div><div id="public-profile-social-links"></div></div><div class="public-profile-actions"><span id="public-profile-status" role="status"></span><span class="public-profile-counts" id="public-profile-counts"></span><button type="button" class="btn-secondary" id="public-profile-preview">Preview</button><button type="button" class="btn-secondary" id="public-profile-copy">Copy URL</button><button type="submit" class="btn-primary" id="public-profile-save">Save profile</button></div></form></article>
-              <article class="settings-card"><h3><i class="app-icon icon-plug"></i> Integrations</h3><p>Bookmark sources connected to your private library.</p><div class="integration-row"><div><strong>Instagram & X scanner extension</strong><small id="extension-devices-status">Checking connected browsers…</small></div><button type="button" id="btn-revoke-extension-devices" class="settings-inline-action" hidden>Disconnect extensions</button></div><div class="integration-row"><span>Chrome Browser Bookmarks scanner</span><span class="status-pill">Ready</span></div><div class="integration-row"><div><strong>MCP service connectors</strong><small>Notion, Google Drive, Slack, Airtable and more</small></div><span class="status-pill status-pill-soon">Coming soon</span></div></article>
-              <article class="settings-card"><h3><i class="app-icon icon-circle-nodes"></i> Future Features</h3><p>Planned tools to make SocialFeed smarter and easier to explore.</p><div class="roadmap-grid"><div class="roadmap-item"><strong>AI categorization</strong><span>Automatically organize bookmarks by topic, intent and platform.</span><em>Coming soon</em></div><div class="roadmap-item"><strong>Visual bookmark explorer</strong><span>Discover saved content through images, themes and visual similarity.</span><em>Coming soon</em></div><div class="roadmap-item"><strong>Smart summaries and search</strong><span>Ask questions across your saved posts and browser links.</span><em>Coming soon</em></div></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-user"></i> Personal Information</h3><p>Update the account name and email used for your SocialFeed Hub workspace.</p><div class="settings-details account-details"><div class="account-detail-row"><div><span>Profile name</span><strong id="settings-profile-name">SocialFeed Owner</strong><input id="settings-profile-name-input" type="text" maxlength="80" autocomplete="name" hidden></div><button type="button" class="settings-inline-action account-edit-button" id="btn-edit-account-name">Edit</button></div><div class="account-detail-row"><div><span>Email address</span><strong id="settings-profile-email">Private account</strong><input id="settings-profile-email-input" type="email" autocomplete="email" hidden></div><button type="button" class="settings-inline-action account-edit-button" id="btn-edit-account-email">Edit</button></div><div><span>Account access</span><strong>Private dashboard</strong></div><div><span>Member since</span><strong id="settings-member-since">—</strong></div></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-database"></i> Data management</h3><p>Import an archive or export a backup of your saved library.</p><div class="settings-data-actions"><button type="button" class="settings-inline-action" id="action-import"><i class="app-icon icon-file-import"></i> Import Archive</button><button type="button" class="settings-inline-action" id="action-export-json"><i class="app-icon icon-download"></i> Export JSON</button></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-lock"></i> Change password</h3><p>Use a new password of at least 10 characters.</p><form id="change-password-form" class="account-security-form"><label>Current password<input id="current-password" type="password" autocomplete="current-password" required></label><label>New password<input id="new-password" type="password" minlength="10" autocomplete="new-password" required></label><label>Confirm new password<input id="confirm-password" type="password" minlength="10" autocomplete="new-password" required></label><div class="settings-form-actions"><span id="change-password-status" role="status"></span><button type="submit" class="btn-primary" id="btn-change-password">Change password</button></div></form></article>
+              <article class="settings-card danger-zone-card"><h3><i class="app-icon icon-trash"></i> Delete account</h3><p>Permanently delete your account, saved links, social posts, profile, and connected extensions.</p><button type="button" class="danger-action" id="btn-delete-account">Delete account</button></article>
               <article class="settings-card"><h3><i class="app-icon icon-credit-card"></i> Manage Your Subscription</h3><p class="coming-soon">Coming soon</p></article>
             </div>
             <aside class="settings-aside"><article class="settings-card"><h3>Account Security</h3><p>Your dashboard and bookmarks are only available after signing in.</p><span class="status-pill">Protected</span></article><button type="button" id="btn-settings-logout" class="settings-logout"><i class="app-icon icon-right-from-bracket"></i> Logout</button></aside>
           </div>
         </section>
 
+        <section id="extension-view" class="settings-view extension-view" hidden>
+          <div class="settings-heading"><h2>Extension</h2><p>Manage the browser extension and connected bookmark sources.</p></div>
+          <div class="settings-layout">
+            <div class="settings-main-column">
+              <article class="settings-card"><h3><i class="app-icon icon-plug"></i> SocialFeed browser extension</h3><p>Connect the Instagram and X scanner extension to import saved posts into your workspace.</p><div class="integration-row"><div><strong>Connected browsers</strong><small id="extension-devices-status">Checking connected browsers…</small></div><button type="button" id="btn-revoke-extension-devices" class="settings-inline-action" hidden>Disconnect extensions</button></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-bookmark"></i> Browser bookmarks</h3><p>The Chrome Browser Bookmarks scanner is ready to import links from your browser.</p><div class="integration-row"><span>Chrome Browser Bookmarks scanner</span><span class="status-pill">Ready</span></div></article>
+            </div>
+            <aside class="settings-aside"><article class="settings-card"><h3>Extension security</h3><p>Disconnecting removes access for every connected browser. You can pair them again later.</p><span class="status-pill">Protected</span></article></aside>
+          </div>
+        </section>
+
+        <section id="profile-edit-view" class="settings-view profile-edit-view" hidden>
+          <div class="settings-heading"><h2>My Profile</h2><p>Choose what visitors see, or update the identity behind your public profile.</p></div>
+          <div class="profile-mode-tabs" role="tablist" aria-label="My Profile sections">
+            <button type="button" class="profile-mode-tab is-active" data-profile-mode="content" role="tab" aria-selected="true"><span class="profile-mode-icon"><i class="app-icon icon-globe"></i></span><span><strong>Public Content</strong><small>Manage links, posts, shop picks, and visibility.</small></span></button>
+            <button type="button" class="profile-mode-tab" data-profile-mode="edit" role="tab" aria-selected="false"><span class="profile-mode-icon"><i class="app-icon icon-user"></i></span><span><strong>Edit Profile</strong><small>Update your name, username, bio, avatar, and socials.</small></span></button>
+          </div>
+          <div class="profile-mode-panel" data-profile-mode-panel="content" role="tabpanel">
+            <div class="profile-content-layout">
+              <div class="settings-main-column">
+                <article class="settings-card public-content-card"><div class="settings-card-heading"><div><h3><i class="app-icon icon-globe"></i> Profile visibility</h3><p>Make the whole public page available or private. Individual links and posts can be controlled below.</p></div><label class="toggle-control"><input type="checkbox" id="public-profile-published"><span></span><b>Published</b></label></div><div class="public-content-summary"><strong id="public-profile-counts">0 public links · 0 public posts · 0 shop picks</strong><span>Only content marked public appears on your shareable profile.</span></div><div class="public-content-preferences"><label>Default public section<select id="public-profile-default-tab"><option value="links">Links</option><option value="posts">Social Posts</option><option value="shop">Shop</option></select></label><button type="button" class="btn-secondary" id="btn-manage-public-content"><i class="app-icon icon-gear"></i> Manage public content</button></div></article>
+                <div class="public-content-manage-grid">
+                  <button type="button" class="public-content-manage-card" id="btn-manage-public-links" data-public-manager-source="browser"><span class="public-manage-card-icon"><i class="app-icon icon-bookmark"></i></span><span><strong>Public links</strong><small>Choose links, titles, descriptions, and thumbnails.</small></span><b id="public-links-count">0</b><em>Manage ↗</em></button>
+                  <button type="button" class="public-content-manage-card" id="btn-manage-public-posts" data-public-manager-source="social"><span class="public-manage-card-icon"><i class="app-icon icon-circle-nodes"></i></span><span><strong>Public posts</strong><small>Curate saved social posts and add a thumbnail.</small></span><b id="public-posts-count">0</b><em>Manage ↗</em></button>
+                  <button type="button" class="public-content-manage-card" id="btn-manage-public-shop" data-public-manager-source="shop"><span class="public-manage-card-icon"><i class="app-icon icon-bookmark"></i></span><span><strong>Shop picks</strong><small>Review the affiliate recommendations on your Shop tab.</small></span><b id="public-shop-count">0</b><em>Manage ↗</em></button>
+                </div>
+                <article class="settings-card public-content-tip"><div class="public-content-tip-icon">✦</div><div><strong>Make each item feel intentional</strong><p>Use a clear public title, a short reason to click, and a useful thumbnail. Visitors can scan the profile without opening every link.</p></div></article>
+              </div>
+              <aside class="settings-aside"><article class="settings-card"><h3><i class="app-icon icon-copy"></i> Share your profile</h3><p>Preview the public page or copy its URL after you finish curating your content.</p><div class="profile-side-actions"><button type="button" class="btn-secondary" id="public-profile-preview-content">Preview profile</button><button type="button" class="btn-secondary" id="public-profile-copy-content">Copy URL</button></div></article></aside>
+            </div>
+          </div>
+          <div class="profile-mode-panel" data-profile-mode-panel="edit" role="tabpanel" hidden>
+            <div class="settings-layout profile-edit-layout">
+              <div class="settings-main-column">
+                <article class="settings-card public-profile-card"><div class="settings-card-heading"><div><h3><i class="app-icon icon-user"></i> Edit Profile</h3><p>Update the identity visitors see on your public SocialFeed profile.</p></div></div><form id="public-profile-form"><div class="public-profile-fields"><label>Username<input id="public-profile-username" name="username" pattern="[a-z0-9-]{3,30}" required><small>Your profile URL: <span id="public-profile-url">/u/socialfeed</span></small></label><label>Display name<input id="public-profile-display-name" name="displayName" maxlength="80"></label><label>Avatar URL<input id="public-profile-avatar" name="avatar" type="url" placeholder="https://…"></label><label>Theme preset<select id="public-profile-theme"><option value="default">Clean</option><option value="paper">Paper</option><option value="midnight">Midnight</option></select></label><label class="full-width">Bio<textarea id="public-profile-bio" name="bio" maxlength="280" rows="3" placeholder="A short introduction…"></textarea></label></div><div class="public-profile-social"><div class="settings-card-heading"><strong>Social links</strong><button type="button" class="settings-inline-action" id="public-profile-add-social">Add link</button></div><div id="public-profile-social-links"></div></div><div class="public-profile-shop"><div class="settings-card-heading"><div><strong>Shop picks</strong><small>Add affiliate links, products, or tools you recommend. They appear in the Shop tab.</small></div><button type="button" class="settings-inline-action" id="public-profile-add-shop">Add pick</button></div><div id="public-profile-shop-links"></div></div><div class="public-profile-actions"><span id="public-profile-status" role="status"></span><button type="button" class="btn-secondary" id="public-profile-preview">Preview</button><button type="button" class="btn-secondary" id="public-profile-copy">Copy URL</button><button type="submit" class="btn-primary" id="public-profile-save">Save profile</button></div></form></article>
+              </div>
+              <aside class="settings-aside"><article class="settings-card"><h3><i class="app-icon icon-circle-nodes"></i> Profile visibility</h3><p>Page visibility is controlled from the Public Content section.</p><button type="button" class="btn-secondary" data-profile-mode-jump="content">Go to Public Content</button></article></aside>
+            </div>
+          </div>
+        </section>
+
         <section class="feed-content" id="feed-content">
-          <div class="feed-section-header">
+          <div class="feed-section-header feed-header-collapsed" id="feed-section-header">
             <div class="feed-title-area">
-              <h2 id="feed-title">All Bookmarks</h2>
+              <div class="feed-title-row">
+                <h2 id="feed-title">All Bookmarks</h2>
+                <div class="social-header-controls" id="social-header-controls" hidden>
+                  <div class="toolbar-dropdown social-category-dropdown" id="social-category-dropdown" style="position: relative;" hidden>
+                    <button class="toolbar-btn dropdown-toggle social-header-filter-btn" id="social-category-btn" aria-label="Post categories"
+                      title="Post categories" aria-expanded="false" type="button">
+                      <i class="app-icon icon-folder-tree"></i>
+                      <span class="btn-label" id="social-category-label">All Categories</span>
+                      <i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" id="social-category-menu" role="menu"></div>
+                  </div>
+                  <button type="button" class="category-rename-btn social-category-rename-btn" id="social-category-rename" data-category-rename="social" aria-label="Rename category" title="Rename category" hidden>
+                    <i class="app-icon icon-pen"></i>
+                  </button>
+                </div>
+              </div>
               <p id="feed-subtitle">Showing all saved bookmark feeds</p>
             </div>
 
@@ -214,6 +251,25 @@
                 <i class="app-icon icon-square-check"></i>
                 <span class="btn-label">Select Mode</span>
               </button>
+
+              <!-- Social post platform filter -->
+              <div class="toolbar-dropdown platform-filter-toolbar" id="platform-filter-dropdown" style="position: relative;" hidden>
+                <button class="toolbar-btn dropdown-toggle" id="platform-filter-btn" aria-label="Social Posts"
+                  title="Social Posts" aria-expanded="false" type="button">
+                  <i class="app-icon icon-circle-nodes"></i>
+                  <span class="btn-label" id="platform-filter-label">All Posts</span>
+                  <i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right" id="platform-filter-menu" role="menu">
+                  <button class="dropdown-item active" data-platform="all" data-sidebar-route="#platform=all" role="menuitem" type="button"><i class="app-icon icon-check check-icon"></i><i class="app-icon icon-circle-nodes"></i><span class="btn-text">All Posts</span><span class="menu-count" id="count-platform-all">0</span></button>
+                  <button class="dropdown-item" data-platform="instagram" data-sidebar-route="#platform=instagram" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-instagram"></i><span class="btn-text">Instagram</span><span class="menu-count" id="count-platform-instagram">0</span></button>
+                  <button class="dropdown-item" data-platform="x" data-sidebar-route="#platform=x" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><svg class="platform-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z"/></svg><span class="btn-text">X / Twitter</span><span class="menu-count" id="count-platform-x">0</span></button>
+                  <button class="dropdown-item" data-platform="threads" data-sidebar-route="#platform=threads" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><svg class="platform-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z"/></svg><span class="btn-text">Threads</span><span class="menu-count" id="count-platform-threads">0</span></button>
+                  <button class="dropdown-item" data-platform="reddit" data-sidebar-route="#platform=reddit" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-reddit-alien"></i><span class="btn-text">Reddit</span><span class="menu-count" id="count-platform-reddit">0</span></button>
+                  <button class="dropdown-item" data-platform="facebook" data-sidebar-route="#platform=facebook" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-facebook"></i><span class="btn-text">Facebook</span><span class="menu-count" id="count-platform-facebook">0</span></button>
+                  <button class="dropdown-item" data-platform="youtube" data-sidebar-route="#platform=youtube" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-youtube"></i><span class="btn-text">YouTube</span><span class="menu-count" id="count-platform-youtube">0</span></button>
+                </div>
+              </div>
 
               <!-- Add link -->
               <button class="toolbar-btn" id="btn-add-bookmark" aria-label="Add Link" title="Add Link" type="button">
@@ -278,15 +334,18 @@
                 </div>
               </div>
 
-              <div class="toolbar-dropdown browser-only-toolbar" id="toolbar-category-dropdown" style="position: relative;">
-                <button class="toolbar-btn dropdown-toggle" id="toolbar-category-btn" aria-label="Jump to category"
-                  title="Jump to category" aria-expanded="false" type="button">
-                  <i class="app-icon icon-folder-tree"></i>
-                  <span class="btn-label">Categories</span>
+              <div class="toolbar-dropdown browser-only-toolbar jump-category-dropdown" id="toolbar-category-dropdown" style="position: relative;">
+                <button class="toolbar-btn dropdown-toggle jump-category-btn" id="toolbar-category-btn" aria-label="Jump category"
+                  title="Jump category" aria-expanded="false" type="button">
+                  <span class="btn-label">Jump category</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-right" id="toolbar-category-menu" role="menu"></div>
               </div>
             </div>
+            <button type="button" class="feed-header-collapse-toggle" id="feed-header-collapse-toggle"
+              aria-label="Expand feed controls" aria-expanded="false" title="Expand feed controls">
+              <i class="app-icon icon-chevron-down" aria-hidden="true"></i>
+            </button>
           </div>
 
           <div class="bookmarks-grid" id="bookmarks-grid">
@@ -305,13 +364,15 @@
           <button class="close-btn" id="close-analytics-modal" type="button" aria-label="Close analytics">&times;</button>
         </div>
         <div class="modal-body analytics-modal-body">
+          <div class="analytics-source-tabs" role="tablist" aria-label="Analytics source">
+            <button type="button" class="analytics-source-tab active" data-analytics-source="platforms" role="tab" aria-selected="true"><i class="app-icon icon-circle-nodes"></i> Platform posts</button>
+            <button type="button" class="analytics-source-tab" data-analytics-source="browser" role="tab" aria-selected="false"><i class="app-icon icon-bookmark"></i> Browser bookmarks</button>
+          </div>
           <div class="stats-grid stats-grid-refined" id="stats-grid">
-            <div class="stats-card stats-card-wide">
-              <h3><i class="app-icon icon-circle-nodes"></i> Platform Splits</h3>
+            <div class="stats-card stats-card-wide analytics-source-panel" id="stat-platform-card">
               <div class="stats-list" id="stat-platform-splits"></div>
             </div>
-            <div class="stats-card stats-card-wide">
-              <h3><i class="app-icon icon-bookmark"></i> Browser Bookmarks</h3>
+            <div class="stats-card stats-card-wide analytics-source-panel" id="stat-browser-card" hidden>
               <div class="stats-list" id="stat-browser-splits"></div>
             </div>
           </div>
@@ -342,6 +403,21 @@
             Copy All Links
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Public Content Manager Modal -->
+    <div class="modal-overlay public-manager-modal-overlay" id="public-manager-modal-overlay" hidden>
+      <div class="modal-box public-manager-modal-box" role="dialog" aria-modal="true" aria-labelledby="public-manager-modal-title">
+        <div class="modal-header public-manager-modal-header">
+          <div><h3 id="public-manager-modal-title">Manage public links</h3><p id="public-manager-modal-subtitle">Choose what visitors can see on your public profile.</p></div>
+          <button class="close-btn" id="close-public-manager-modal" type="button" aria-label="Close public content manager">&times;</button>
+        </div>
+        <div class="public-manager-summary"><div><strong id="public-manager-total">0</strong><span id="public-manager-total-label">public items</span></div><div><strong id="public-manager-published">0</strong><span>published</span></div><div><strong id="public-manager-private">0</strong><span>private in library</span></div></div>
+        <div class="public-manager-tabs" role="tablist" aria-label="Public content type"><button type="button" class="is-active" data-public-manager-tab="browser" role="tab" aria-selected="true">Links</button><button type="button" data-public-manager-tab="social" role="tab" aria-selected="false">Posts</button><button type="button" data-public-manager-tab="shop" role="tab" aria-selected="false">Shop picks</button></div>
+        <div class="public-manager-body" id="public-manager-list" aria-live="polite"></div>
+        <div class="public-manager-empty" id="public-manager-empty" hidden>No public items are available yet.</div>
+        <div class="modal-footer public-manager-modal-footer"><span id="public-manager-status" role="status"></span><button type="button" class="btn-secondary" id="public-manager-go-edit" hidden>Edit shop picks</button><button type="button" class="btn-primary" id="public-manager-done">Done</button></div>
       </div>
     </div>
 
@@ -418,6 +494,30 @@
               <div id="add-preview-status" class="link-preview-status" hidden></div>
             </div>
 
+            <div id="browser-icon-picker" class="browser-icon-picker" hidden>
+              <label class="form-label" for="btn-select-browser-icon">Site icon</label>
+              <div class="browser-icon-picker-row">
+                <button type="button" id="browser-icon-preview" class="browser-icon-preview" title="Change site icon" aria-label="Change site icon">
+                  <img id="browser-icon-preview-image" alt="" hidden>
+                  <span id="browser-icon-preview-initial">S</span>
+                  <span class="browser-icon-pencil" aria-hidden="true"><i class="app-icon icon-pen"></i></span>
+                </button>
+                <div class="browser-icon-picker-copy">
+                  <small>Fetched automatically when available. Hover the icon and click the pencil to replace it.</small>
+                </div>
+              </div>
+              <div id="browser-icon-picker-panel" class="browser-icon-picker-panel" hidden>
+                <button type="button" id="browser-icon-dropzone" class="manual-image-dropzone browser-icon-dropzone">
+                  <i class="app-icon icon-image"></i>
+                  <span>Drop an icon here or click to choose</span>
+                  <small>PNG, JPG, WebP, or GIF</small>
+                </button>
+                <button type="button" id="btn-clear-browser-icon" class="browser-icon-clear">Use fallback letter</button>
+              </div>
+              <input type="file" id="browser-icon-file" accept="image/*" hidden>
+              <input type="hidden" id="browser-icon-value">
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 6px;" id="add-category-group">
               <label for="add-category"
                 style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Category</label>
@@ -432,8 +532,7 @@
 
             <div style="display: flex; flex-direction: column; gap: 6px;">
               <label id="add-author-label" for="add-author-name"
-                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Author Name
-                (Optional)</label>
+                style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Site name</label>
               <input type="text" id="add-author-name" class="search-input" style="padding-left: 14px;"
                 placeholder="NASA or National Geographic">
             </div>
@@ -582,52 +681,54 @@
 
     <!-- Bulk Edit Modal Overlay -->
     <div class="modal-overlay" id="bulk-edit-modal-overlay">
-      <div class="modal-box" style="max-width: 450px;">
+      <div class="modal-box bulk-edit-box">
         <div class="modal-header">
           <h3>Bulk Edit Bookmarks</h3>
           <button class="close-btn" id="close-bulk-edit-modal">&times;</button>
         </div>
         <form id="bulk-edit-form">
-          <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
-            <p style="font-size: 0.88rem; color: var(--text-muted);" id="bulk-edit-count-label">Editing 0 selected
-              bookmarks.</p>
+          <div class="modal-body bulk-edit-body">
+            <p id="bulk-edit-count-label">Editing 0 selected bookmarks.</p>
 
             <!-- Category Edit -->
             <div class="form-group">
-              <label for="bulk-edit-category" class="form-label"
-                style="font-weight: 600; margin-bottom: 6px; display: block;">Category</label>
+              <label for="bulk-edit-category" class="form-label">Category</label>
               <select id="bulk-edit-category" class="filter-select"
-                style="width: 100%; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px;">
+                >
                 <option value="__no_change__">Keep Original</option>
                 <option value="">Others</option>
                 <!-- Other categories will be dynamically loaded -->
               </select>
               <input type="text" id="bulk-edit-category-new" class="modal-input"
                 placeholder="Enter new category name..."
-                style="display: none; margin-top: 8px; width: 100%; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px;">
+                >
             </div>
 
-            <!-- Platform Edit -->
+            <!-- Author / site name metadata -->
             <div class="form-group">
-              <label for="bulk-edit-platform" class="form-label"
-                style="font-weight: 600; margin-bottom: 6px; display: block;">Platform</label>
-              <select id="bulk-edit-platform" class="filter-select"
-                style="width: 100%; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px;">
+              <label for="bulk-edit-author-name" id="bulk-edit-author-label" class="form-label">Author / Site name</label>
+              <input type="text" id="bulk-edit-author-name" class="modal-input"
+                placeholder="Leave blank to keep each original"
+                autocomplete="off">
+              <small style="display: block; margin-top: 4px; color: var(--text-secondary);">Applies one display name to every selected bookmark. Social posts use the author name; browser bookmarks use the site name.</small>
+            </div>
+
+            <!-- Notes metadata -->
+            <div class="form-group">
+              <label for="bulk-edit-notes-mode" class="form-label">Notes</label>
+              <select id="bulk-edit-notes-mode" class="filter-select">
                 <option value="__no_change__">Keep Original</option>
-                <option value="x">X / Twitter</option>
-                <option value="instagram">Instagram</option>
-                <option value="threads">Threads</option>
-                <option value="reddit">Reddit</option>
-                <option value="facebook">Facebook</option>
-                <option value="youtube">YouTube</option>
+                <option value="append">Append Note</option>
+                <option value="replace">Replace Notes</option>
+                <option value="clear">Clear Notes</option>
               </select>
+              <textarea id="bulk-edit-notes" class="notes-textarea" style="min-height: 72px;"
+                placeholder="Enter a note to apply to the selected bookmarks..."></textarea>
             </div>
           </div>
-          <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <div class="modal-footer bulk-edit-footer">
             <button type="button" class="btn-secondary" id="btn-bulk-edit-cancel">Cancel</button>
-            <button type="submit" class="btn-primary"
-              style="background-color: var(--accent-purple); border-color: var(--accent-purple); color: white;">Apply
-              Changes</button>
+            <button type="submit" class="btn-primary bulk-edit-submit">Apply Changes</button>
           </div>
         </form>
       </div>

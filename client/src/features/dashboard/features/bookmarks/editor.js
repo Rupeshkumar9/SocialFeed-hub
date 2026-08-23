@@ -17,6 +17,7 @@ const processCollections = (...args) => actions.processCollections(...args);
 const refreshLocalMetadataAndCounts = (...args) => actions.refreshLocalMetadataAndCounts(...args);
 const saveDataToServer = (...args) => actions.saveDataToServer(...args);
 const setManualImageFieldVisible = (...args) => actions.setManualImageFieldVisible(...args);
+const updateBrowserIconPreview = (...args) => actions.updateBrowserIconPreview(...args);
 const showToast = (...args) => actions.showToast(...args);
 const sortedCategoryItemsFromCounts = (...args) => actions.sortedCategoryItemsFromCounts(...args);
 const toggleSelectionMode = (...args) => actions.toggleSelectionMode(...args);
@@ -90,6 +91,7 @@ async function handleManualBookmarkSubmit(e) {
 
   const authorName = DOM.addAuthorName.value.trim();
   const content = DOM.addContent.value.trim();
+  const notes = DOM.addNotes ? DOM.addNotes.value.trim() : '';
   const tagListInput = DOM.addTags.value.trim();
   const imageUrl = DOM.addThumbnail ? DOM.addThumbnail.value.trim() : '';
   const url = DOM.addUrl.value.trim();
@@ -108,6 +110,14 @@ async function handleManualBookmarkSubmit(e) {
   if (!resolvedPlatform) return;
   const { platform, platformName } = resolvedPlatform;
 
+  if (platform === 'browser' && !authorName) {
+    DOM.addAuthorName?.setCustomValidity('Enter the site name for this link.');
+    DOM.addAuthorName?.reportValidity();
+    showToast('Site name is required for browser bookmarks.', 'error');
+    return;
+  }
+  DOM.addAuthorName?.setCustomValidity('');
+
   if (!platform) {
     showToast("Please select a platform.", "error");
     return;
@@ -122,6 +132,8 @@ async function handleManualBookmarkSubmit(e) {
       const browserUrlChanged = browser && (!previousBrowser || String(bm.url || '') !== url);
       const preview = browserUrlChanged ? await previewBrowserLink(url) : null;
       const canonical = browser ? (preview?.canonicalUrl || url.toLowerCase().replace(/\/$/, '')) : '';
+      const browserIcon = DOM.browserIconValue ? DOM.browserIconValue.value.trim() : '';
+      const browserIconCustom = DOM.browserIconValue?.dataset.custom === 'true';
       if (browser && AppState.bookmarks.some(item => item.id !== bm.id && (item.source === 'browser' || item.platform === 'browser') && (item.canonicalUrl || String(item.url || '').toLowerCase().replace(/\/$/, '')) === canonical)) {
         showToast("This browser bookmark is already saved.", "error");
         return;
@@ -134,9 +146,11 @@ async function handleManualBookmarkSubmit(e) {
       bm.folder = categoryVal;
       bm.source = browser ? 'browser' : 'social';
       bm.url = browser ? (preview?.url || url) : url;
+      bm.notes = notes;
       if (browser) {
         bm.canonicalUrl = canonical;
-        if (preview?.favicon) bm.favicon = preview.favicon;
+        bm.favicon = browserIcon || preview?.favicon || '';
+        bm.faviconCustom = browserIconCustom;
       }
       bm.thumbnail = imageUrl || bm.thumbnail || '';
 
@@ -184,6 +198,8 @@ async function handleManualBookmarkSubmit(e) {
   const browser = platform === 'browser';
   const preview = browser ? await previewBrowserLink(url) : null;
   const canonical = browser ? (preview?.canonicalUrl || url.toLowerCase().replace(/\/$/, '')) : '';
+  const browserIcon = DOM.browserIconValue ? DOM.browserIconValue.value.trim() : '';
+  const browserIconCustom = DOM.browserIconValue?.dataset.custom === 'true';
   if (browser && AppState.bookmarks.some(item => (item.source === 'browser' || item.platform === 'browser') && (item.canonicalUrl || String(item.url || '').toLowerCase().replace(/\/$/, '')) === canonical)) {
     showToast("This browser bookmark is already saved.", "error");
     return;
@@ -199,14 +215,15 @@ async function handleManualBookmarkSubmit(e) {
     source: browser ? 'browser' : 'social',
     url: browser ? (preview?.url || url) : url,
     canonicalUrl: browser ? canonical : undefined,
-    favicon: browser ? (preview?.favicon || '') : undefined,
+    favicon: browser ? (browserIcon || preview?.favicon || '') : undefined,
+    faviconCustom: browser ? browserIconCustom : false,
     authorName: authorName || (browser ? browserSite : defaultAuthorNameForPlatform(platform, platformName)),
     authorUsername: authorName ? authorName.toLowerCase().replace(/\s+/g, '') : (browser ? browserSite.replace(/^www\./, '') : platform),
-    content: content || (browser ? (preview?.title || 'Saved browser bookmark') : `Saved ${platformLabel(platform, platformName)} Post (click to load embed)`),
+    content: content || (browser ? (preview?.description || '') : `Saved ${platformLabel(platform, platformName)} Post (click to load embed)`),
     timestamp: new Date().toISOString(),
     hashtags: hashtags,
     folder: categoryVal,
-    notes: document.getElementById('add-notes')?.value.trim() || '',
+    notes,
     thumbnail: imageUrl || (browser ? (preview?.image || '') : '')
   };
 
@@ -396,6 +413,17 @@ function openBulkEditModal() {
     return;
   }
 
+  // A single selection should use the complete normal editor, since URL,
+  // content, image, and other unique fields can safely be edited there.
+  if (selectedIds.length === 1) {
+    const bookmark = AppState.bookmarks.find(bm => bm.id === selectedIds[0]);
+    if (bookmark) {
+      toggleSelectionMode(false);
+      openEditBookmarkModal(bookmark);
+    }
+    return;
+  }
+
   // Update label
   DOM.bulkEditCountLabel.textContent = `Editing ${selectedIds.length} selected bookmarks.`;
 
@@ -417,6 +445,14 @@ function openBulkEditModal() {
   const firstPlatform = selectedBookmarks[0] && selectedBookmarks[0].platform;
   const samePlatform = selectedBookmarks.length > 0 && selectedBookmarks.every(bm => bm.platform === firstPlatform);
   const categoryContext = sameBrowser ? { source: 'browser', platform: 'browser' } : { source: 'social', platform: samePlatform ? firstPlatform : 'all' };
+
+  if (DOM.bulkEditAuthorLabel) {
+    const allSocial = selectedBookmarks.every(bm => bm.source !== 'browser' && bm.platform !== 'browser');
+    DOM.bulkEditAuthorLabel.textContent = sameBrowser ? 'Site name' : (allSocial ? 'Author name' : 'Author / Site name');
+  }
+  if (DOM.bulkEditAuthorName) DOM.bulkEditAuthorName.value = '';
+  if (DOM.bulkEditNotesMode) DOM.bulkEditNotesMode.value = '__no_change__';
+  if (DOM.bulkEditNotes) DOM.bulkEditNotes.value = '';
   othersOpt.textContent = getCategoryDefaultLabel(categoryContext.source);
 
   const sortedCollections = sortedCategoryItemsFromCounts(getCategoryCountsForContext(categoryContext), categoryContext.source)
@@ -440,7 +476,6 @@ function openBulkEditModal() {
   DOM.bulkEditCategory.value = '__no_change__';
   DOM.bulkEditCategoryNew.style.display = 'none';
   DOM.bulkEditCategoryNew.value = '';
-  DOM.bulkEditPlatform.value = '__no_change__';
 
   // Show modal
   DOM.bulkEditModalOverlay.classList.add('active');
@@ -463,7 +498,15 @@ function handleBulkEditSubmit(e) {
     }
   }
 
-  const platformVal = DOM.bulkEditPlatform.value;
+  const authorName = DOM.bulkEditAuthorName?.value.trim() || '';
+  const notesMode = DOM.bulkEditNotesMode?.value || '__no_change__';
+  const notesValue = DOM.bulkEditNotes?.value.trim() || '';
+
+  if ((notesMode === 'append' || notesMode === 'replace') && !notesValue) {
+    showToast('Enter a note or choose Keep Original / Clear Notes.', 'error');
+    DOM.bulkEditNotes?.focus();
+    return;
+  }
 
   let changedCount = 0;
 
@@ -485,11 +528,21 @@ function handleBulkEditSubmit(e) {
         }
       }
 
-      // 2. Update Platform
-      if (platformVal !== '__no_change__') {
-        bm.platform = platformVal;
-        bm.platformName = '';
-        bm.source = 'social';
+      // 2. Update display name without changing platform identity or username
+      if (authorName) {
+        bm.authorName = authorName;
+        bookmarkChanged = true;
+      }
+
+      // 3. Update notes using an explicit, non-destructive default
+      if (notesMode !== '__no_change__') {
+        if (notesMode === 'append') {
+          bm.notes = bm.notes ? `${bm.notes}\n${notesValue}` : notesValue;
+        } else if (notesMode === 'replace') {
+          bm.notes = notesValue;
+        } else if (notesMode === 'clear') {
+          bm.notes = '';
+        }
         bookmarkChanged = true;
       }
 
@@ -531,18 +584,27 @@ function openEditBookmarkModal(bm) {
   DOM.addUrl.readOnly = false;
 
   const addPlatformSelect = document.getElementById('add-platform');
+  const isBrowserBookmark = bm.source === 'browser' || bm.platform === 'browser';
   if (addPlatformSelect) {
-    const isBrowser = bm.source === 'browser' || bm.platform === 'browser';
+    const isBrowser = isBrowserBookmark;
     const isCustom = !isBrowser && !isKnownSocialPlatform(bm.platform);
     addPlatformSelect.value = isBrowser ? 'browser' : (isCustom ? '__custom__' : bm.platform);
     updateManualModalPlatformUI(addPlatformSelect.value);
     if (isCustom && DOM.addCustomPlatformName) DOM.addCustomPlatformName.value = bm.platformName || platformLabel(bm.platform);
+    if (DOM.browserIconValue) {
+      DOM.browserIconValue.value = isBrowser ? (bm.favicon || '') : '';
+      DOM.browserIconValue.dataset.custom = isBrowser && bm.faviconCustom === true ? 'true' : 'false';
+    }
   }
 
   DOM.addAuthorName.value = bm.authorName || '';
   DOM.addContent.value = bm.content || '';
-  if (DOM.addThumbnail) DOM.addThumbnail.value = bm.thumbnail || '';
-  setManualImageFieldVisible(!!bm.thumbnail);
+  if (DOM.addNotes) DOM.addNotes.value = bm.notes || '';
+  if (isBrowserBookmark) updateBrowserIconPreview();
+  if (!isBrowserBookmark) {
+    if (DOM.addThumbnail) DOM.addThumbnail.value = bm.thumbnail || '';
+    setManualImageFieldVisible(!!bm.thumbnail);
+  }
 
   const userTags = bm.hashtags || [];
   DOM.addTags.value = userTags.join(', ');
@@ -570,7 +632,12 @@ async function previewBrowserLink(url) {
     if (requestId !== previewRequestId || document.getElementById('add-platform')?.value !== 'browser' || DOM.addUrl.value.trim() !== url) return null;
     if (!response.ok) throw new Error(data.error || "Preview unavailable");
     AppState.linkPreview = data;
-    if (DOM.addContent && !DOM.addContent.value) DOM.addContent.value = data.description || data.title || "";
+    if (DOM.browserIconValue && DOM.browserIconValue.dataset.custom !== 'true') {
+      DOM.browserIconValue.value = data.favicon || '';
+      DOM.browserIconValue.dataset.custom = 'false';
+      updateBrowserIconPreview();
+    }
+    if (DOM.addContent && !DOM.addContent.value) DOM.addContent.value = data.description || "";
     if (DOM.addAuthorName && !DOM.addAuthorName.value) DOM.addAuthorName.value = data.siteName || "";
     if (status) status.textContent = "Preview found: " + (data.title || data.siteName);
     return data;
