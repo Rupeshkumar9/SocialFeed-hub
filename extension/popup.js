@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 5. Detect if we are on Instagram or X
+  // 5. Detect supported social platforms
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tabs || tabs.length === 0) {
@@ -317,9 +317,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       detectedPlatform = activePlatform;
       pageTypeEl.textContent = 'X / Twitter';
       btnScan.disabled = false;
+    } else if (url.includes('threads.com') || url.includes('threads.net')) {
+      activePlatform = 'threads';
+      detectedPlatform = activePlatform;
+      pageTypeEl.textContent = 'Threads';
+      btnScan.disabled = false;
     } else {
       pageTypeEl.textContent = 'Unsupported Site';
-      showError('Please navigate to Instagram Saved page or X Bookmarks page to scan.');
+      showError('Open Instagram Saved, Threads Saved, or X Bookmarks to scan posts.');
     }
   } catch (err) {
     console.error(err);
@@ -369,8 +374,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         scrapedData.push({
           id: item.id,
-          platform: detectedPlatform,
-          source: detectedPlatform === 'browser' ? 'browser' : 'social',
+          platform: item.platform || detectedPlatform,
+          platformItemId: item.platformItemId || '',
+          source: (item.platform || detectedPlatform) === 'browser' ? 'browser' : 'social',
           folder: item.folder || '',
           url: item.url,
           authorName: item.authorName,
@@ -379,6 +385,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           postUploadedAt: item.postUploadedAt || '',
           extensionScrapedAt: item.extensionScrapedAt || new Date().toISOString(),
           hashtags: item.hashtags || [],
+          authorAvatar: item.authorAvatar || '',
+          mediaUrls: item.mediaUrls || [],
+          videoUrl: item.videoUrl || '',
+          externalUrls: item.externalUrls || [],
           notes: '',
           thumbnail: base64Image
         });

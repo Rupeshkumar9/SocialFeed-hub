@@ -30,21 +30,14 @@
     
     // Reset scroll to top to scan everything from the beginning
     window.scrollTo(0, 0);
+    collectVisibleItems();
 
     scrollInterval = setInterval(() => {
       // 1. Scroll down incrementally
       window.scrollBy(0, 600);
 
       // 2. Perform DOM scraping of visible elements
-      const platform = window.location.href.includes("instagram.com") ? "instagram" : "x";
-      const newItems = platform === "instagram" ? scrapeInstagram() : scrapeTwitter();
-
-      // Deduplicate and store
-      newItems.forEach(item => {
-        if (!collectedMap.has(item.url)) {
-          collectedMap.set(item.url, item);
-        }
-      });
+      collectVisibleItems();
 
       // 3. Send progress update to popup
       chrome.runtime.sendMessage({
@@ -73,6 +66,57 @@
         stopAutoScrollScan(false);
       }
     }, 500); // Scan and scroll every 500ms
+  }
+
+  function detectPlatform() {
+    const host = window.location.hostname.toLowerCase();
+    if (host === 'instagram.com' || host.endsWith('.instagram.com')) return 'instagram';
+    if (host === 'threads.com' || host.endsWith('.threads.com') || host === 'threads.net' || host.endsWith('.threads.net')) return 'threads';
+    if (host === 'x.com' || host.endsWith('.x.com') || host === 'twitter.com' || host.endsWith('.twitter.com')) return 'x';
+    return '';
+  }
+
+  function collectVisibleItems() {
+    const platform = detectPlatform();
+    const newItems = platform === 'instagram'
+      ? scrapeInstagram()
+      : platform === 'threads'
+        ? scrapeThreads()
+        : platform === 'x'
+          ? scrapeTwitter()
+          : [];
+
+    newItems.forEach(item => {
+      if (!item.url) return;
+      const previous = collectedMap.get(item.url);
+      if (!previous) {
+        collectedMap.set(item.url, item);
+        return;
+      }
+      // Virtualized feeds can reveal text/media a moment after the card first
+      // appears. Refresh an existing item with the richer visible snapshot.
+      collectedMap.set(item.url, {
+        ...previous,
+        ...item,
+        content: item.content && item.content !== 'Saved Threads post' ? item.content : previous.content,
+        imageUrl: item.imageUrl || previous.imageUrl,
+        mediaUrls: Array.from(new Set([...(previous.mediaUrls || []), ...(item.mediaUrls || [])])),
+        externalUrls: Array.from(new Set([...(previous.externalUrls || []), ...(item.externalUrls || [])])),
+        videoUrl: item.videoUrl || previous.videoUrl,
+        extensionScrapedAt: previous.extensionScrapedAt
+      });
+    });
+  }
+
+  function extractHashtags(content) {
+    const hashtags = [];
+    const hashtagRegex = /#([\p{L}\p{N}_-]+)/gu;
+    let tagMatch;
+    while ((tagMatch = hashtagRegex.exec(content || '')) !== null) {
+      const tag = tagMatch[1].toLowerCase();
+      if (!hashtags.includes(tag)) hashtags.push(tag);
+    }
+    return hashtags;
   }
 
   function stopAutoScrollScan(wasCancelled = false) {
@@ -164,13 +208,7 @@
 
         const extensionScrapedAt = new Date().toISOString();
 
-        const hashtagRegex = /#(\w+)/g;
-        const hashtags = [];
-        let tagMatch;
-        while ((tagMatch = hashtagRegex.exec(content)) !== null) {
-          const t = tagMatch[1].toLowerCase();
-          if (!hashtags.includes(t)) hashtags.push(t);
-        }
+        const hashtags = extractHashtags(content);
         
         items.push({
           id: `ig_${code}`,
@@ -185,6 +223,113 @@
         });
       } catch (err) {
         console.error("Error Instagram element:", err);
+      }
+    });
+
+    return items;
+  }
+
+  // ==========================================
+  // Threads Scraper Logic
+  // ==========================================
+  function scrapeThreads() {
+    const items = [];
+    const seenCards = new Set();
+    const datedPostLinks = document.querySelectorAll('a[href*="/post/"]:not([href$="/media"])');
+
+    datedPostLinks.forEach(link => {
+      try {
+        const timeEl = link.querySelector('time');
+        if (!timeEl) return;
+
+        const container = link.closest('[data-pressable-container="true"]');
+        if (!container || seenCards.has(container)) return;
+        if (container.parentElement?.closest('[data-pressable-container="true"]')) return;
+        seenCards.add(container);
+
+        const rawHref = link.getAttribute('href') || '';
+        const postMatch = rawHref.match(/\/@([^/?#]+)\/post\/([a-zA-Z0-9_-]+)/i);
+        if (!postMatch) return;
+
+        const authorUsername = decodeURIComponent(postMatch[1]).replace(/^@/, '');
+        const postId = postMatch[2];
+        const postUrl = `https://www.threads.com/@${encodeURIComponent(authorUsername)}/post/${postId}`;
+
+        const profileLinks = Array.from(container.querySelectorAll('a[href^="/@"]'));
+        const authorLink = profileLinks.find(profileLink => {
+          const href = (profileLink.getAttribute('href') || '').replace(/\/+$/, '');
+          return href.toLowerCase() === `/@${authorUsername}`.toLowerCase();
+        });
+
+        const mediaImages = Array.from(container.querySelectorAll('img')).filter(img => {
+          const alt = img.getAttribute('alt') || '';
+          return !/profile picture/i.test(alt) && Boolean(img.currentSrc || img.getAttribute('src'));
+        });
+        const mediaAlt = mediaImages.map(img => img.getAttribute('alt') || '').find(Boolean) || '';
+        const displayNameMatch = mediaAlt.match(/^(?:Photo|Video) by (.+?) on [A-Z][a-z]+ \d{1,2}, \d{4}/i);
+        const authorName = (displayNameMatch?.[1] || authorLink?.textContent || authorUsername).trim();
+
+        let postUploadedAt = '';
+        const datetime = timeEl.getAttribute('datetime') || '';
+        const parsedDate = new Date(datetime);
+        if (!Number.isNaN(parsedDate.getTime())) postUploadedAt = parsedDate.toISOString();
+
+        const orderedDescendants = Array.from(container.querySelectorAll('*'));
+        const timeIndex = orderedDescendants.indexOf(timeEl);
+        const candidateTextNodes = Array.from(container.querySelectorAll('[dir="auto"]')).filter(node => {
+          const text = (node.textContent || '').trim();
+          if (!text || /^\d+(?:[.,]\d+)?[KMB]?$/i.test(text)) return false;
+          if (node.closest('button') || node.closest('a[href*="/post/"]')) return false;
+          if (authorLink && authorLink.contains(node)) return false;
+          return orderedDescendants.indexOf(node) > timeIndex;
+        });
+        const topLevelTextNodes = candidateTextNodes.filter(node =>
+          !candidateTextNodes.some(other => other !== node && other.contains(node))
+        );
+        const contentParts = [];
+        topLevelTextNodes.forEach(node => {
+          const text = (node.innerText || node.textContent || '').trim();
+          if (text && contentParts[contentParts.length - 1] !== text) contentParts.push(text);
+        });
+        const content = contentParts.join('\n').trim() || 'Saved Threads post';
+
+        const mediaUrls = Array.from(new Set(mediaImages.map(img => img.currentSrc || img.getAttribute('src')).filter(Boolean)));
+        const videoEl = container.querySelector('video');
+        const videoUrl = videoEl ? (videoEl.currentSrc || videoEl.getAttribute('src') || '') : '';
+        const videoPoster = videoEl ? (videoEl.getAttribute('poster') || '') : '';
+        const imageUrl = mediaUrls[0] || videoPoster || null;
+        const avatarEl = container.querySelector('img[alt*="profile picture" i]');
+
+        const externalUrls = Array.from(new Set(Array.from(container.querySelectorAll('a[href]')).map(anchor => {
+          try {
+            const url = new URL(anchor.href, window.location.origin);
+            if (url.hostname === 'l.threads.com' && url.searchParams.get('u')) return url.searchParams.get('u');
+            if (!/(^|\.)threads\.(?:com|net)$/i.test(url.hostname)) return url.href;
+          } catch (error) {
+            return '';
+          }
+          return '';
+        }).filter(Boolean)));
+
+        items.push({
+          id: `threads_${postId}`,
+          platform: 'threads',
+          platformItemId: postId,
+          url: postUrl,
+          authorName,
+          authorUsername,
+          authorAvatar: avatarEl ? (avatarEl.currentSrc || avatarEl.getAttribute('src') || '') : '',
+          content,
+          postUploadedAt,
+          extensionScrapedAt: new Date().toISOString(),
+          hashtags: extractHashtags(content),
+          imageUrl,
+          mediaUrls,
+          videoUrl,
+          externalUrls
+        });
+      } catch (error) {
+        console.error('Error Threads element:', error);
       }
     });
 
@@ -255,13 +400,7 @@
           }
         }
 
-        const hashtagRegex = /#(\w+)/g;
-        const hashtags = [];
-        let tagMatch;
-        while ((tagMatch = hashtagRegex.exec(content)) !== null) {
-          const t = tagMatch[1].toLowerCase();
-          if (!hashtags.includes(t)) hashtags.push(t);
-        }
+        const hashtags = extractHashtags(content);
 
         items.push({
           id: `x_${tweetId}`,

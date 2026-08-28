@@ -6,6 +6,7 @@ const {
   normalizeExtensionOrigin,
   setExtensionCors
 } = require('../api/lib/extension-auth');
+const { canonicalUrl, detectPlatform, extractPlatformItemId } = require('../api/lib/bookmark-utils');
 
 test('recognizes extension origins used by current browser families', () => {
   assert.equal(isBrowserExtensionOrigin('chrome-extension://abcdefghijklmnopqrstuvwxyzabcdef'), true);
@@ -51,4 +52,11 @@ test('does not emit CORS headers for an ordinary website', () => {
 
   assert.equal(setExtensionCors(req, res), false);
   assert.deepEqual(headers, {});
+});
+
+test('recognizes current and legacy Threads URLs consistently', () => {
+  assert.equal(detectPlatform('https://www.threads.com/@openai/post/ABC_123'), 'threads');
+  assert.equal(detectPlatform('https://www.threads.net/@openai/post/ABC_123'), 'threads');
+  assert.equal(extractPlatformItemId('https://www.threads.com/@openai/post/ABC_123', 'threads'), 'ABC_123');
+  assert.equal(canonicalUrl('https://www.threads.net/@openai/post/ABC_123?utm_source=test'), 'threads.com/@openai/post/abc_123');
 });

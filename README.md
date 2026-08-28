@@ -1,18 +1,18 @@
 # SocialFeed Hub 🚀
-> A premium, elegant, and secure bookmarks feed manager dashboard to curate, search, and view your saved bookmarks from **X (Twitter)** and **Instagram** in one unified feed.
+> A premium, elegant, and secure bookmarks feed manager dashboard to curate, search, and view your saved bookmarks from **X (Twitter)**, **Instagram**, and **Threads** in one unified feed.
 
 ---
 
 ## ✨ Features
 
-* **Multi-Platform Support**: Beautifully render curated posts from X/Twitter and Instagram with standard platform branding, author cards, post content, and image previews.
+* **Multi-Platform Support**: Beautifully render curated posts from X/Twitter, Instagram, and Threads with standard platform branding, author cards, post content, and image previews.
 * **Database & Media Cloud Storage**: Backed by **MongoDB Atlas** for bookmarks data and **Cloudinary** for automatic Base64 image compression and standard JPG/PNG hosting.
 * **Portfolio-Style Admin Protection**: 
   * **Visitor View**: A clean, read-only feed. Visitors can search, view cards, read your custom notes, and click links, but cannot modify anything.
   * **Admin View**: Locked behind a secure password. Logging in unlocks manual bookmark additions, inline note editing, collection/folder updates, bulk selection actions, and item deletion.
 * **Advanced Layout Controls**: Toggle between **Grid**, **List**, and **Compact** card layouts on-the-fly.
 * **Granular Filtering & Analytics**: Filter by platform type, custom folder collections, or hashtags. Features a collapsible **Analytics Dashboard** highlighting tag clouds, collection counts, and platform splits.
-* **Chrome Scraper Extension**: Includes a custom browser extension to scroll your X Bookmarks timeline or Instagram Saved collection and download them directly into the dashboard.
+* **Chrome Scraper Extension**: Includes a custom browser extension to scroll X Bookmarks, Instagram Saved, or Threads Saved and download or sync them directly into the dashboard.
 
 ---
 

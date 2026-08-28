@@ -13,7 +13,7 @@ function detectPlatform(url = '') {
   const lower = String(url).toLowerCase();
   if (lower.includes('instagram.com')) return 'instagram';
   if (lower.includes('x.com') || lower.includes('twitter.com')) return 'x';
-  if (lower.includes('threads.net')) return 'threads';
+  if (lower.includes('threads.net') || lower.includes('threads.com')) return 'threads';
   if (lower.includes('reddit.com') || lower.includes('redd.it')) return 'reddit';
   if (lower.includes('facebook.com') || lower.includes('fb.watch')) return 'facebook';
   if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
@@ -66,6 +66,7 @@ function canonicalUrl(url = '') {
     const urlObj = new URL(url);
     let host = urlObj.hostname.toLowerCase().replace(/^mobile\./, '').replace(/^www\./, '');
     if (host === 'x.com') host = 'twitter.com';
+    if (host === 'threads.net') host = 'threads.com';
     if (host === 'redd.it') host = 'reddit.com';
 
     const trackingPrefixes = ['utm_', 'fbclid', 'gclid', 'igshid', 'si'];

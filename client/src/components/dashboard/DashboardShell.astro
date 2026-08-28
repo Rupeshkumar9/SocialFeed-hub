@@ -171,7 +171,7 @@
           <div class="settings-layout">
             <div class="settings-main-column">
               <article class="settings-card"><h3><i class="app-icon icon-user"></i> Personal Information</h3><p>Update the account name and email used for your SocialFeed Hub workspace.</p><div class="settings-details account-details"><div class="account-detail-row"><div><span>Profile name</span><strong id="settings-profile-name">SocialFeed Owner</strong><input id="settings-profile-name-input" type="text" maxlength="80" autocomplete="name" hidden></div><button type="button" class="settings-inline-action account-edit-button" id="btn-edit-account-name">Edit</button></div><div class="account-detail-row"><div><span>Email address</span><strong id="settings-profile-email">Private account</strong><input id="settings-profile-email-input" type="email" autocomplete="email" hidden></div><button type="button" class="settings-inline-action account-edit-button" id="btn-edit-account-email">Edit</button></div><div><span>Account access</span><strong>Private dashboard</strong></div><div><span>Member since</span><strong id="settings-member-since">—</strong></div></div></article>
-              <article class="settings-card"><h3><i class="app-icon icon-database"></i> Data management</h3><p>Import an archive or export a backup of your saved library.</p><div class="settings-data-actions"><button type="button" class="settings-inline-action" id="action-import"><i class="app-icon icon-file-import"></i> Import Archive</button><button type="button" class="settings-inline-action" id="action-export-json"><i class="app-icon icon-download"></i> Export JSON</button></div></article>
+              <article class="settings-card"><h3><i class="app-icon icon-database"></i> Data management</h3><p>Import an archive or download a complete backup directly from MongoDB.</p><div class="settings-data-actions"><button type="button" class="settings-inline-action" id="action-import"><i class="app-icon icon-file-import"></i> Import Archive</button><button type="button" class="settings-inline-action" id="action-export-json"><i class="app-icon icon-download"></i> Export Full Backup</button></div></article>
               <article class="settings-card"><h3><i class="app-icon icon-lock"></i> Change password</h3><p>Use a new password of at least 10 characters.</p><form id="change-password-form" class="account-security-form"><label>Current password<input id="current-password" type="password" autocomplete="current-password" required></label><label>New password<input id="new-password" type="password" minlength="10" autocomplete="new-password" required></label><label>Confirm new password<input id="confirm-password" type="password" minlength="10" autocomplete="new-password" required></label><div class="settings-form-actions"><span id="change-password-status" role="status"></span><button type="submit" class="btn-primary" id="btn-change-password">Change password</button></div></form></article>
               <article class="settings-card danger-zone-card"><h3><i class="app-icon icon-trash"></i> Delete account</h3><p>Permanently delete your account, saved links, social posts, profile, and connected extensions.</p><button type="button" class="danger-action" id="btn-delete-account">Delete account</button></article>
               <article class="settings-card"><h3><i class="app-icon icon-credit-card"></i> Manage Your Subscription</h3><p class="coming-soon">Coming soon</p></article>
@@ -405,7 +405,7 @@
               <i class="app-icon icon-cloud-arrow-up"></i>
             </div>
             <p>Drag and drop your exported archive file here</p>
-            <p class="drag-drop-sub">Supports Twitter bookmark HTML/JSON or Instagram saved_posts.json</p>
+            <p class="drag-drop-sub">Supports SocialFeed extension JSON, X archives, and Instagram saved_posts.json</p>
             <button class="btn-secondary" style="margin-top: 8px;" id="btn-select-file">Browse File</button>
             <input type="file" id="import-file-input" style="display: none;" accept=".json,.html,.js">
           </div>
@@ -418,6 +418,7 @@
               <li><strong>Instagram</strong>: Go to Account Center &gt; Your Information and Permissions &gt; Download
                 your information. Request standard JSON format, select "Saved Items" only. Look for `saved_posts.json`
                 inside the ZIP.</li>
+              <li><strong>Threads</strong>: Use the SocialFeed extension on the Threads Saved page, then import its downloaded JSON package here.</li>
             </ul>
           </div>
         </div>

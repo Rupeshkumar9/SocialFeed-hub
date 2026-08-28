@@ -48,19 +48,40 @@ function saveDataToServer() {
     });
 }
 
-/**
- * Trigger manual backup download/**
- * Trigger manual backup download of bookmarks.json (Option A Fallback)
- */
-function triggerManualDownload() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState.bookmarks, null, 2));
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", "bookmarks.json");
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-  showToast("Downloaded bookmarks.json. Overwrite the file in your data/ folder to complete manual sync!", "success");
+/** Download a complete, server-generated backup independent of feed filters. */
+async function triggerManualDownload() {
+  const button = DOM.btnExportJson;
+  if (button) button.disabled = true;
+  showToast('Preparing a complete MongoDB backup…');
+
+  try {
+    const response = await fetch('/api/export', {
+      credentials: 'same-origin',
+      cache: 'no-store'
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || `Backup failed (${response.status}).`);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const fileName = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `socialfeed-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const downloadUrl = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.href = downloadUrl;
+    downloadAnchor.download = fileName;
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    URL.revokeObjectURL(downloadUrl);
+    showToast('Complete SocialFeed backup downloaded.', 'success');
+  } catch (error) {
+    console.error('Backup export failed:', error);
+    showToast(error.message || 'Unable to export the backup.', 'error');
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 /**

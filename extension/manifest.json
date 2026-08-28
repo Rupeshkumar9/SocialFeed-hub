@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SocialFeed Bookmarks Exporter",
-  "version": "1.2",
-  "description": "Scrapes and exports saved bookmarks from Instagram and X with embedded Base64 thumbnails, using automated scroll scanning.",
+  "version": "1.3",
+  "description": "Scrapes and exports saved posts from Instagram, Threads, and X with embedded Base64 thumbnails, using automated scroll scanning.",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
@@ -24,6 +24,8 @@
     "*://*.instagram.com/*",
     "*://*.x.com/*",
     "*://*.twitter.com/*",
+    "*://*.threads.com/*",
+    "*://*.threads.net/*",
     "*://*.cdninstagram.com/*",
     "*://*.fbcdn.net/*",
     "*://*.twimg.com/*",
@@ -34,7 +36,9 @@
       "matches": [
         "*://*.instagram.com/*",
         "*://*.x.com/*",
-        "*://*.twitter.com/*"
+        "*://*.twitter.com/*",
+        "*://*.threads.com/*",
+        "*://*.threads.net/*"
       ],
       "js": ["content.js"]
     }

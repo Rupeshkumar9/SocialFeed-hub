@@ -1,6 +1,6 @@
 /**
  * Bookmarks Importer Module
- * Handles client-side parsing of exported archive files from X and Instagram.
+ * Handles client-side parsing of extension exports and platform archives.
  */
 
 export const BookmarksImporter = {
@@ -176,6 +176,13 @@ export const BookmarksImporter = {
    */
   parseJSONData: function(data) {
     const imported = [];
+
+    // Case 0: Complete, versioned backup produced by SocialFeed Hub.
+    if (data?.format === 'socialfeed-bookmarks-backup' && Array.isArray(data.bookmarks)) {
+      return data.bookmarks
+        .map((item, index) => this.parseSocialFeedBackupItem(item, index))
+        .filter(Boolean);
+    }
     
     // Case A: Instagram Saved Posts export (saved_posts.json)
     // Structure: {"saved_saved_media": [{"title": "", "string_map_data": {"Saved Time": {"timestamp": 170...}}, "uri": "https://..."}]}
@@ -213,21 +220,29 @@ export const BookmarksImporter = {
     if (Array.isArray(data)) {
       data.forEach((item, index) => {
         if (item.url) {
-          const platform = this.detectPlatform(item.url);
+          const declaredPlatform = this.normalizePlatform(item.platform);
+          const platform = declaredPlatform || this.detectPlatform(item.url);
           if (platform) {
             imported.push({
               id: item.id || `${platform}_${Date.now()}_${index}`,
               platform: platform,
+              platformItemId: item.platformItemId || this.extractPlatformItemId(item.url, platform),
               url: item.url,
-              authorName: item.authorName || (platform === 'x' ? 'X User' : 'Instagram Creator'),
-              authorUsername: item.authorUsername || (platform === 'x' ? 'twitter_user' : 'instagram_user'),
+              authorName: item.authorName || this.defaultAuthorName(platform),
+              authorUsername: item.authorUsername || this.defaultAuthorUsername(platform),
               content: item.content || item.title || `Bookmarked ${platform.toUpperCase()} Link`,
               postUploadedAt: item.postUploadedAt || '',
               extensionScrapedAt: item.extensionScrapedAt || item.timestamp || new Date().toISOString(),
               timestamp: item.extensionScrapedAt || item.timestamp || new Date().toISOString(),
               hashtags: Array.isArray(item.hashtags) ? item.hashtags : [],
               notes: item.notes || '',
-              thumbnail: item.thumbnail || ''
+              thumbnail: item.thumbnail || item.imageUrl || '',
+              source: item.source || 'social',
+              folder: item.folder || '',
+              authorAvatar: item.authorAvatar || '',
+              mediaUrls: Array.isArray(item.mediaUrls) ? item.mediaUrls : [],
+              videoUrl: item.videoUrl || '',
+              externalUrls: Array.isArray(item.externalUrls) ? item.externalUrls : []
             });
           }
         }
@@ -247,14 +262,57 @@ export const BookmarksImporter = {
     return [];
   },
 
+  parseSocialFeedBackupItem: function(item, index) {
+    if (!item || typeof item !== 'object' || !item.url) return null;
+    const platform = this.normalizePlatform(item.platform) || this.detectPlatform(item.url);
+    if (!platform) return null;
+    return {
+      id: item.id || `${platform}_${Date.now()}_${index}`,
+      platform,
+      platformName: item.platformName || '',
+      platformItemId: item.platformItemId || this.extractPlatformItemId(item.url, platform),
+      canonicalUrl: item.canonicalUrl || '',
+      identityKey: item.identityKey || '',
+      source: item.source || (platform === 'browser' ? 'browser' : 'social'),
+      url: item.url,
+      authorName: item.authorName || this.defaultAuthorName(platform),
+      authorUsername: item.authorUsername || this.defaultAuthorUsername(platform),
+      authorAvatar: item.authorAvatar || '',
+      content: item.content || `Bookmarked ${platform.toUpperCase()} Link`,
+      postUploadedAt: item.postUploadedAt || '',
+      firstSavedAt: item.firstSavedAt || item.createdAt || item.extensionScrapedAt || '',
+      lastScannedAt: item.lastScannedAt || '',
+      extensionScrapedAt: item.extensionScrapedAt || item.firstSavedAt || item.timestamp || new Date().toISOString(),
+      sourceSavedAt: item.sourceSavedAt || item.firstSavedAt || '',
+      createdAt: item.createdAt || item.firstSavedAt || '',
+      timestamp: item.timestamp || item.firstSavedAt || item.extensionScrapedAt || new Date().toISOString(),
+      importSource: item.importSource || 'backup',
+      hashtags: Array.isArray(item.hashtags) ? item.hashtags : [],
+      notes: item.notes || '',
+      thumbnail: item.thumbnail || item.imageUrl || '',
+      favicon: item.favicon || '',
+      folder: item.folder || '',
+      visibility: item.visibility === 'public' ? 'public' : 'private',
+      featured: item.featured === true,
+      publicOrder: Number.isFinite(Number(item.publicOrder)) ? Number(item.publicOrder) : null,
+      publicTitle: item.publicTitle || '',
+      publicDescription: item.publicDescription || '',
+      visibilityUpdatedAt: item.visibilityUpdatedAt || null,
+      mediaUrls: Array.isArray(item.mediaUrls) ? item.mediaUrls : [],
+      videoUrl: item.videoUrl || '',
+      externalUrls: Array.isArray(item.externalUrls) ? item.externalUrls : []
+    };
+  },
+
   /**
    * Parse Raw Text / HTML files using regex to search for links
    */
   parseRawTextUrls: function(text) {
     const imported = [];
-    // Regex for X/Twitter and Instagram posts
+    // Regex for X/Twitter, Instagram, and Threads posts
     const twitterRegex = /https?:\/\/(?:mobile\.)?(?:twitter|x)\.com\/\w+\/status\/(\d+)/gi;
     const instagramRegex = /https?:\/\/(?:www\.)?instagram\.com\/(?:p|reels|reel)\/([a-zA-Z0-9_-]+)/gi;
+    const threadsRegex = /https?:\/\/(?:www\.)?threads\.(?:com|net)\/@([^\s/?#]+)\/post\/([a-zA-Z0-9_-]+)/gi;
     
     let match;
     let index = 0;
@@ -296,6 +354,21 @@ export const BookmarksImporter = {
       });
     }
 
+    while ((match = threadsRegex.exec(text)) !== null) {
+      imported.push({
+        id: `threads_${match[2]}`,
+        platform: 'threads',
+        platformItemId: match[2],
+        url: match[0],
+        authorName: match[1],
+        authorUsername: match[1],
+        content: 'Extracted Threads post',
+        timestamp: new Date().toISOString(),
+        hashtags: [],
+        notes: ''
+      });
+    }
+
     return imported;
   },
 
@@ -306,11 +379,39 @@ export const BookmarksImporter = {
     const lowerUrl = String(url || '').toLowerCase();
     if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) return 'x';
     if (lowerUrl.includes('instagram.com')) return 'instagram';
-    if (lowerUrl.includes('threads.net')) return 'threads';
+    if (lowerUrl.includes('threads.net') || lowerUrl.includes('threads.com')) return 'threads';
     if (lowerUrl.includes('reddit.com') || lowerUrl.includes('redd.it')) return 'reddit';
     if (lowerUrl.includes('facebook.com') || lowerUrl.includes('fb.watch')) return 'facebook';
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return 'youtube';
     return null;
+  },
+
+  normalizePlatform: function(platform) {
+    const normalized = String(platform || '').trim().toLowerCase();
+    const aliases = { twitter: 'x' };
+    const value = aliases[normalized] || normalized;
+    return ['instagram', 'x', 'threads', 'reddit', 'facebook', 'youtube', 'browser'].includes(value) ? value : null;
+  },
+
+  defaultAuthorName: function(platform) {
+    if (platform === 'x') return 'X User';
+    if (platform === 'instagram') return 'Instagram Creator';
+    if (platform === 'threads') return 'Threads Creator';
+    return 'Social Creator';
+  },
+
+  defaultAuthorUsername: function(platform) {
+    if (platform === 'x') return 'twitter_user';
+    if (platform === 'instagram') return 'instagram_user';
+    if (platform === 'threads') return 'threads_user';
+    return 'user';
+  },
+
+  extractPlatformItemId: function(url, platform) {
+    if (platform === 'threads') return url.match(/\/(?:@[^/]+\/)?post\/([a-zA-Z0-9_-]+)/i)?.[1] || '';
+    if (platform === 'x') return url.match(/\/status\/(\d+)/i)?.[1] || '';
+    if (platform === 'instagram') return this.extractInstagramCode(url) || '';
+    return '';
   },
 
   /**
@@ -366,6 +467,7 @@ export const BookmarksImporter = {
       // Ensure hostname is generic
       let host = urlObj.hostname.replace('mobile.', '').replace('www.', '');
       if (host === 'x.com') host = 'twitter.com';
+      if (host === 'threads.net') host = 'threads.com';
       if (host === 'redd.it') host = 'reddit.com';
       
       let path = urlObj.pathname;
