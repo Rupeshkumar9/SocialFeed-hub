@@ -45,11 +45,11 @@ function renderFeedLoadingState() {
   DOM.bookmarksGrid.innerHTML = `
     <div class="feed-loading-state" role="status" aria-live="polite">
       <i class="app-icon icon-circle-notch icon-spin" aria-hidden="true"></i>
-      <span>Loading bookmarks…</span>
+      <span>Loading ${AppState.activeSource === 'browser' ? 'links' : 'posts'}…</span>
     </div>
   `;
   updateFeedHeaders();
-  DOM.feedSubtitle.textContent = 'Loading bookmarks…';
+  DOM.feedSubtitle.textContent = `Loading ${AppState.activeSource === 'browser' ? 'links' : 'posts'}…`;
 }
 
 /**
@@ -275,11 +275,11 @@ function renderInfiniteScrollSentinel() {
   sentinel.id = "infinite-scroll-sentinel";
   sentinel.className = "infinite-scroll-sentinel";
   if (showing < total || AppState.isLoadingMore) {
-    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><i class=\"app-icon icon-circle-notch icon-spin\"></i><span>Loading more bookmarks…</span></div>";
+      sentinel.innerHTML = `<div class="infinite-scroll-spinner"><i class="app-icon icon-circle-notch icon-spin"></i><span>Loading more ${AppState.activeSource === 'browser' ? 'links' : 'posts'}…</span></div>`;
   } else if (AppState.hasMore) {
-    sentinel.innerHTML = "<div class=\"infinite-scroll-spinner\"><span>More bookmarks load automatically as you scroll</span></div>";
+    sentinel.innerHTML = `<div class="infinite-scroll-spinner"><span>More ${AppState.activeSource === 'browser' ? 'links' : 'posts'} load automatically as you scroll</span></div>`;
   } else {
-    sentinel.innerHTML = "<div class=\"infinite-scroll-end\">Showing all loaded bookmarks</div>";
+    sentinel.innerHTML = `<div class="infinite-scroll-end">Showing all loaded ${AppState.activeSource === 'browser' ? 'links' : 'posts'}</div>`;
   }
   DOM.bookmarksGrid.parentNode.insertBefore(sentinel, DOM.bookmarksGrid.nextSibling);
   if (showing < total || AppState.hasMore) initInfiniteScrollObserver();

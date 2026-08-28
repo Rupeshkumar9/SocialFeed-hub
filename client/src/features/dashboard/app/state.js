@@ -53,6 +53,7 @@ export const DOM = {
   searchInput: document.getElementById('search-input'),
   feedTitle: document.getElementById('feed-title'),
   feedSubtitle: document.getElementById('feed-subtitle'),
+  feedLoadedCount: document.getElementById('feed-loaded-count'),
   extensionView: document.getElementById('extension-view'),
   socialHeaderControls: document.getElementById('social-header-controls'),
   socialCategoryDropdown: document.getElementById('social-category-dropdown'),

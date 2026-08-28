@@ -16,6 +16,9 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
+# Local production migration backups (may contain private user data)
+.migration-backups/
+
 _docs_temp/
 
 # System and editor files

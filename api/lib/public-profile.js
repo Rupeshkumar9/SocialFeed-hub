@@ -204,14 +204,20 @@ async function getPublicCounts(db, userId) {
 
 function encodePublicCursor(bookmark) {
   if (!bookmark?._id || !bookmark.firstSavedAt) return null;
-  return Buffer.from(JSON.stringify({ date: bookmark.firstSavedAt, id: String(bookmark._id) })).toString('base64url');
+  return Buffer.from(JSON.stringify({
+    date: bookmark.firstSavedAt,
+    id: String(bookmark._id),
+    idType: bookmark._id instanceof ObjectId ? 'objectId' : 'string'
+  })).toString('base64url');
 }
 
 function decodePublicCursor(value) {
   if (!value) return null;
   try {
     const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
-    if (!parsed.date || !ObjectId.isValid(parsed.id)) return null;
+    if (!parsed.date || typeof parsed.id !== 'string' || !parsed.id) return null;
+    if (parsed.idType === 'string') return { date: parsed.date, id: parsed.id };
+    if (!ObjectId.isValid(parsed.id)) return null;
     return { date: parsed.date, id: new ObjectId(parsed.id) };
   } catch {
     return null;

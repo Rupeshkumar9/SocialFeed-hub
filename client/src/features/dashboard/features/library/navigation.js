@@ -538,13 +538,13 @@ function applyRouteFromHash(options = {}) {
     matched = true;
     setRoutePath('/dashboard');
     openProfileEdit();
-  } else if (hash === '#links' || hash === '#bookmarks') {
+  } else if (hash === '#mylinks' || hash === '#links' || hash === '#bookmarks') {
     AppState.activeSource = 'browser';
     AppState.activePlatform = 'all';
     AppState.activeCollection = 'all';
     AppState.nextCursor = null;
     matched = true;
-    if (hash === '#bookmarks') setRouteHash('#links');
+    if (hash !== '#mylinks') setRouteHash('#mylinks');
     closeSettings();
     closeExtension();
     closeProfileEdit();

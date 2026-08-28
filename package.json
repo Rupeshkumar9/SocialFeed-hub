@@ -9,6 +9,7 @@
     "dev:astro": "cross-env ASTRO_TELEMETRY_DISABLED=1 astro dev --host 0.0.0.0",
     "build:astro": "cross-env ASTRO_TELEMETRY_DISABLED=1 astro build",
     "build": "npm run build:astro",
+    "migrate:multi-user": "node scripts/migrate-single-user-to-multi-user.js",
     "preview": "astro preview",
     "start": "node server.js"
   },

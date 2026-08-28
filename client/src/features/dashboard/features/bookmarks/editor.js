@@ -477,6 +477,10 @@ function openBulkEditModal() {
   DOM.bulkEditCategoryNew.style.display = 'none';
   DOM.bulkEditCategoryNew.value = '';
 
+  // Keep the fixed selection ribbon behind the modal so it cannot cover the
+  // footer when the category field expands for a new category.
+  document.getElementById('bulk-action-bar')?.classList.remove('active');
+
   // Show modal
   DOM.bulkEditModalOverlay.classList.add('active');
 }
@@ -484,7 +488,7 @@ function openBulkEditModal() {
 /**
  * Handle form submission for bulk editing
  */
-function handleBulkEditSubmit(e) {
+async function handleBulkEditSubmit(e) {
   e.preventDefault();
   const selectedIds = Array.from(AppState.selectedIds);
   if (selectedIds.length === 0) return;
@@ -551,13 +555,19 @@ function handleBulkEditSubmit(e) {
   });
 
   if (changedCount > 0) {
-    saveDataToServer();
-    showToast(`Successfully updated ${changedCount} bookmarks!`, "success");
+    const submitButton = e.submitter || DOM.bulkEditForm?.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const synced = await saveDataToServer();
+      if (!synced) return;
 
-    DOM.bulkEditModalOverlay.classList.remove('active');
-    toggleSelectionMode(false);
-
-    refreshLocalMetadataAndCounts();
+      showToast(`Successfully updated ${changedCount} bookmarks!`, "success");
+      DOM.bulkEditModalOverlay.classList.remove('active');
+      toggleSelectionMode(false);
+      refreshLocalMetadataAndCounts();
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   } else {
     DOM.bulkEditModalOverlay.classList.remove('active');
   }

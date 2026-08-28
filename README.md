@@ -121,7 +121,25 @@ Start command: npm start
 Health check: /healthz
 ```
 
-Required environment variables include `MONGODB_URI`, `CLOUDINARY_URL`, `ADMIN_PASSWORD`, `SESSION_SECRET`, and `PUBLIC_SITE_URL` (the canonical HTTPS site origin). Optional SEO rollout flags are `PUBLIC_PRICING_INDEXABLE=true` and `PUBLIC_BLOG_INDEXABLE=true`; leave them unset while those pages are only Coming Soon placeholders. `MONGODB_SERVER_SELECTION_TIMEOUT_MS` can be used to bound database connection failures during server-rendered public-profile requests.
+Required environment variables include `MONGODB_URI`, `CLOUDINARY_URL`, `SESSION_SECRET`, and `PUBLIC_SITE_URL` (the canonical HTTPS site origin). `ADMIN_PASSWORD` is only a legacy fallback for `SESSION_SECRET` and should not be used for new deployments. Optional SEO rollout flags are `PUBLIC_PRICING_INDEXABLE=true` and `PUBLIC_BLOG_INDEXABLE=true`; leave them unset while those pages are only Coming Soon placeholders. `MONGODB_SERVER_SELECTION_TIMEOUT_MS` can be used to bound database connection failures during server-rendered public-profile requests.
+
+### One-time migration from the legacy single-user database
+
+The migration reads the legacy production `MONGODB_URI`, `PROFILE_EMAIL`, `PROFILE_NAME`, `ADMIN_PASSWORD`, and optional `MEMBER_SINCE` values from the commented production block in `.env`. It creates the first Mongo-backed user, attaches the legacy profile/bookmarks/extension devices to that user, fills missing bookmark identity and privacy fields, and installs the multi-user indexes.
+
+Run a read-only preflight first:
+
+```bash
+npm run migrate:multi-user
+```
+
+Apply after reviewing the preflight:
+
+```bash
+npm run migrate:multi-user -- --apply
+```
+
+Apply mode automatically writes an Extended JSON backup to the Git-ignored `.migration-backups/` directory before changing Atlas. The script refuses any URI that does not explicitly target `socialfeed_db` and refuses ambiguous mixed-owner or duplicate-identity data.
 
 Express remains the public HTTP server. It serves `/api/*`, enforces dashboard authentication, serves Astro's generated client assets, and loads `dist/astro/server/entry.mjs` as Astro middleware. Do not configure the service as a Vercel deployment or as a static-only site.
 

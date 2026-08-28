@@ -90,7 +90,7 @@ function applyFiltersAndSearch(options = {}) {
  */
 
 function updateFeedHeaders() {
-  let title = AppState.activeSource === "browser" ? "Links" : "All Posts";
+  let title = AppState.activeSource === "browser" ? "My Links" : "All Posts";
   const category = AppState.activeCollection && AppState.activeCollection !== "all"
     ? (AppState.activeCollection === "uncategorized" ? "Others" : AppState.activeCollection)
     : '';
@@ -100,7 +100,15 @@ function updateFeedHeaders() {
   if (AppState.activeSource === "social") title = category ? `${category} in ${platform}` : platform;
   DOM.feedTitle.hidden = AppState.activeSource === 'social';
   DOM.feedTitle.innerHTML = escapeHTML(title);
-  DOM.feedSubtitle.textContent = "Showing " + AppState.filteredBookmarks.length + " loaded bookmark" + (AppState.filteredBookmarks.length === 1 ? "" : "s");
+  const noun = AppState.activeSource === "browser" ? "link" : "post";
+  const loadedMessage = "Showing " + AppState.filteredBookmarks.length + " loaded " + noun + (AppState.filteredBookmarks.length === 1 ? "" : "s");
+  DOM.feedSubtitle.textContent = loadedMessage;
+  if (DOM.feedLoadedCount) {
+    DOM.feedLoadedCount.textContent = AppState.filteredBookmarks.length;
+    DOM.feedLoadedCount.title = loadedMessage;
+    DOM.feedLoadedCount.dataset.tooltip = loadedMessage;
+    DOM.feedLoadedCount.setAttribute('aria-label', loadedMessage);
+  }
   const browserItem = document.getElementById("sidebar-browser-item");
   if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser");
 }

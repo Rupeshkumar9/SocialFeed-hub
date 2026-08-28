@@ -277,6 +277,61 @@ function initEventListeners() {
     if (socialCategoryBtn) socialCategoryBtn.setAttribute('aria-expanded', 'false');
   };
 
+  // Feed controls live in one shared drawer for both My Links and Social Posts.
+  // The controls keep their original IDs so the existing filter, sort, layout,
+  // selection, and category handlers continue to operate on the same elements.
+  const optionsLayer = document.getElementById('feed-options-layer');
+  const optionsDrawer = document.getElementById('feed-options-drawer');
+  const optionsFab = document.getElementById('feed-options-fab');
+  const optionsBackdrop = document.getElementById('feed-options-backdrop');
+  const setFeedOptionsOpen = (open) => {
+    if (!optionsLayer || !optionsDrawer) return;
+    if (open) {
+      optionsLayer.hidden = false;
+      requestAnimationFrame(() => optionsLayer.classList.add('is-open'));
+    } else {
+      optionsLayer.classList.remove('is-open');
+      window.setTimeout(() => {
+        if (!optionsLayer.classList.contains('is-open')) optionsLayer.hidden = true;
+      }, 280);
+      closeAllToolbarDropdowns();
+    }
+    optionsDrawer.setAttribute('aria-hidden', String(!open));
+    optionsFab?.setAttribute('aria-expanded', String(open));
+  };
+
+  optionsFab?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setFeedOptionsOpen(optionsLayer?.hidden !== false);
+  });
+  optionsBackdrop?.addEventListener('click', () => setFeedOptionsOpen(false));
+  document.getElementById('feed-options-cancel')?.addEventListener('click', () => setFeedOptionsOpen(false));
+  document.getElementById('feed-options-apply')?.addEventListener('click', () => setFeedOptionsOpen(false));
+  document.getElementById('btn-select-mode')?.addEventListener('click', () => setFeedOptionsOpen(false));
+  document.getElementById('btn-add-bookmark')?.addEventListener('click', () => setFeedOptionsOpen(false));
+  document.getElementById('feed-options-clear')?.addEventListener('click', () => {
+    AppState.activePlatform = 'all';
+    AppState.activeCollection = 'all';
+    AppState.activeTag = 'all';
+    AppState.activeSort = 'recent-desc';
+    AppState.searchQuery = '';
+    if (DOM.searchInput) DOM.searchInput.value = '';
+    const activeSortLabel = document.getElementById('sort-active-label');
+    if (activeSortLabel) activeSortLabel.textContent = 'Newest First';
+    document.querySelectorAll('#toolbar-sort-menu [data-sort]').forEach(item => {
+      const active = item.dataset.sort === 'recent-desc';
+      item.classList.toggle('active', active);
+      item.querySelector('.check-icon')?.style.setProperty('visibility', active ? 'visible' : 'hidden');
+    });
+    setRouteHash(AppState.activeSource === 'social' ? '#platform=all' : '#mylinks');
+    AppState.nextCursor = null;
+    syncFilterSelects();
+    updateSidebarNavigation();
+    if (AppState.isServerConnected) loadData({ navigation: true });
+    else applyFiltersAndSearch();
+    setFeedOptionsOpen(false);
+  });
+
   if (platformFilterBtn && platformFilterMenu) {
     platformFilterBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -413,9 +468,12 @@ function initEventListeners() {
       row?.querySelector('.browser-row-menu')?.setAttribute('aria-expanded', 'false');
       el.closest('.bookmark-card')?.querySelector('.btn-card-menu')?.setAttribute('aria-expanded', 'false');
     });
-    document.querySelectorAll('.card-category-popover.active').forEach(el => {
+  document.querySelectorAll('.card-category-popover.active').forEach(el => {
       el.classList.remove('active');
     });
+    if (optionsLayer && !optionsLayer.hidden && optionsDrawer && !optionsDrawer.contains(event.target)) {
+      setFeedOptionsOpen(false);
+    }
     const account = document.getElementById('dashboard-account');
     const accountMenu = document.getElementById('dashboard-account-menu');
     const accountTrigger = document.getElementById('dashboard-account-trigger');
@@ -449,6 +507,10 @@ function initEventListeners() {
       const activeBtn = activeMenu === sortMenu ? sortBtn : activeMenu === layoutMenu ? layoutBtn : activeMenu === dataMenu ? dataBtn : activeMenu === categoryMenu ? categoryBtn : activeMenu === platformFilterMenu ? platformFilterBtn : activeMenu === socialCategoryMenu ? socialCategoryBtn : null;
 
       closeAllToolbarDropdowns();
+
+      if (optionsLayer && !optionsLayer.hidden) {
+        setFeedOptionsOpen(false);
+      }
 
       if (activeBtn) {
         activeBtn.focus();
@@ -962,7 +1024,7 @@ function initPrivateEventListeners() {
     AppState.activePlatform = 'all';
     AppState.activeCollection = 'all';
     AppState.nextCursor = null;
-    setRouteHash('#links');
+    setRouteHash('#mylinks');
     updateSidebarNavigation();
     loadData({ navigation: true });
   });

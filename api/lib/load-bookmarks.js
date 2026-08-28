@@ -9,7 +9,9 @@ function decodeCursor(value) {
   if (!value) return null;
   try {
     const data = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
-    if (!data.date || !ObjectId.isValid(data.id)) return null;
+    if (!data.date || typeof data.id !== 'string' || !data.id) return null;
+    if (data.idType === 'string') return { date: data.date, id: data.id };
+    if (!ObjectId.isValid(data.id)) return null;
     return { date: data.date, id: new ObjectId(data.id) };
   } catch (error) {
     return null;
@@ -17,7 +19,11 @@ function decodeCursor(value) {
 }
 
 function encodeCursor(bookmark) {
-  return Buffer.from(JSON.stringify({ date: bookmark.firstSavedAt || bookmark.createdAt || bookmark.extensionScrapedAt, id: bookmark._id.toString() })).toString('base64url');
+  return Buffer.from(JSON.stringify({
+    date: bookmark.firstSavedAt || bookmark.createdAt || bookmark.extensionScrapedAt,
+    id: bookmark._id.toString(),
+    idType: bookmark._id instanceof ObjectId ? 'objectId' : 'string'
+  })).toString('base64url');
 }
 
 async function loadBookmarks(query = {}, userId) {

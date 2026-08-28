@@ -131,7 +131,7 @@
             <ul class="menu-list sidebar-primary-list" id="sidebar-primary-list">
               <li class="menu-item" id="sidebar-profile-item"><button type="button" id="btn-sidebar-profile" data-sidebar-route="/dashboard"><i
                     class="app-icon icon-user"></i><span>My Profile</span></button></li>
-              <li class="menu-item active" id="sidebar-browser-item"><button type="button" id="btn-browser-bookmarks" data-sidebar-route="#links"><i class="app-icon icon-bookmark"></i><span>Links</span><span class="menu-count" id="count-browser-bookmarks">0</span></button></li>
+              <li class="menu-item active" id="sidebar-browser-item"><button type="button" id="btn-browser-bookmarks" data-sidebar-route="#mylinks"><i class="app-icon icon-bookmark"></i><span>My Links</span><span class="menu-count" id="count-browser-bookmarks">0</span></button></li>
               <li class="menu-item" id="sidebar-social-posts-item"><button type="button" id="btn-social-posts" data-platform="all" data-sidebar-route="#platform=all"><i
                     class="app-icon icon-circle-nodes"></i><span>Social Posts</span><span class="menu-count"
                     id="sidebar-count-platform-all">0</span></button></li>
@@ -222,131 +222,107 @@
         </section>
 
         <section class="feed-content" id="feed-content">
-          <div class="feed-section-header feed-header-collapsed" id="feed-section-header">
+          <div class="feed-section-header" id="feed-section-header" hidden aria-hidden="true">
             <div class="feed-title-area">
-              <div class="feed-title-row">
-                <h2 id="feed-title">All Bookmarks</h2>
-                <div class="social-header-controls" id="social-header-controls" hidden>
-                  <div class="toolbar-dropdown social-category-dropdown" id="social-category-dropdown" style="position: relative;" hidden>
-                    <button class="toolbar-btn dropdown-toggle social-header-filter-btn" id="social-category-btn" aria-label="Post categories"
-                      title="Post categories" aria-expanded="false" type="button">
-                      <i class="app-icon icon-folder-tree"></i>
-                      <span class="btn-label" id="social-category-label">All Categories</span>
-                      <i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i>
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-right" id="social-category-menu" role="menu"></div>
-                  </div>
-                  <button type="button" class="category-rename-btn social-category-rename-btn" id="social-category-rename" data-category-rename="social" aria-label="Rename category" title="Rename category" hidden>
-                    <i class="app-icon icon-pen"></i>
-                  </button>
-                </div>
-              </div>
-              <p id="feed-subtitle">Showing all saved bookmark feeds</p>
+              <div class="feed-title-row"><h2 id="feed-title">My Links</h2></div>
+              <p id="feed-subtitle">Showing 0 loaded links</p>
             </div>
-
-            <div class="action-toolbar" id="action-toolbar">
-              <!-- Select mode -->
-              <button class="toolbar-btn" id="btn-select-mode" aria-label="Select Mode" title="Select Mode"
-                type="button">
-                <i class="app-icon icon-square-check"></i>
-                <span class="btn-label">Select Mode</span>
-              </button>
-
-              <!-- Social post platform filter -->
-              <div class="toolbar-dropdown platform-filter-toolbar" id="platform-filter-dropdown" style="position: relative;" hidden>
-                <button class="toolbar-btn dropdown-toggle" id="platform-filter-btn" aria-label="Social Posts"
-                  title="Social Posts" aria-expanded="false" type="button">
-                  <i class="app-icon icon-circle-nodes"></i>
-                  <span class="btn-label" id="platform-filter-label">All Posts</span>
-                  <i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right" id="platform-filter-menu" role="menu">
-                  <button class="dropdown-item active" data-platform="all" data-sidebar-route="#platform=all" role="menuitem" type="button"><i class="app-icon icon-check check-icon"></i><i class="app-icon icon-circle-nodes"></i><span class="btn-text">All Posts</span><span class="menu-count" id="count-platform-all">0</span></button>
-                  <button class="dropdown-item" data-platform="instagram" data-sidebar-route="#platform=instagram" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-instagram"></i><span class="btn-text">Instagram</span><span class="menu-count" id="count-platform-instagram">0</span></button>
-                  <button class="dropdown-item" data-platform="x" data-sidebar-route="#platform=x" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><svg class="platform-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z"/></svg><span class="btn-text">X / Twitter</span><span class="menu-count" id="count-platform-x">0</span></button>
-                  <button class="dropdown-item" data-platform="threads" data-sidebar-route="#platform=threads" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><svg class="platform-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z"/></svg><span class="btn-text">Threads</span><span class="menu-count" id="count-platform-threads">0</span></button>
-                  <button class="dropdown-item" data-platform="reddit" data-sidebar-route="#platform=reddit" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-reddit-alien"></i><span class="btn-text">Reddit</span><span class="menu-count" id="count-platform-reddit">0</span></button>
-                  <button class="dropdown-item" data-platform="facebook" data-sidebar-route="#platform=facebook" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-facebook"></i><span class="btn-text">Facebook</span><span class="menu-count" id="count-platform-facebook">0</span></button>
-                  <button class="dropdown-item" data-platform="youtube" data-sidebar-route="#platform=youtube" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-youtube"></i><span class="btn-text">YouTube</span><span class="menu-count" id="count-platform-youtube">0</span></button>
-                </div>
-              </div>
-
-              <!-- Add link -->
-              <button class="toolbar-btn" id="btn-add-bookmark" aria-label="Add Link" title="Add Link" type="button">
-                <i class="app-icon icon-plus"></i>
-                <span class="btn-label">Add Link</span>
-              </button>
-
-
-
-              <!-- Filter/sort -->
-              <div class="toolbar-dropdown" id="toolbar-sort-dropdown" style="position: relative;">
-                <button class="toolbar-btn dropdown-toggle" id="toolbar-sort-btn" aria-label="Filter & Sort"
-                  title="Filter & Sort" aria-expanded="false" type="button">
-                  <i class="app-icon icon-arrow-down-wide-short"></i>
-                  <span class="btn-label" id="sort-active-label">Newest First</span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right" id="toolbar-sort-menu">
-                  <button class="dropdown-item active" data-sort="recent-desc" type="button">
-                    <i class="app-icon icon-check check-icon"></i> <span class="btn-text">Newest First</span>
-                  </button>
-                  <button class="dropdown-item" data-sort="recent-asc" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
-                      class="btn-text">Oldest First</span>
-                  </button>
-                  <button class="dropdown-item" data-sort="author-asc" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
-                      class="btn-text">Author A–Z</span>
-                  </button>
-                  <button class="dropdown-item" data-sort="author-desc" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
-                      class="btn-text">Author Z–A</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Layout View Dropdown -->
-              <div class="toolbar-dropdown" id="toolbar-layout-dropdown" style="position: relative;">
-                <button class="toolbar-btn dropdown-toggle" id="toolbar-layout-btn" aria-label="Layout View"
-                  title="Layout View" aria-expanded="false" type="button">
-                  <i class="app-icon icon-grip" id="layout-active-icon"></i>
-                  <span class="btn-label" id="layout-active-label">Grid View</span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right" id="toolbar-layout-menu">
-                  <button class="dropdown-item active social-layout-item" data-layout="grid" type="button">
-                    <i class="app-icon icon-check check-icon"></i> <span class="btn-text">Grid View</span>
-                  </button>
-                  <button class="dropdown-item social-layout-item" data-layout="list" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">List
-                      View</span>
-                  </button>
-                  <button class="dropdown-item social-layout-item" data-layout="compact" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
-                      class="btn-text">Compact View</span>
-                  </button>
-                  <button class="dropdown-item browser-layout-item" data-layout="dense" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span class="btn-text">Dense Links</span>
-                  </button>
-                  <button class="dropdown-item" data-layout="links" type="button">
-                    <i class="app-icon icon-check check-icon" style="visibility: hidden;"></i> <span
-                      class="btn-text">Link View</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="toolbar-dropdown browser-only-toolbar jump-category-dropdown" id="toolbar-category-dropdown" style="position: relative;">
-                <button class="toolbar-btn dropdown-toggle jump-category-btn" id="toolbar-category-btn" aria-label="Jump category"
-                  title="Jump category" aria-expanded="false" type="button">
-                  <span class="btn-label">Jump category</span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right" id="toolbar-category-menu" role="menu"></div>
-              </div>
-            </div>
-            <button type="button" class="feed-header-collapse-toggle" id="feed-header-collapse-toggle"
-              aria-label="Expand feed controls" aria-expanded="false" title="Expand feed controls">
-              <i class="app-icon icon-chevron-down" aria-hidden="true"></i>
-            </button>
           </div>
+
+          <div class="feed-options-layer" id="feed-options-layer" hidden>
+            <button type="button" class="feed-options-backdrop" id="feed-options-backdrop" aria-label="Close options"></button>
+            <aside class="feed-options-drawer" id="feed-options-drawer" aria-label="Feed options" aria-hidden="true">
+              <div class="feed-options-handle" aria-hidden="true"></div>
+              <div class="feed-options-heading"><h3>All Options <span class="feed-loaded-count" id="feed-loaded-count" title="Showing 0 loaded links" data-tooltip="Showing 0 loaded links" aria-label="Showing 0 loaded links">0</span></h3><button type="button" id="feed-options-clear">Clear all</button></div>
+              <div class="action-toolbar feed-options-grid" id="action-toolbar">
+                <section class="feed-option-group feed-option-filters">
+                  <span class="feed-option-label">FILTERS</span>
+                  <div class="feed-option-controls" id="feed-filter-controls">
+                    <div class="social-header-controls" id="social-header-controls" hidden>
+                      <div class="toolbar-dropdown platform-filter-toolbar" id="platform-filter-dropdown" style="position: relative;" hidden>
+                        <button class="toolbar-btn dropdown-toggle" id="platform-filter-btn" aria-label="Social Posts"
+                          title="Social Posts" aria-expanded="false" type="button">
+                          <i class="app-icon icon-circle-nodes"></i>
+                          <span class="btn-label" id="platform-filter-label">All Posts</span>
+                          <i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right" id="platform-filter-menu" role="menu">
+                          <button class="dropdown-item active" data-platform="all" data-sidebar-route="#platform=all" role="menuitem" type="button"><i class="app-icon icon-check check-icon"></i><i class="app-icon icon-circle-nodes"></i><span class="btn-text">All Posts</span><span class="menu-count" id="count-platform-all">0</span></button>
+                          <button class="dropdown-item" data-platform="instagram" data-sidebar-route="#platform=instagram" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-instagram"></i><span class="btn-text">Instagram</span><span class="menu-count" id="count-platform-instagram">0</span></button>
+                          <button class="dropdown-item" data-platform="x" data-sidebar-route="#platform=x" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><svg class="platform-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z"/></svg><span class="btn-text">X / Twitter</span><span class="menu-count" id="count-platform-x">0</span></button>
+                          <button class="dropdown-item" data-platform="threads" data-sidebar-route="#platform=threads" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><svg class="platform-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2-.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z"/></svg><span class="btn-text">Threads</span><span class="menu-count" id="count-platform-threads">0</span></button>
+                          <button class="dropdown-item" data-platform="reddit" data-sidebar-route="#platform=reddit" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-reddit-alien"></i><span class="btn-text">Reddit</span><span class="menu-count" id="count-platform-reddit">0</span></button>
+                          <button class="dropdown-item" data-platform="facebook" data-sidebar-route="#platform=facebook" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-facebook"></i><span class="btn-text">Facebook</span><span class="menu-count" id="count-platform-facebook">0</span></button>
+                          <button class="dropdown-item" data-platform="youtube" data-sidebar-route="#platform=youtube" role="menuitem" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-youtube"></i><span class="btn-text">YouTube</span><span class="menu-count" id="count-platform-youtube">0</span></button>
+                        </div>
+                      </div>
+                      <div class="toolbar-dropdown social-category-dropdown" id="social-category-dropdown" style="position: relative;" hidden>
+                        <button class="toolbar-btn dropdown-toggle social-header-filter-btn" id="social-category-btn" aria-label="Post categories"
+                          title="Post categories" aria-expanded="false" type="button">
+                          <i class="app-icon icon-folder-tree"></i>
+                          <span class="btn-label" id="social-category-label">All Categories</span>
+                          <i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right" id="social-category-menu" role="menu"></div>
+                      </div>
+                      <button type="button" class="category-rename-btn social-category-rename-btn" id="social-category-rename" data-category-rename="social" aria-label="Rename category" title="Rename category" hidden>
+                        <i class="app-icon icon-pen"></i>
+                      </button>
+                    </div>
+                    <div class="toolbar-dropdown browser-only-toolbar jump-category-dropdown" id="toolbar-category-dropdown" style="position: relative;">
+                      <button class="toolbar-btn dropdown-toggle jump-category-btn" id="toolbar-category-btn" aria-label="Jump category"
+                        title="Jump category" aria-expanded="false" type="button">
+                        <i class="app-icon icon-folder-tree"></i><span class="btn-label">Jump category</span>
+                      </button>
+                      <div class="dropdown-menu dropdown-menu-right" id="toolbar-category-menu" role="menu"></div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="feed-option-group feed-option-actions">
+                  <span class="feed-option-label">ACTIONS</span>
+                  <div class="feed-option-controls">
+                    <button class="toolbar-btn" id="btn-add-bookmark" aria-label="Add Link" title="Add Link" type="button"><i class="app-icon icon-plus"></i><span class="btn-label">Add Link</span></button>
+                    <button class="toolbar-btn" id="btn-select-mode" aria-label="Select Mode" title="Select Mode" type="button"><i class="app-icon icon-square-check"></i><span class="btn-label">Select Mode</span></button>
+                  </div>
+                </section>
+
+                <section class="feed-option-group feed-option-view">
+                  <span class="feed-option-label">VIEW</span>
+                  <div class="feed-option-controls">
+                    <div class="toolbar-dropdown" id="toolbar-layout-dropdown" style="position: relative;">
+                      <button class="toolbar-btn dropdown-toggle" id="toolbar-layout-btn" aria-label="Layout View"
+                        title="Layout View" aria-expanded="false" type="button"><i class="app-icon icon-grip" id="layout-active-icon"></i><span class="btn-label" id="layout-active-label">Grid View</span><i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i></button>
+                      <div class="dropdown-menu dropdown-menu-right" id="toolbar-layout-menu">
+                        <button class="dropdown-item active social-layout-item" data-layout="grid" type="button"><i class="app-icon icon-check check-icon"></i><i class="app-icon icon-grip"></i><span class="btn-text">Grid View</span></button>
+                        <button class="dropdown-item social-layout-item" data-layout="list" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-list"></i><span class="btn-text">List View</span></button>
+                        <button class="dropdown-item social-layout-item" data-layout="compact" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-bars"></i><span class="btn-text">Compact View</span></button>
+                        <button class="dropdown-item browser-layout-item" data-layout="dense" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-grip"></i><span class="btn-text">Dense Links</span></button>
+                        <button class="dropdown-item" data-layout="links" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><i class="app-icon icon-link"></i><span class="btn-text">Link View</span></button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="feed-option-group feed-option-sort">
+                  <span class="feed-option-label">SORT BY</span>
+                  <div class="feed-option-controls">
+                    <div class="toolbar-dropdown" id="toolbar-sort-dropdown" style="position: relative;">
+                      <button class="toolbar-btn dropdown-toggle" id="toolbar-sort-btn" aria-label="Filter & Sort" title="Filter & Sort" aria-expanded="false" type="button"><i class="app-icon icon-arrow-down-wide-short"></i><span class="btn-label" id="sort-active-label">Newest First</span><i class="app-icon icon-chevron-down toolbar-filter-chevron" aria-hidden="true"></i></button>
+                      <div class="dropdown-menu dropdown-menu-right" id="toolbar-sort-menu">
+                        <button class="dropdown-item active" data-sort="recent-desc" type="button"><i class="app-icon icon-check check-icon"></i><span class="btn-text">Newest First</span></button>
+                        <button class="dropdown-item" data-sort="recent-asc" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><span class="btn-text">Oldest First</span></button>
+                        <button class="dropdown-item" data-sort="author-asc" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><span class="btn-text">Author A–Z</span></button>
+                        <button class="dropdown-item" data-sort="author-desc" type="button"><i class="app-icon icon-check check-icon" style="visibility: hidden;"></i><span class="btn-text">Author Z–A</span></button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <div class="feed-options-footer"><button type="button" class="feed-options-cancel" id="feed-options-cancel">Cancel</button><button type="button" class="feed-options-apply" id="feed-options-apply">Apply</button></div>
+            </aside>
+          </div>
+          <button type="button" class="feed-options-fab" id="feed-options-fab" aria-label="Open feed options" aria-expanded="false" title="Open feed options"><i class="app-icon icon-sliders"></i></button>
 
           <div class="bookmarks-grid" id="bookmarks-grid">
             <!-- Bookmark Cards will be dynamically injected here -->
