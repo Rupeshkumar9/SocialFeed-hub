@@ -1,5 +1,6 @@
 ---
 import "../../styles/public-profile.css";
+import { SOCIAL_ICON_DEFINITIONS, socialIconMarkup } from "../../features/dashboard/ui/social-icons.js";
 
 export interface Props {
   profile: Record<string, any>;
@@ -48,26 +49,16 @@ const dateFor = (value: unknown) => {
     : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
-const socialGlyphs: Record<string, string> = {
-  instagram: "◎",
-  x: "𝕏",
-  threads: "◉",
-  facebook: "f",
-  tiktok: "♪",
-  whatsapp: "◔",
-  telegram: "➤",
-  custom: "↗",
-};
+const socialPlatforms = new Set(Object.keys(SOCIAL_ICON_DEFINITIONS).filter((platform) => platform !== "custom"));
 const platformForSocial = (link: Record<string, any>) => {
   const declared = String(link.platform || "").toLowerCase();
-  if (socialGlyphs[declared] && declared !== "custom") return declared;
+  if (socialPlatforms.has(declared)) return declared;
   const host = hostFor(link.url);
   if (host.includes("instagram")) return "instagram";
   if (host === "x.com" || host.includes("twitter")) return "x";
   if (host.includes("threads")) return "threads";
   if (host.includes("facebook")) return "facebook";
   if (host.includes("tiktok")) return "tiktok";
-  if (host === "wa.me" || host.includes("whatsapp")) return "whatsapp";
   if (host.includes("telegram") || host === "t.me") return "telegram";
   return "custom";
 };
@@ -172,7 +163,7 @@ const profileItemData = [
                 aria-label={link.label || link.platform}
                 title={link.label || link.platform}
               >
-                <span aria-hidden="true">{socialGlyphs[link.platform] || socialGlyphs.custom}</span>
+                <span aria-hidden="true" set:html={socialIconMarkup(link.platform)}></span>
                 <span class="profile-sr-only">{link.label || link.platform}</span>
               </a>
             ))}

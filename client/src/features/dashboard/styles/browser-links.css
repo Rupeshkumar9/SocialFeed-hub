@@ -76,6 +76,7 @@
 .profile-avatar-remove { align-self: center; border: 0; background: transparent; color: #aa5962; cursor: pointer; font-size: .72rem; }
 .public-social-row { grid-template-columns: 34px minmax(122px, .45fr) minmax(0, 1fr) auto; align-items: center; }
 .public-social-preview { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #dfe4f3; border-radius: 50%; background: #f8f9ff; color: #4d5ec4; font-weight: 750; }
+.public-social-preview .social-icon-svg { display: block; width: 1.1em; height: 1.1em; }
 .public-social-row input[hidden] { display: none; }
 @media (max-width: 680px) { .profile-avatar-picker { grid-template-columns: 48px minmax(0, 1fr); }.profile-avatar-preview { width: 48px; height: 48px; }.profile-avatar-remove { grid-column: 2; justify-self: start; }.public-social-row { grid-template-columns: 34px 1fr; }.public-social-row input, .public-social-row select { grid-column: 2; }.public-social-row button { grid-column: 2; justify-self: start; } }
 

@@ -340,6 +340,11 @@
 
   .feed-options-layer.is-open .feed-options-drawer { transform: translateY(0); }
 
+  .feed-options-drawer .feed-option-group:nth-child(odd) .dropdown-menu-right {
+    left: 0;
+    right: auto;
+  }
+
   .feed-options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 0; }
   .feed-option-group { padding: 0 12px; }
   .feed-option-group:nth-child(odd) { padding-left: 0; border-left: 0; }

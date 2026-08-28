@@ -720,8 +720,10 @@ html[data-theme="light"] .mini-line, html[data-theme="light"] .mini-link { backg
 
   .theme-toggle-label { display: none; }
   .public-account-copy { display: none; }
-  .public-account.is-open .public-account-copy { display: grid; }
-  .public-account-trigger { padding-right: 7px; }
+  .dashboard-account .public-account-copy,
+  .dashboard-account.is-open .public-account-copy { display: none !important; }
+  .dashboard-account .public-account-trigger { width: 42px; max-width: 42px; padding: 4px; justify-content: center; gap: 0; }
+  .dashboard-account .public-account-chevron { display: none; }
 
   .hero-card {
     min-height: 260px;

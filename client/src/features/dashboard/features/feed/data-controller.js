@@ -174,17 +174,26 @@ async function loadData(options = {}) {
 }
 
 async function refreshPlatformCounts() {
+  AppState.libraryCountsLoaded = false;
+  AppState.platformCounts = null;
+  AppState.libraryCounts = null;
+  updateSidebarNavigation();
   try {
     const data = await socialFeedApi.getCounts();
     AppState.libraryCounts = data;
     AppState.platformCounts = data?.platforms || { all: data?.all || 0, instagram: data?.instagram || 0, x: data?.x || 0, threads: data?.threads || 0, reddit: data?.reddit || 0, facebook: data?.facebook || 0, youtube: data?.youtube || 0 };
+    AppState.libraryCountsLoaded = true;
     setDatabaseStatus(true);
     updateSidebarNavigation();
     updateStatsAnalytics();
     return data;
   } catch (error) {
+    AppState.libraryCountsLoaded = true;
+    AppState.libraryCounts = null;
+    AppState.platformCounts = { all: 0, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0, youtube: 0 };
     if (error instanceof ApiError && error.status === 401) showPrivateLogin('Session expired; sign in again.');
     else setDatabaseStatus(false);
+    updateSidebarNavigation();
     return null;
   }
 }

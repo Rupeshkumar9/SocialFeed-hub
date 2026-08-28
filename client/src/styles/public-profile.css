@@ -48,6 +48,7 @@ html[data-theme="light"] .public-profile-theme-default .profile-link-favicon {
 .profile-bio { max-width: 650px; margin: 14px 0 0; color: var(--profile-muted); line-height: 1.65; }
 .profile-social-links { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
 .profile-social-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--profile-border); border-radius: 13px; background: rgba(255, 255, 255, .07); color: var(--profile-text); font-size: 1rem; font-weight: 800; text-decoration: none; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
+.profile-social-icon .social-icon-svg { display: block; width: 1.05em; height: 1.05em; }
 .profile-social-icon:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--profile-accent) 60%, white 10%); background: color-mix(in srgb, var(--profile-accent) 24%, transparent); }
 .profile-social-facebook { font-family: Arial, sans-serif; font-size: 1.18rem; }
 .profile-share { align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--profile-accent) 45%, white 8%); border-radius: 12px; background: color-mix(in srgb, var(--profile-accent) 18%, transparent); color: var(--profile-text); font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; }

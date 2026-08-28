@@ -1,17 +1,17 @@
 import { AppState } from '../../app/state.js';
 import { actions, registerActions } from '../../app/actions.js';
 import { socialFeedApi } from '../../api/socialfeed-api.js';
+import { socialIconMarkup } from '../../ui/social-icons.js';
 
 const showToast = (...args) => actions.showToast(...args);
 const SOCIAL_PRESETS = {
-  instagram: { label: 'Instagram', base: 'https://instagram.com/', icon: '◎' },
-  x: { label: 'X', base: 'https://x.com/', icon: '𝕏' },
-  threads: { label: 'Threads', base: 'https://threads.net/@', icon: '◎' },
-  facebook: { label: 'Facebook', base: 'https://facebook.com/', icon: 'f' },
-  tiktok: { label: 'TikTok', base: 'https://tiktok.com/@', icon: '♪' },
-  whatsapp: { label: 'WhatsApp', base: 'https://wa.me/', icon: '◔' },
-  telegram: { label: 'Telegram', base: 'https://t.me/', icon: '➤' },
-  custom: { label: 'Custom site', base: '', icon: '↗' }
+  instagram: { label: 'Instagram', base: 'https://instagram.com/', icon: socialIconMarkup('instagram') },
+  x: { label: 'X', base: 'https://x.com/', icon: socialIconMarkup('x') },
+  threads: { label: 'Threads', base: 'https://threads.net/@', icon: socialIconMarkup('threads') },
+  facebook: { label: 'Facebook', base: 'https://facebook.com/', icon: socialIconMarkup('facebook') },
+  tiktok: { label: 'TikTok', base: 'https://tiktok.com/@', icon: socialIconMarkup('tiktok') },
+  telegram: { label: 'Telegram', base: 'https://t.me/', icon: socialIconMarkup('telegram') },
+  custom: { label: 'Custom site', base: '', icon: socialIconMarkup('custom') }
 };
 
 let profile = null;
@@ -57,7 +57,7 @@ function updateSocialRow(row) {
   const preview = row.querySelector('[data-social-preview]');
   if (username) { username.hidden = platform === 'custom'; username.placeholder = `${preset.label} username`; }
   if (customUrl) { customUrl.hidden = platform !== 'custom'; customUrl.placeholder = 'https://your-site.example/profile'; }
-  if (preview) preview.textContent = preset.icon;
+  if (preview) preview.innerHTML = preset.icon;
 }
 
 function renderSocialLinks(links = []) {

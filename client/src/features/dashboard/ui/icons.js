@@ -1,3 +1,5 @@
+import { SOCIAL_ICON_DEFINITIONS } from './social-icons.js';
+
 const stroke = body => ({ body, fill: 'none', stroke: 'currentColor' });
 const fill = body => ({ body, fill: 'currentColor', stroke: 'none' });
 
@@ -18,7 +20,7 @@ const ICONS = Object.freeze({
   database: stroke('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>'),
   download: stroke('<path d="M12 3v12m0 0 5-5m-5 5-5-5M4 20h16"/>'),
   'ellipsis-vertical': fill('<circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>'),
-  facebook: fill('<path d="M13.8 22v-8h2.8l.5-3.2h-3.3V8.7c0-.9.3-1.6 1.7-1.6h1.8V4.2c-.3 0-1.4-.2-2.6-.2-2.6 0-4.4 1.6-4.4 4.5v2.3H7.4V14h2.9v8h3.5Z"/>'),
+  facebook: SOCIAL_ICON_DEFINITIONS.facebook,
   'feather-pointed': stroke('<path d="M20.2 4.8a6 6 0 0 0-8.5 0L5 11.5V20h8.5l6.7-6.7a6 6 0 0 0 0-8.5ZM16 8 2 22M17.5 15H9"/>'),
   'file-import': stroke('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M12 18v-7m0 0-3 3m3-3 3 3"/>'),
   'file-pen': stroke('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h7M14 2v6h6M13 17l6-6 2 2-6 6-3 1Z"/>'),
@@ -29,7 +31,7 @@ const ICONS = Object.freeze({
   globe: stroke('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
   grip: fill('<circle cx="8" cy="6" r="1.5"/><circle cx="16" cy="6" r="1.5"/><circle cx="8" cy="12" r="1.5"/><circle cx="16" cy="12" r="1.5"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/>'),
   image: stroke('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 2-2 5 5"/>'),
-  instagram: stroke('<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>'),
+  instagram: SOCIAL_ICON_DEFINITIONS.instagram,
   'layer-group': stroke('<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/>'),
   list: stroke('<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>'),
   lock: stroke('<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'),
@@ -49,12 +51,14 @@ const ICONS = Object.freeze({
   'square-check': stroke('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m7 12 3 3 7-7"/>'),
   sliders: stroke('<path d="M4 6h7M15 6h5M4 12h3M11 12h9M4 18h7M15 18h5"/><circle cx="13" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/>'),
   sun: stroke('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>'),
-  threads: fill('<path d="M17.6 11.1c-.2-3.5-2.2-5.5-5.6-5.5-2 0-3.7.8-4.7 2.3l1.7 1.2c.7-.9 1.7-1.4 3-1.4 1.9 0 3.1 1 3.4 2.8-.9-.2-1.9-.3-3-.2-2.9.2-4.7 1.6-4.6 3.8.1 2.1 1.9 3.5 4.4 3.4 2.2-.1 3.8-1.2 4.7-3.1.7.5 1.1 1.2 1.1 2.1 0 2.6-2.5 4.4-6 4.4-4.3 0-7-3.2-7-8.7 0-5.4 2.7-8.7 7-8.7 3.1 0 5.4 1.5 6.7 4.4l2-.9C19.1 3.7 16 2 12 2 6.4 2 3 5.9 3 12.2 3 18.5 6.4 22 12 22c4.8 0 8.1-2.5 8.1-6.2 0-2.1-.9-3.6-2.5-4.7Zm-5.5 4.3c-1.2.1-2.1-.5-2.1-1.4 0-.9.9-1.5 2.5-1.6 1-.1 2 0 2.8.3-.4 1.6-1.5 2.6-3.2 2.7Z"/>'),
+  tiktok: SOCIAL_ICON_DEFINITIONS.tiktok,
+  threads: SOCIAL_ICON_DEFINITIONS.threads,
+  telegram: SOCIAL_ICON_DEFINITIONS.telegram,
   trash: stroke('<path d="M4 7h16M9 3h6l1 4H8ZM7 7l1 14h8l1-14M10 11v6M14 11v6"/>'),
   user: stroke('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   'user-gear': stroke('<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 11-5.7M18 14v2m0 4v2m-4-4h2m4 0h2M15.9 15.9l1.4 1.4m1.4 1.4 1.4 1.4m0-4.2-1.4 1.4m-1.4 1.4-1.4 1.4"/>'),
   'window-restore': stroke('<rect x="3" y="7" width="14" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/>'),
-  'x-twitter': fill('<path d="M18.9 2h3.3l-7.2 8.2 8.5 11.8h-6.7l-5.2-6.9-6 6.9H2.3l7.7-8.8L1.9 2h6.8l4.7 6.3L18.9 2Zm-1.2 17.9h1.8L7.7 4H5.8l11.9 15.9Z"/>'),
+  'x-twitter': SOCIAL_ICON_DEFINITIONS.x,
   xmark: stroke('<path d="M6 6l12 12M18 6 6 18"/>'),
   moon: stroke('<path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/>'),
   youtube: fill('<path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z"/>'),

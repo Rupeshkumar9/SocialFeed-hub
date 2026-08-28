@@ -310,8 +310,9 @@ function updateSocialCategoryMenu() {
 }
 
 function updateSidebarNavigation() {
-  const platformCounts = AppState.platformCounts ? { ...AppState.platformCounts } : { all: 0, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0, youtube: 0 };
-  if (!AppState.platformCounts) {
+  const countsLoaded = Boolean(AppState.libraryCountsLoaded);
+  const platformCounts = countsLoaded && AppState.platformCounts ? { ...AppState.platformCounts } : { all: 0, instagram: 0, x: 0, threads: 0, reddit: 0, facebook: 0, youtube: 0 };
+  if (!AppState.platformCounts && countsLoaded) {
     AppState.bookmarks.forEach(bm => {
       if (bm.source === 'browser' || bm.platform === 'browser') return;
       let platform = (bm.platform || "web").toLowerCase().trim();
@@ -350,16 +351,20 @@ function updateSidebarNavigation() {
     DOM.socialCategoryRename.setAttribute('aria-hidden', String(!canRenameSocialCategory));
   }
 
-  Object.entries(platformCounts).forEach(([platform, count]) => {
-    const el = document.getElementById("count-platform-" + platform);
-    if (el) el.textContent = count;
-  });
-  const sidebarAllCount = document.getElementById('sidebar-count-platform-all');
-  if (sidebarAllCount) sidebarAllCount.textContent = platformCounts.all || 0;
+  if (countsLoaded) {
+    Object.entries(platformCounts).forEach(([platform, count]) => {
+      const el = document.getElementById("count-platform-" + platform);
+      if (el) setCountValue(el, count);
+    });
+    const sidebarAllCount = document.getElementById('sidebar-count-platform-all');
+    if (sidebarAllCount) setCountValue(sidebarAllCount, platformCounts.all);
 
-  const browserCount = AppState.libraryCounts && AppState.libraryCounts.sources ? AppState.libraryCounts.sources.browser : (AppState.activeSource === "browser" ? AppState.bookmarks.length : 0);
-  const browserCountEl = document.getElementById("count-browser-bookmarks");
-  if (browserCountEl) browserCountEl.textContent = browserCount || 0;
+    const browserCount = AppState.libraryCounts && AppState.libraryCounts.sources ? AppState.libraryCounts.sources.browser : 0;
+    const browserCountEl = document.getElementById("count-browser-bookmarks");
+    if (browserCountEl) setCountValue(browserCountEl, browserCount);
+  } else {
+    setCountLoadingState();
+  }
 
   const browserItem = document.getElementById("sidebar-browser-item");
   if (browserItem) browserItem.classList.toggle("active", AppState.activeSource === "browser" && !AppState.isSettingsOpen && !AppState.isProfileEditOpen && !AppState.isExtensionOpen);
@@ -446,6 +451,20 @@ function updateSidebarNavigation() {
 
   syncFilterSelects();
   setSidebarNavigationLoading(AppState.isNavigationLoading);
+}
+
+function setCountLoadingState() {
+  document.querySelectorAll('.menu-count').forEach(element => {
+    element.classList.add('is-loading');
+    element.setAttribute('aria-busy', 'true');
+    element.innerHTML = '<i class="app-icon icon-circle-notch icon-spin" aria-hidden="true"></i><span class="sr-only">Loading count</span>';
+  });
+}
+
+function setCountValue(element, value) {
+  element.classList.remove('is-loading');
+  element.removeAttribute('aria-busy');
+  element.textContent = String(Number(value) || 0);
 }
 /**
  * Apply both active platform and tag filters along with text search query

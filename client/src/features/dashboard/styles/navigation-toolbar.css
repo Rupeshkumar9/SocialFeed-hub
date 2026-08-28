@@ -45,6 +45,21 @@
   text-align: center;
 }
 
+.menu-count.is-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 22px;
+  padding: 0;
+}
+
+.menu-count.is-loading .app-icon {
+  width: .85rem;
+  height: .85rem;
+  font-size: .85rem;
+}
+
 .menu-item.active .menu-count {
   background-color: #ffffff;
   color: var(--accent-blue);
