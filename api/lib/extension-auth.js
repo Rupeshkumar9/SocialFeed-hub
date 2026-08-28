@@ -6,29 +6,28 @@ function isExtensionAuthorized(req) {
   return !!expected && typeof token === 'string' && token.length === expected.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
 }
 
+const BROWSER_EXTENSION_ORIGIN = /^(?:chrome-extension|moz-extension|safari-web-extension):\/\/[a-z0-9](?:[a-z0-9._-]{0,254})$/i;
+
+function normalizeExtensionOrigin(value) {
+  const origin = String(value || '').trim();
+  if (/[\u0000-\u001f\u007f]/.test(origin)) return '';
+  return origin
+    .replace(/\/+$/, '')
+    .toLowerCase();
+}
+
+function isBrowserExtensionOrigin(value) {
+  return BROWSER_EXTENSION_ORIGIN.test(normalizeExtensionOrigin(value));
+}
+
 function setExtensionCors(req, res) {
   const origin = String(req.headers.origin || '').trim();
-  const normalizedOrigin = origin.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\/+$/, '').toLowerCase();
-  const configured = (process.env.EXTENSION_ALLOWED_ORIGINS || '')
-    .split(',')
-    .map(value => value
-      .trim()
-      .replace(/^['"]|['"]$/g, '')
-      .replace(/^extension_allowed_origins\s*=\s*/i, '')
-      .replace(/[\u0000-\u001f\u007f]/g, '')
-      .replace(/[\s\u200b\u200c\u200d\ufeff]+/g, '')
-      .replace(/\/+$/, '')
-      .toLowerCase())
-    .filter(Boolean)
-    .flatMap(value => {
-      // Accept both full origins and pasted bare extension IDs. Always retain
-      // the original value, then add canonical forms for either ID format.
-      const bareId = value.replace(/^(?:chrome|moz)-extension:\/\//i, '');
-      return [value, `chrome-extension://${bareId}`, `moz-extension://${bareId}`];
-    });
-  const isBrowserExtension = normalizedOrigin.startsWith('chrome-extension://') || normalizedOrigin.startsWith('moz-extension://');
-  const allowed = configured.includes(normalizedOrigin) || (!configured.length && isBrowserExtension);
-  if (!allowed) console.warn(`[Extension CORS] denied origin: ${origin || '(missing)'}; configured origins: ${configured.join(', ') || '(none)'}`);
+  // Browser-assigned extension IDs are different between stores, browsers,
+  // profiles, and temporary Firefox installs. CORS therefore validates the
+  // extension URL shape, while pairing + the per-device bearer token proves
+  // that the caller was approved by a signed-in SocialFeed user.
+  const allowed = isBrowserExtensionOrigin(origin);
+  if (!allowed) console.warn(`[Extension CORS] denied non-extension origin: ${origin || '(missing)'}`);
   if (allowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
@@ -38,4 +37,9 @@ function setExtensionCors(req, res) {
   return allowed;
 }
 
-module.exports = { isExtensionAuthorized, setExtensionCors };
+module.exports = {
+  isBrowserExtensionOrigin,
+  isExtensionAuthorized,
+  normalizeExtensionOrigin,
+  setExtensionCors
+};

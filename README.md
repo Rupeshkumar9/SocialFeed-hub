@@ -86,9 +86,8 @@ EXTENSION_SYNC_TOKEN=generate_a_different_long_random_token
 # Account/profile details are created per user by the signup form and stored
 # in MongoDB. They are not configured through environment variables.
 
-# Optional: comma-separated Chrome/Firefox extension origins for production CORS.
-# Leave unset to allow browser extension origins during private single-user use.
-# EXTENSION_ALLOWED_ORIGINS=chrome-extension://your_chrome_id,moz-extension://your_firefox_id
+# Browser extension origins are recognized automatically. Do not configure an
+# extension ID: Chrome-family, Firefox, and Safari assign different IDs.
 ```
 
 ### Step 3: Start the Dev Servers
@@ -104,6 +103,8 @@ For a production-style local check, run `npm run build` and then `npm start`. Ex
 ### Connect the browser extension
 
 Load the `extension/` directory as an unpacked extension in Chrome or Firefox. Open the extension popup, expand the settings panel, and choose **Connect using SocialFeed login**. The extension opens the website pairing page; sign in if requested and approve the connection. A unique credential is generated for that browser and stored in extension-local storage. The master `EXTENSION_SYNC_TOKEN` is not exposed to the extension UI.
+
+The API recognizes `chrome-extension://`, `moz-extension://`, and `safari-web-extension://` origins automatically, so the server does not need a browser-specific extension ID. Origin recognition only enables the browser CORS exchange; access still requires the unique credential issued by the signed-in pairing flow.
 
 The credential remains valid until the extension is disconnected, all extension devices are revoked from Profile Settings, or an optional lifetime configured by `EXTENSION_DEVICE_IDLE_SECONDS` / `EXTENSION_DEVICE_MAX_AGE_SECONDS` is reached. Normal website logout does not disconnect a paired extension.
 
