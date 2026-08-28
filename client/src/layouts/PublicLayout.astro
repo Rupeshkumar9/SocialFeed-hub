@@ -10,8 +10,9 @@ export interface Props {
   type?: string;
   image?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  profilePage?: boolean;
 }
-const { title, description, canonical, robots, type, image, jsonLd } = Astro.props;
+const { title, description, canonical, robots, type, image, jsonLd, profilePage = false } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -30,8 +31,8 @@ const { title, description, canonical, robots, type, image, jsonLd } = Astro.pro
     <SeoHead title={title} description={description} canonical={canonical} robots={robots} type={type} image={image} jsonLd={jsonLd} />
   </head>
   <body>
-    <div class="site-shell">
-      <header class="site-container site-nav">
+    <div class:list={{ "site-shell": true, "public-profile-site-shell": profilePage }}>
+      {!profilePage ? <header class="site-container site-nav">
         <a class="brand" href="/" aria-label="SocialFeed Hub home"><img class="brand-logo-image" src="/favicon.svg" alt="" /><span>SocialFeed Hub</span></a>
         <nav class="nav-links" aria-label="Primary navigation">
           <a href="/pricing">Pricing</a>
@@ -58,9 +59,9 @@ const { title, description, canonical, robots, type, image, jsonLd } = Astro.pro
             </div>
           </div>
         </div>
-      </header>
-      <main class="site-container page-main"><slot /></main>
-      <footer class="site-container site-footer"><div class="site-footer-inner"><span>Organize the web you want to remember.</span><span>© {new Date().getFullYear()} SocialFeed Hub</span></div></footer>
+      </header> : null}
+      <main class:list={{ "site-container page-main": true, "public-profile-page-main": profilePage }}><slot /></main>
+      {!profilePage ? <footer class="site-container site-footer"><div class="site-footer-inner"><span>Organize the web you want to remember.</span><span>© {new Date().getFullYear()} SocialFeed Hub</span></div></footer> : null}
     </div>
   </body>
 </html>

@@ -242,7 +242,8 @@ function publicBookmarkFields(bookmark) {
     publicTitle: bookmark.publicTitle || '',
     publicDescription: bookmark.publicDescription || '',
     featured: bookmark.featured === true,
-    publicOrder: Number.isFinite(Number(bookmark.publicOrder)) ? Number(bookmark.publicOrder) : null
+    publicOrder: Number.isFinite(Number(bookmark.publicOrder)) ? Number(bookmark.publicOrder) : null,
+    publicPublishedAt: bookmark.visibilityUpdatedAt || bookmark.publicPublishedAt || bookmark.firstSavedAt || bookmark.createdAt || null
   };
 }
 
@@ -265,7 +266,7 @@ async function loadPublicBookmarks({ profile, source = 'browser', platform, coll
 
   const rows = await db.collection('bookmarks')
     .find(filter)
-    .sort({ firstSavedAt: -1, _id: -1 })
+    .sort({ visibilityUpdatedAt: -1, firstSavedAt: -1, _id: -1 })
     .limit(safeLimit + 1)
     .toArray();
   const visible = rows.filter(item => publicCollectionEnabled(profile, source, item.folder));
