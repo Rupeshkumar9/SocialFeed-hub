@@ -45,6 +45,7 @@ const ICONS = Object.freeze({
   'reddit-alien': stroke('<circle cx="12" cy="13" r="7"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><path d="M8.5 16c2 1.3 5 1.3 7 0M12 6l1.2-4 3.8 1M5 11a2 2 0 1 0-1 4M19 11a2 2 0 1 1 1 4"/>'),
   'right-from-bracket': stroke('<path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/>'),
   rotate: stroke('<path d="M20 7v5h-5M4 17v-5h5M6.1 8a7 7 0 0 1 11.5-2.3L20 8M4 16l2.4 2.3A7 7 0 0 0 17.9 16"/>'),
+  sidebar: stroke('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>'),
   'square-check': stroke('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m7 12 3 3 7-7"/>'),
   sliders: stroke('<path d="M4 6h7M15 6h5M4 12h3M11 12h9M4 18h7M15 18h5"/><circle cx="13" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/>'),
   sun: stroke('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>'),

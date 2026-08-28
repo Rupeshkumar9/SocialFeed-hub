@@ -59,8 +59,9 @@ function renderFeedLoadingState() {
 function getGridColumnCount() {
   const w = window.innerWidth;
   if (w <= 768) return 2;
-  if (w <= 1100) return 3;
-  return 4;
+  const sidebarCollapsed = document.body.classList.contains('sidebar-collapsed');
+  if (w <= 1100) return sidebarCollapsed ? 4 : 3;
+  return sidebarCollapsed ? 5 : 4;
 }
 
 /**

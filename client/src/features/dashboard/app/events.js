@@ -57,14 +57,34 @@ const openCategoryRenameDialog = (...args) => actions.openCategoryRenameDialog(.
 const visitPublicProfile = (...args) => actions.visitPublicProfile(...args);
 const logout = (...args) => actions.logout(...args);
 
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'socialfeed_desktop_sidebar_collapsed';
+
+function setDesktopSidebarCollapsed(collapsed, { persist = true, rerender = true } = {}) {
+  if (window.innerWidth <= 768) return;
+
+  const toggle = document.getElementById('sidebar-collapse-toggle');
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  if (persist) localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
+
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+
+  if (rerender && DOM.bookmarksGrid && (!AppState.activeLayout || AppState.activeLayout === 'grid' || AppState.activeSource === 'browser')) {
+    renderFeedGrid();
+  }
+}
+
 function initEventListeners() {
   const sidebarCollapseToggle = document.getElementById('sidebar-collapse-toggle');
   if (sidebarCollapseToggle) {
+    const initiallyCollapsed = window.innerWidth > 768 && localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
+    setDesktopSidebarCollapsed(initiallyCollapsed, { persist: false, rerender: false });
     sidebarCollapseToggle.addEventListener('click', () => {
-      const collapsed = document.body.classList.toggle('sidebar-collapsed');
-      sidebarCollapseToggle.setAttribute('aria-expanded', String(!collapsed));
-      sidebarCollapseToggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-      sidebarCollapseToggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+      if (window.innerWidth <= 768) return;
+      setDesktopSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
     });
   }
 

@@ -56,6 +56,13 @@
 @media (max-width: 680px) { .public-profile-fields { grid-template-columns: 1fr; }.public-profile-fields .full-width { grid-column: auto; }.public-social-row { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) { .browser-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 680px) { .browser-category-grid { grid-template-columns: 1fr; gap: 7px; } .browser-row-meta { display: inline-flex; margin-left: 2px; } .browser-visibility-badge { padding: 2px 4px; font-size: .55rem; } .browser-link-row { min-height: 54px; } }
+
+@media (min-width: 769px) {
+  body.sidebar-collapsed .browser-category-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .public-profile-fields input, .public-profile-fields select, .public-profile-fields textarea { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
 .public-profile-fields textarea { overflow-wrap: anywhere; resize: vertical; line-height: 1.45; }
 .public-profile-fields input:focus, .public-profile-fields select:focus, .public-profile-fields textarea:focus { outline: 0; border-color: #8792ef; box-shadow: 0 0 0 3px rgba(88, 101, 218, .14); }
