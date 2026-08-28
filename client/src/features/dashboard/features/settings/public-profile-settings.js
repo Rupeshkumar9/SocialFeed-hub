@@ -15,6 +15,7 @@ const SOCIAL_PRESETS = {
 };
 
 let profile = null;
+let featuredShopId = null;
 function form() { return document.getElementById('public-profile-form'); }
 function setStatus(message, error = false) { const status = document.getElementById('public-profile-status'); if (status) { status.textContent = message; status.className = error ? 'error' : ''; } }
 function ensurePrivacyToggle() {
@@ -91,7 +92,8 @@ function renderShopLinks(links = []) {
   items.forEach(item => {
     const row = document.createElement('div');
     row.className = 'public-shop-row';
-    row.innerHTML = `<div class="public-shop-row-heading"><span class="public-shop-row-icon">✦</span><strong>Shop pick</strong><button type="button" class="settings-inline-action" data-remove-shop>Remove</button></div><div class="public-shop-row-fields"><input data-shop-title aria-label="Shop title" placeholder="Product or tool name" maxlength="120"><input data-shop-url aria-label="Shop URL" type="url" placeholder="https://…"><input data-shop-merchant aria-label="Merchant" placeholder="Brand or store"><input data-shop-price aria-label="Price" placeholder="$29"><input data-shop-thumbnail aria-label="Thumbnail URL" type="url" placeholder="Thumbnail image URL"><textarea data-shop-description aria-label="Shop description" placeholder="Why you recommend it" maxlength="220" rows="2"></textarea></div>`;
+    row.dataset.shopId = String(item.id || `shop_${items.indexOf(item) + 1}`);
+    row.innerHTML = `<div class="public-shop-row-heading"><span class="public-shop-row-icon">✦</span><strong>Shop pick</strong><button type="button" class="settings-inline-action" data-remove-shop>Remove</button></div><div class="public-shop-row-fields"><input data-shop-title aria-label="Shop title" placeholder="Product or tool name" maxlength="120"><input data-shop-url aria-label="Shop URL" type="url" placeholder="https://…"><input data-shop-merchant aria-label="Merchant" placeholder="Brand or store"><input data-shop-price aria-label="Price" placeholder="$29"><div class="public-shop-image-field"><label>Product image URL<input data-shop-thumbnail aria-label="Thumbnail URL" type="text" placeholder="https://…"></label><label class="public-shop-file-label">Choose image<input data-shop-thumbnail-file aria-label="Choose product image" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><span class="public-shop-thumbnail" data-shop-thumbnail-preview aria-hidden="true"></span></div><textarea data-shop-description aria-label="Shop description" placeholder="Why you recommend it" maxlength="220" rows="2"></textarea></div>`;
     row.querySelector('[data-shop-title]').value = item.title || '';
     row.querySelector('[data-shop-url]').value = item.url || '';
     row.querySelector('[data-shop-merchant]').value = item.merchant || '';
@@ -99,18 +101,37 @@ function renderShopLinks(links = []) {
     row.querySelector('[data-shop-thumbnail]').value = item.thumbnail || '';
     row.querySelector('[data-shop-description]').value = item.description || '';
     row.querySelector('[data-remove-shop]').addEventListener('click', () => row.remove());
+    const thumbnailInput = row.querySelector('[data-shop-thumbnail]');
+    const preview = row.querySelector('[data-shop-thumbnail-preview]');
+    const updateThumbnailPreview = () => {
+      preview.replaceChildren();
+      const value = thumbnailInput.value.trim();
+      if (!value) { preview.textContent = 'No image'; return; }
+      const image = document.createElement('img'); image.src = value; image.alt = 'Product thumbnail preview';
+      image.addEventListener('error', () => { preview.replaceChildren(); preview.textContent = 'Image unavailable'; }, { once: true });
+      preview.appendChild(image);
+    };
+    thumbnailInput.addEventListener('input', updateThumbnailPreview);
+    row.querySelector('[data-shop-thumbnail-file]').addEventListener('change', event => {
+      const file = event.target.files?.[0]; if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { showToast('Shop image must be 2 MB or smaller.', 'error'); event.target.value = ''; return; }
+      const reader = new FileReader(); reader.onload = () => { thumbnailInput.value = String(reader.result || ''); updateThumbnailPreview(); }; reader.readAsDataURL(file);
+    });
+    updateThumbnailPreview();
     host.appendChild(row);
   });
 }
 
 function collectShopLinks() {
   return [...document.querySelectorAll('#public-profile-shop-links .public-shop-row')].map(row => ({
+    id: row.dataset.shopId || '',
     title: row.querySelector('[data-shop-title]')?.value.trim() || '',
     url: row.querySelector('[data-shop-url]')?.value.trim() || '',
     merchant: row.querySelector('[data-shop-merchant]')?.value.trim() || '',
     price: row.querySelector('[data-shop-price]')?.value.trim() || '',
     thumbnail: row.querySelector('[data-shop-thumbnail]')?.value.trim() || '',
-    description: row.querySelector('[data-shop-description]')?.value.trim() || ''
+    description: row.querySelector('[data-shop-description]')?.value.trim() || '',
+    featured: row.dataset.shopId === featuredShopId
   })).filter(item => item.title && item.url);
 }
 
@@ -138,7 +159,7 @@ function ensureAvatarPicker() {
 }
 
 function collectProfile() {
-  return { username: document.getElementById('public-profile-username').value.trim().toLowerCase(), displayName: document.getElementById('public-profile-display-name').value.trim(), bio: document.getElementById('public-profile-bio').value.trim(), avatarUrl: document.getElementById('public-profile-avatar').value.trim(), published: !document.getElementById('public-profile-private').checked, defaultTab: document.getElementById('public-profile-default-tab').value, theme: { background: document.getElementById('public-profile-theme').value, accent: '#f43f5e', buttonStyle: 'soft' }, socialLinks: collectSocialLinks(), shopLinks: collectShopLinks() };
+  return { username: document.getElementById('public-profile-username').value.trim().toLowerCase(), displayName: document.getElementById('public-profile-display-name').value.trim(), bio: document.getElementById('public-profile-bio').value.trim(), avatarUrl: document.getElementById('public-profile-avatar').value.trim(), published: !document.getElementById('public-profile-private').checked, theme: { background: document.getElementById('public-profile-theme').value, accent: '#f43f5e', buttonStyle: 'soft' }, socialLinks: collectSocialLinks(), shopLinks: collectShopLinks() };
 }
 function updateUrl(username) { return `${location.origin}/u/${encodeURIComponent(username || 'socialfeed')}`; }
 function updateUrlHint(username) {
@@ -146,8 +167,8 @@ function updateUrlHint(username) {
   if (hint) hint.textContent = `/u/${encodeURIComponent(username || 'socialfeed')}`;
 }
 
-let publicManagerItems = [];
-let publicManagerSource = 'browser';
+let publicContentItems = [];
+let featuredSource = 'all-links';
 
 function managerTitle(item = {}) {
   return item.publicTitle || item.authorName || item.siteName || item.title || item.content || item.url || 'Untitled public item';
@@ -157,15 +178,17 @@ function managerHost(url = '') {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'saved item'; }
 }
 
+function itemDate(item = {}) {
+  const value = item.publicPublishedAt || item.visibilityUpdatedAt || item.firstSavedAt || item.createdAt || 0;
+  const time = Date.parse(value); return Number.isFinite(time) ? time : 0;
+}
+
 function updatePublicContentCounts(data = {}) {
   const counts = data.counts || profile?.counts || {};
+  const browser = Number(counts.browser || 0);
+  const social = Number(counts.social || 0);
   const shopCount = (data.shopLinks || profile?.profile?.shopLinks || profile?.shopLinks || []).length;
-  const values = {
-    'public-profile-counts': `${counts.browser || 0} public links · ${counts.social || 0} public posts · ${shopCount} shop picks`,
-    'public-links-count': counts.browser || 0,
-    'public-posts-count': counts.social || 0,
-    'public-shop-count': shopCount
-  };
+  const values = { 'public-profile-counts': `${browser + social} public links · ${shopCount} shop picks`, 'public-links-count': browser + social };
   Object.entries(values).forEach(([id, value]) => { const element = document.getElementById(id); if (element) element.textContent = String(value); });
 }
 
@@ -179,128 +202,102 @@ function setProfileMode(mode = 'content') {
   document.querySelectorAll('[data-profile-mode-panel]').forEach(panel => { panel.hidden = panel.dataset.profileModePanel !== selected; });
 }
 
-function publicManagerElements() {
-  return {
-    overlay: document.getElementById('public-manager-modal-overlay'),
-    list: document.getElementById('public-manager-list'),
-    empty: document.getElementById('public-manager-empty'),
-    title: document.getElementById('public-manager-modal-title'),
-    subtitle: document.getElementById('public-manager-modal-subtitle'),
-    total: document.getElementById('public-manager-total'),
-    totalLabel: document.getElementById('public-manager-total-label'),
-    published: document.getElementById('public-manager-published'),
-    private: document.getElementById('public-manager-private'),
-    status: document.getElementById('public-manager-status'),
-    editShop: document.getElementById('public-manager-go-edit')
-  };
-}
+function currentProfileData() { return profile?.profile || profile || {}; }
 
-function setManagerStatus(message = '', error = false) {
-  const status = publicManagerElements().status;
-  if (status) { status.textContent = message; status.className = error ? 'error' : ''; }
-}
-
-function renderPublicManager(items = [], source = 'browser') {
-  const elements = publicManagerElements();
-  if (!elements.list) return;
-  elements.list.replaceChildren();
-  const isShop = source === 'shop';
-  const title = isShop ? 'Manage shop picks' : source === 'social' ? 'Manage public posts' : 'Manage public links';
-  const label = isShop ? 'shop picks' : source === 'social' ? 'social posts' : 'links';
-  if (elements.title) elements.title.textContent = title;
-  if (elements.subtitle) elements.subtitle.textContent = isShop ? 'Review the recommendations displayed in your Shop tab.' : 'Choose what visitors can see and polish the details shown on your public profile.';
-  if (elements.totalLabel) elements.totalLabel.textContent = `public ${label}`;
-  const profileData = profile?.profile || profile || {};
-  const sharedCount = isShop ? items.length : source === 'social' ? Number(profileData.counts?.social || 0) : Number(profileData.counts?.browser || 0);
-  if (elements.total) elements.total.textContent = String(sharedCount || items.filter(item => item.visibility === 'public').length);
-  if (elements.published) elements.published.textContent = String(isShop ? items.length : items.filter(item => item.visibility === 'public').length);
-  if (elements.private) elements.private.textContent = String(isShop ? 0 : items.filter(item => item.visibility !== 'public').length);
-  if (elements.editShop) elements.editShop.hidden = !isShop;
-  elements.empty.hidden = items.length > 0;
-  if (!items.length) return;
-
-  items.forEach((item, index) => {
-    const row = document.createElement('article');
-    row.className = 'public-manager-item';
-    if (isShop) row.classList.add('is-shop');
-    row.dataset.managerId = item.id || `shop_${index + 1}`;
-    const titleText = isShop ? item.title : managerTitle(item);
-    const description = isShop ? (item.description || 'Recommended shop pick') : (item.publicDescription || item.content || 'No public description yet.');
-    const image = isShop ? item.thumbnail : (item.thumbnail || item.favicon);
-    if (isShop) {
-      row.innerHTML = `<div class="public-manager-item-media">${image ? '<img data-manager-image alt="" loading="lazy">' : '<span class="public-manager-image-fallback">✦</span>'}</div><div class="public-manager-item-copy"><div class="public-manager-item-meta"><span data-manager-merchant></span><strong data-manager-price></strong></div><strong class="public-manager-item-title"></strong><p></p><small data-manager-shop-host></small></div><button type="button" class="settings-inline-action public-manager-edit-shop">Edit</button>`;
-      row.querySelector('.public-manager-item-title').textContent = titleText;
-      row.querySelector('p').textContent = description;
-      row.querySelector('[data-manager-merchant]').textContent = item.merchant || 'Shop pick';
-      row.querySelector('[data-manager-price]').textContent = item.price || '';
-      row.querySelector('[data-manager-shop-host]').textContent = managerHost(item.url);
-    } else {
-      row.innerHTML = `<div class="public-manager-item-media"><span class="public-manager-image-fallback">↗</span><img data-manager-image alt="" loading="lazy" hidden></div><div class="public-manager-item-copy"><div class="public-manager-item-meta"><span data-manager-source-label></span><label class="public-manager-visibility"><input type="checkbox" data-manager-visibility><span></span><b>Public</b></label></div><strong class="public-manager-item-title"></strong><small class="public-manager-item-url"></small><div class="public-manager-fields"><label>Public title<input type="text" data-manager-title maxlength="160"></label><label>Thumbnail URL<input type="url" data-manager-thumbnail placeholder="https://image.example/thumb.jpg"></label><label class="full-width">Public description<textarea data-manager-description maxlength="280" rows="2" placeholder="A short reason to click…"></textarea></label></div><div class="public-manager-item-actions"><button type="button" class="btn-primary" data-manager-save>Save item</button><a data-manager-open target="_blank" rel="noopener noreferrer">Open original ↗</a></div></div>`;
-      row.querySelector('[data-manager-source-label]').textContent = item.platformName || item.platform || (source === 'social' ? 'Saved post' : managerHost(item.url));
-      row.querySelector('.public-manager-item-title').textContent = titleText;
-      row.querySelector('.public-manager-item-url').textContent = managerHost(item.url);
-      row.querySelector('[data-manager-title]').value = item.publicTitle || titleText;
-      row.querySelector('[data-manager-thumbnail]').value = item.thumbnail || '';
-      row.querySelector('[data-manager-description]').value = item.publicDescription || '';
-      row.querySelector('[data-manager-visibility]').checked = item.visibility === 'public';
-      row.querySelector('[data-manager-open]').href = item.url || '#';
-      row.querySelector('[data-manager-save]').addEventListener('click', async () => {
-        const button = row.querySelector('[data-manager-save]');
-        button.disabled = true; setManagerStatus('Saving item…');
-        try {
-          const result = await socialFeedApi.updateBookmarkVisibility({
-            ids: [item.id],
-            visibility: row.querySelector('[data-manager-visibility]').checked ? 'public' : 'private',
-            publicTitle: row.querySelector('[data-manager-title]').value.trim(),
-            publicDescription: row.querySelector('[data-manager-description]').value.trim(),
-            thumbnail: row.querySelector('[data-manager-thumbnail]').value.trim(),
-            publicOrder: index * 10
-          });
-          item.visibility = row.querySelector('[data-manager-visibility]').checked ? 'public' : 'private';
-          item.publicTitle = row.querySelector('[data-manager-title]').value.trim();
-          item.publicDescription = row.querySelector('[data-manager-description]').value.trim();
-          item.thumbnail = row.querySelector('[data-manager-thumbnail]').value.trim();
-          if (profile) { const profileData = profile.profile || profile; profileData.counts = result.counts || profileData.counts; updatePublicContentCounts(profileData); }
-          setManagerStatus('Item updated.'); showToast('Public item updated.', 'success'); renderPublicManager(publicManagerItems, publicManagerSource);
-        } catch (error) { setManagerStatus(error?.message || 'Unable to update item.', true); } finally { button.disabled = false; }
-      });
-    }
-    const imageElement = row.querySelector('[data-manager-image]');
-    if (imageElement && image) { imageElement.src = image; imageElement.hidden = false; row.querySelector('.public-manager-image-fallback')?.setAttribute('hidden', ''); imageElement.addEventListener('error', () => { imageElement.hidden = true; row.querySelector('.public-manager-image-fallback')?.removeAttribute('hidden'); }, { once: true }); }
-    row.querySelector('.public-manager-edit-shop')?.addEventListener('click', () => { closePublicManager(); setProfileMode('edit'); });
-    elements.list.appendChild(row);
+function renderPublicLinks(items = []) {
+  const list = document.getElementById('public-links-list');
+  const empty = document.getElementById('public-links-empty');
+  if (!list || !empty) return;
+  list.replaceChildren(); empty.hidden = items.length > 0;
+  items.forEach(item => {
+    const row = document.createElement('article'); row.className = 'public-curation-row';
+    const title = managerTitle(item); const description = item.publicDescription || item.content || 'No public description yet.';
+    row.innerHTML = `<span class="public-curation-thumb">↗</span><div class="public-curation-copy"><strong></strong><small></small><p></p></div><button type="button" class="public-content-remove">Remove</button>`;
+    row.querySelector('strong').textContent = title;
+    row.querySelector('small').textContent = `${item.platformName || item.platform || managerHost(item.url)} · ${new Date(itemDate(item)).toLocaleDateString()}`;
+    row.querySelector('p').textContent = description;
+    const image = item.thumbnail || item.favicon;
+    if (image) { const imageElement = document.createElement('img'); imageElement.src = image; imageElement.alt = ''; imageElement.loading = 'lazy'; imageElement.addEventListener('error', () => imageElement.remove(), { once: true }); row.querySelector('.public-curation-thumb').replaceChildren(imageElement); }
+    row.querySelector('.public-content-remove').addEventListener('click', async () => {
+      if (!window.confirm(`Make “${title}” private?`)) return;
+      const button = row.querySelector('.public-content-remove'); button.disabled = true;
+      try { await socialFeedApi.updateBookmarkVisibility({ ids: [item.id], visibility: 'private', featured: false }); showToast('Item made private.', 'success'); await loadPublicContentItems(); }
+      catch (error) { showToast(error?.message || 'Unable to make item private.', 'error'); button.disabled = false; }
+    });
+    list.appendChild(row);
   });
 }
 
-async function loadPublicManagerItems(source = publicManagerSource) {
-  publicManagerSource = source;
-  setManagerStatus('Loading…');
+function renderFeaturedCurrent(item) {
+  const host = document.getElementById('public-featured-current'); if (!host) return;
+  const title = document.getElementById('public-featured-title'); const meta = document.getElementById('public-featured-meta'); const description = document.getElementById('public-featured-description'); const thumb = host.querySelector('.public-featured-thumb');
+  const hasItem = Boolean(item);
+  host.classList.toggle('is-empty', !hasItem);
+  title.textContent = hasItem ? managerTitle(item) : 'No featured content selected';
+  const isShop = hasItem && item.kind === 'Shop pick';
+  meta.textContent = hasItem ? (isShop ? `Shop pick${item.merchant ? ` · ${item.merchant}` : ''}${item.price ? ` · ${item.price}` : ''}` : `${item.platformName || item.platform || managerHost(item.url)} · Public`) : 'Choose from all public links or shop picks.';
+  description.textContent = hasItem ? (item.publicDescription || item.content || item.url || '') : '';
+  thumb.replaceChildren();
+  if (hasItem && (item.thumbnail || item.favicon)) { const image = document.createElement('img'); image.src = item.thumbnail || item.favicon; image.alt = ''; thumb.appendChild(image); }
+  else thumb.textContent = '↗';
+}
+
+async function loadPublicContentItems() {
   try {
-    const data = profile?.profile || profile || await socialFeedApi.getPublicProfileSettings();
-    if (source === 'shop') publicManagerItems = data.shopLinks || [];
-    else {
-      const result = await socialFeedApi.getBookmarks(new URLSearchParams({ source, limit: '60' }));
-      publicManagerItems = Array.isArray(result) ? result : (result?.bookmarks || []);
-    }
-    renderPublicManager(publicManagerItems, source); setManagerStatus('');
-  } catch (error) { publicManagerItems = []; renderPublicManager([], source); setManagerStatus(error?.message || 'Unable to load public items.', true); }
+    const [browserResult, socialResult] = await Promise.all([
+      socialFeedApi.getBookmarks(new URLSearchParams({ source: 'browser', limit: '100' })),
+      socialFeedApi.getBookmarks(new URLSearchParams({ source: 'social', limit: '100' }))
+    ]);
+    const browser = Array.isArray(browserResult) ? browserResult : (browserResult?.bookmarks || []);
+    const social = Array.isArray(socialResult) ? socialResult : (socialResult?.bookmarks || []);
+    publicContentItems = [...browser, ...social].filter(item => item.visibility === 'public').sort((a, b) => itemDate(b) - itemDate(a));
+    renderPublicLinks(publicContentItems);
+    const featuredBookmark = publicContentItems.find(item => item.featured);
+    const featuredShop = (currentProfileData().shopLinks || []).find(item => item.featured);
+    renderFeaturedCurrent(featuredBookmark || (featuredShop ? { ...featuredShop, kind: 'Shop pick' } : null));
+  } catch (error) { renderPublicLinks([]); renderFeaturedCurrent(null); showToast(error?.message || 'Unable to load public content.', 'error'); }
 }
 
-async function openPublicManager(source = 'browser') {
-  const elements = publicManagerElements();
-  if (!elements.overlay) return;
-  document.querySelectorAll('[data-public-manager-tab]').forEach(tab => { const active = tab.dataset.publicManagerTab === source; tab.classList.toggle('is-active', active); tab.setAttribute('aria-selected', String(active)); });
-  elements.overlay.querySelector('.public-manager-modal-box')?.scrollTo(0, 0);
-  elements.list?.scrollTo(0, 0);
-  elements.overlay.hidden = false; elements.overlay.classList.add('active');
-  await loadPublicManagerItems(source);
+function featuredElements() { return { overlay: document.getElementById('featured-post-modal-overlay'), list: document.getElementById('featured-post-list'), empty: document.getElementById('featured-post-empty'), status: document.getElementById('featured-post-status') }; }
+function setFeaturedStatus(message = '', error = false) { const status = featuredElements().status; if (status) { status.textContent = message; status.className = error ? 'error' : ''; } }
+
+async function renderFeaturedChoices(source = featuredSource) {
+  featuredSource = source; const elements = featuredElements(); if (!elements.list) return;
+  elements.list.replaceChildren(); setFeaturedStatus('Loading…');
+  try {
+    let items = [];
+    if (source === 'all-links') items = publicContentItems;
+    else if (source === 'shop') items = (currentProfileData().shopLinks || []).filter(item => item.title && item.url);
+    elements.empty.hidden = items.length > 0; setFeaturedStatus('');
+    items.forEach(item => {
+      const row = document.createElement('article'); row.className = 'featured-post-row';
+      row.innerHTML = `<span class="public-curation-thumb">↗</span><div class="public-curation-copy"><strong></strong><small></small></div><button type="button" class="settings-inline-action"></button>`;
+      row.querySelector('strong').textContent = managerTitle(item); row.querySelector('small').textContent = source === 'shop' ? `Shop pick${item.merchant ? ` · ${item.merchant}` : ''}${item.price ? ` · ${item.price}` : ''}` : `${item.platformName || item.platform || managerHost(item.url)} · Public`;
+      const image = item.thumbnail || item.favicon; if (image) { const imageElement = document.createElement('img'); imageElement.src = image; imageElement.alt = ''; row.querySelector('.public-curation-thumb').replaceChildren(imageElement); }
+      const button = row.querySelector('button'); const selected = item.featured === true; button.textContent = selected ? 'Selected' : 'Set featured'; button.disabled = selected;
+      button.addEventListener('click', async () => {
+        button.disabled = true; setFeaturedStatus('Saving…');
+        try {
+          if (source === 'shop') {
+            for (const current of publicContentItems.filter(candidate => candidate.featured)) await socialFeedApi.updateBookmarkVisibility({ ids: [current.id], visibility: 'public', featured: false });
+            featuredShopId = String(item.id || '');
+            profile = await socialFeedApi.savePublicProfileSettings(collectProfile());
+          } else {
+            const currentFeatured = publicContentItems.filter(candidate => candidate.featured && candidate.id !== item.id);
+            for (const current of currentFeatured) await socialFeedApi.updateBookmarkVisibility({ ids: [current.id], visibility: 'public', featured: false });
+            if (featuredShopId) { featuredShopId = null; profile = await socialFeedApi.savePublicProfileSettings(collectProfile()); }
+            await socialFeedApi.updateBookmarkVisibility({ ids: [item.id], visibility: 'public', featured: true });
+          }
+          showToast('Featured post updated.', 'success'); await loadPublicContentItems(); closeFeaturedPostModal();
+        } catch (error) { setFeaturedStatus(error?.message || 'Unable to update featured post.', true); button.disabled = false; }
+      });
+      elements.list.appendChild(row);
+    });
+  } catch (error) { elements.empty.hidden = false; setFeaturedStatus(error?.message || 'Unable to load public items.', true); }
 }
 
-function closePublicManager() {
-  const overlay = publicManagerElements().overlay;
-  if (!overlay) return;
-  overlay.classList.remove('active'); window.setTimeout(() => { overlay.hidden = true; }, 180);
-}
+function openFeaturedPostModal() { const elements = featuredElements(); if (!elements.overlay) return; elements.overlay.hidden = false; elements.overlay.classList.add('active'); renderFeaturedChoices(featuredSource); }
+function closeFeaturedPostModal() { const overlay = featuredElements().overlay; if (!overlay) return; overlay.classList.remove('active'); window.setTimeout(() => { overlay.hidden = true; }, 180); }
 
 async function loadPublicProfileSettings() {
   if (!form()) return; ensureAvatarPicker(); const privacyToggle = ensurePrivacyToggle();
@@ -318,10 +315,10 @@ async function loadPublicProfileSettings() {
     document.getElementById('public-profile-display-name').value = data.displayName || '';
     document.getElementById('public-profile-avatar').value = data.avatarUrl || data.avatar || '';
     document.getElementById('public-profile-bio').value = data.bio || '';
-    document.getElementById('public-profile-default-tab').value = ['links', 'posts', 'shop'].includes(data.defaultTab) ? data.defaultTab : 'links';
     document.getElementById('public-profile-theme').value = data.theme?.background || 'default';
+    featuredShopId = String((data.shopLinks || []).find(item => item.featured)?.id || '');
     setAvatarPreview(document.getElementById('public-profile-avatar').value); renderSocialLinks(data.socialLinks || []); renderShopLinks(data.shopLinks || []);
-    updatePublicContentCounts(data);
+    updatePublicContentCounts(data); await loadPublicContentItems();
   } catch (error) { setStatus(error?.message || 'Unable to load profile settings.', true); }
 }
 
@@ -339,25 +336,31 @@ document.getElementById('public-profile-add-shop')?.addEventListener('click', ()
 });
 document.querySelectorAll('[data-profile-mode]').forEach(button => button.addEventListener('click', () => setProfileMode(button.dataset.profileMode)));
 document.querySelectorAll('[data-profile-mode-jump]').forEach(button => button.addEventListener('click', () => setProfileMode(button.dataset.profileModeJump)));
-document.getElementById('btn-manage-public-content')?.addEventListener('click', () => openPublicManager('browser'));
-document.getElementById('btn-manage-public-links')?.addEventListener('click', () => openPublicManager('browser'));
-document.getElementById('btn-manage-public-posts')?.addEventListener('click', () => openPublicManager('social'));
-document.getElementById('btn-manage-public-shop')?.addEventListener('click', () => openPublicManager('shop'));
-document.querySelectorAll('[data-public-manager-tab]').forEach(button => button.addEventListener('click', () => {
-  document.querySelectorAll('[data-public-manager-tab]').forEach(tab => { const active = tab === button; tab.classList.toggle('is-active', active); tab.setAttribute('aria-selected', String(active)); });
-  loadPublicManagerItems(button.dataset.publicManagerTab || 'browser');
+document.getElementById('public-featured-change')?.addEventListener('click', openFeaturedPostModal);
+document.querySelectorAll('[data-featured-tab]').forEach(button => button.addEventListener('click', () => {
+  document.querySelectorAll('[data-featured-tab]').forEach(tab => { const active = tab === button; tab.classList.toggle('is-active', active); tab.setAttribute('aria-selected', String(active)); });
+  renderFeaturedChoices(button.dataset.featuredTab || 'browser');
 }));
-document.getElementById('close-public-manager-modal')?.addEventListener('click', closePublicManager);
-document.getElementById('public-manager-done')?.addEventListener('click', closePublicManager);
-document.getElementById('public-manager-go-edit')?.addEventListener('click', () => { closePublicManager(); setProfileMode('edit'); });
-document.getElementById('public-manager-modal-overlay')?.addEventListener('click', event => { if (event.target?.id === 'public-manager-modal-overlay') closePublicManager(); });
+document.getElementById('close-featured-post-modal')?.addEventListener('click', closeFeaturedPostModal);
+document.getElementById('featured-post-done')?.addEventListener('click', closeFeaturedPostModal);
+document.getElementById('featured-post-modal-overlay')?.addEventListener('click', event => { if (event.target?.id === 'featured-post-modal-overlay') closeFeaturedPostModal(); });
 document.getElementById('public-profile-username')?.addEventListener('input', event => { AppState.publicProfileUsername = event.target.value.trim().toLowerCase(); updateUrlHint(AppState.publicProfileUsername); });
 document.getElementById('public-profile-display-name')?.addEventListener('input', () => { if (!document.getElementById('public-profile-avatar').value) setAvatarPreview(''); });
 document.getElementById('public-profile-preview')?.addEventListener('click', () => window.open(updateUrl(document.getElementById('public-profile-username').value), '_blank', 'noopener,noreferrer'));
 document.getElementById('public-profile-copy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(updateUrl(document.getElementById('public-profile-username').value)); showToast('Profile URL copied.', 'success'); } catch { setStatus('Copy was blocked by the browser.', true); } });
-document.getElementById('public-profile-preview-content')?.addEventListener('click', () => window.open(updateUrl(document.getElementById('public-profile-username').value), '_blank', 'noopener,noreferrer'));
-document.getElementById('public-profile-copy-content')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(updateUrl(document.getElementById('public-profile-username').value)); showToast('Profile URL copied.', 'success'); } catch { setManagerStatus('Copy was blocked by the browser.', true); } });
-document.getElementById('public-profile-form')?.addEventListener('submit', async event => { event.preventDefault(); setStatus('Saving…'); const button = document.getElementById('public-profile-save'); button.disabled = true; try { profile = await socialFeedApi.savePublicProfileSettings(collectProfile()); setStatus('Profile saved.'); showToast('Public profile updated.', 'success'); await loadPublicProfileSettings(); } catch (error) { setStatus(error?.message || 'Unable to save profile.', true); } finally { button.disabled = false; } });
+function profileUrlFromForm() { return updateUrl(document.getElementById('public-profile-username')?.value || AppState.publicProfileUsername); }
+function bindSaveButton(button, statusTarget) {
+  button?.addEventListener('click', async () => {
+    button.disabled = true; const status = document.getElementById(statusTarget); if (status) status.textContent = 'Saving…';
+    try { profile = await socialFeedApi.savePublicProfileSettings(collectProfile()); if (status) status.textContent = 'Profile saved.'; showToast('Public profile updated.', 'success'); await loadPublicProfileSettings(); }
+    catch (error) { if (status) { status.textContent = error?.message || 'Unable to save profile.'; status.className = 'error'; } }
+    finally { button.disabled = false; }
+  });
+}
+document.getElementById('public-profile-preview-content')?.addEventListener('click', () => window.open(profileUrlFromForm(), '_blank', 'noopener,noreferrer'));
+document.getElementById('public-profile-copy-content')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(profileUrlFromForm()); showToast('Profile URL copied.', 'success'); } catch { showToast('Copy was blocked by the browser.', 'error'); } });
+bindSaveButton(document.getElementById('public-profile-save-content'), 'public-content-status');
+document.getElementById('public-profile-form')?.addEventListener('submit', async event => { event.preventDefault(); const button = document.getElementById('public-profile-save'); button.disabled = true; setStatus('Saving…'); try { profile = await socialFeedApi.savePublicProfileSettings(collectProfile()); setStatus('Profile saved.'); showToast('Public profile updated.', 'success'); await loadPublicProfileSettings(); } catch (error) { setStatus(error?.message || 'Unable to save profile.', true); } finally { button.disabled = false; } });
 
 registerActions('public-profile-settings', { loadPublicProfileSettings, visitPublicProfile });
 export { loadPublicProfileSettings, visitPublicProfile };

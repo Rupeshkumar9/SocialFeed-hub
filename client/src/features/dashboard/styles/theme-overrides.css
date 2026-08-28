@@ -36,6 +36,22 @@ html[data-theme="dark"] .filter-select:focus {
   color: var(--text-primary);
 }
 
+html[data-theme="dark"] .profile-mode-tab {
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .profile-mode-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .profile-mode-tab.is-active {
+  background: linear-gradient(135deg, rgba(244, 63, 94, .16), rgba(244, 63, 94, .05));
+  color: var(--text-primary);
+}
+
 html[data-theme="dark"] .card-menu-dropdown button,
 html[data-theme="dark"] .card-category-popover strong,
 html[data-theme="dark"] .sidebar-context-menu button {

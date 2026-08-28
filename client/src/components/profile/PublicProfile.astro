@@ -38,7 +38,7 @@ const hostFor = (value = "") => {
   }
 };
 const labelForBookmark = (bookmark: Record<string, any>) =>
-  bookmark.publicTitle || bookmark.authorName || bookmark.siteName || bookmark.content || hostFor(bookmark.url) || "Saved link";
+  bookmark.publicTitle || bookmark.title || bookmark.authorName || bookmark.siteName || bookmark.content || hostFor(bookmark.url) || "Saved link";
 const descriptionForBookmark = (bookmark: Record<string, any>) =>
   bookmark.publicDescription || bookmark.content || "Open the original link";
 const dateFor = (value: unknown) => {
@@ -114,7 +114,18 @@ const publicLinks = [
     image: safeImage(bookmark.thumbnail),
   })),
 ].sort((a, b) => dateValue(b.publishedAt) - dateValue(a.publishedAt));
-const featuredLink = publicLinks.find((item) => item.featured) || publicLinks[0];
+const featuredShop = shopLinks.find((item) => item.featured);
+const featuredShopAsLink = featuredShop ? {
+  ...featuredShop,
+  kind: "Shop pick",
+  title: featuredShop.title,
+  description: featuredShop.description || "A recommendation from this profile.",
+  sourceLabel: featuredShop.merchant || "Shop pick",
+  url: featuredShop.href,
+  thumbnail: featuredShop.image,
+  favicon: "",
+} : null;
+const featuredLink = publicLinks.find((item) => item.featured) || featuredShopAsLink || publicLinks[0];
 const combinedLinkCount = Number(profile.counts?.browser ?? browserLinks.length) + Number(profile.counts?.social ?? savedPosts.length);
 const profileItemData = [
   ...publicLinks.map((item, index) => ({

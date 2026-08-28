@@ -38,7 +38,6 @@ function buildBrowserLinkRow(bookmark) {
         <button type="button" class="menu-item-edit" data-action="edit"><i class="app-icon icon-pen"></i> Edit</button>
         <button type="button" class="menu-item-visibility" data-action="visibility"><i class="app-icon icon-${bookmark.visibility === 'public' ? 'lock' : 'globe'}"></i> ${bookmark.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
         <button type="button" data-action="copy"><i class="app-icon icon-copy"></i> Copy link</button>
-        <button type="button" data-action="featured"><i class="app-icon icon-bookmark"></i> ${bookmark.featured ? 'Remove featured' : 'Feature publicly'}</button>
         <button type="button" class="menu-item-delete" data-action="delete"><i class="app-icon icon-trash"></i> Delete</button>
       </div>
     </div>`;
@@ -98,14 +97,6 @@ function buildBrowserLinkRow(bookmark) {
         await socialFeedApi.updateBookmarkVisibility({ ids: [bookmark.id], visibility });
         bookmark.visibility = visibility;
         showToast(visibility === 'public' ? 'Link published to your profile.' : 'Link made private.', 'success');
-        renderFeedGrid(); updateSidebarNavigation();
-      } else if (action === 'featured') {
-        const featured = !bookmark.featured;
-        const visibility = featured ? 'public' : bookmark.visibility;
-        await socialFeedApi.updateBookmarkVisibility({ ids: [bookmark.id], visibility, featured });
-        bookmark.visibility = visibility;
-        bookmark.featured = featured;
-        showToast(featured ? 'Link published and featured publicly.' : 'Link removed from featured.', 'success');
         renderFeedGrid(); updateSidebarNavigation();
       }
     } catch (error) { showToast(error?.message || 'Unable to update link.', 'error'); }

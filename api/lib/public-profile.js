@@ -45,6 +45,12 @@ function safeAvatarUrl(value) {
   return safeUrl(raw);
 }
 
+function safeImageUrl(value) {
+  const raw = String(value || '').trim();
+  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(raw) && raw.length <= 3 * 1024 * 1024) return raw;
+  return safeUrl(raw);
+}
+
 function defaultProfile(userId, overrides = {}) {
   // Profile identity is user-owned data. Environment variables are reserved
   // for deployment configuration, so a missing profile gets only a neutral
@@ -90,9 +96,10 @@ function normalizeShopLinks(value) {
     title: String(item?.title || 'Featured pick').trim().slice(0, 120),
     url: safeUrl(item?.url),
     description: String(item?.description || '').trim().slice(0, 220),
-    thumbnail: safeUrl(item?.thumbnail),
+    thumbnail: safeImageUrl(item?.thumbnail),
     price: String(item?.price || '').trim().slice(0, 40),
     merchant: String(item?.merchant || '').trim().slice(0, 70),
+    featured: item?.featured === true,
     sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : (index + 1) * 10
   })).filter(item => item.url && item.title);
 }

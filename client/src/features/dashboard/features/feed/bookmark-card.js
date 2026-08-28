@@ -266,7 +266,6 @@ function buildCardElement(bm) {
             <button class="menu-item-edit"><i class="app-icon icon-pen"></i> Edit</button>
             <button class="menu-item-visibility"><i class="app-icon icon-${bm.visibility === 'public' ? 'lock' : 'globe'}"></i> ${bm.visibility === 'public' ? 'Make private' : 'Publish to profile'}</button>
             <button class="menu-item-copy"><i class="app-icon icon-copy"></i> Copy link</button>
-            <button class="menu-item-featured"><i class="app-icon icon-bookmark"></i> ${bm.featured ? 'Remove featured' : 'Feature publicly'}</button>
             <button class="menu-item-delete"><i class="app-icon icon-trash"></i> Delete</button>
           </div>
         </div>
@@ -402,24 +401,6 @@ function buildCardElement(bm) {
       } finally {
         dropdown.classList.remove('active');
         menuBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-
-    const featuredBtn = card.querySelector('.menu-item-featured');
-    featuredBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      dropdown.classList.remove('active');
-      menuBtn.setAttribute('aria-expanded', 'false');
-      try {
-        const featured = !bm.featured;
-        const visibility = featured ? 'public' : bm.visibility;
-        await socialFeedApi.updateBookmarkVisibility({ ids: [bm.id], visibility, featured });
-        bm.visibility = visibility;
-        bm.featured = featured;
-        actions.showToast(featured ? 'Post published and featured publicly.' : 'Post removed from featured.', 'success');
-        renderFeedGrid();
-      } catch (error) {
-        actions.showToast(error?.message || 'Unable to update featured status.', 'error');
       }
     });
 
